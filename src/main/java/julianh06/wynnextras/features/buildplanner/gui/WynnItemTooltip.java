@@ -37,11 +37,13 @@ final class WynnItemTooltip {
     }
 
     static void render(PlannerScreen screen, DrawContext context, TextRenderer font, WynnItem item,
-            int mouseX, int mouseY, CharacterClass selectedClass, int level, int[] finalSkills) {
+            int mouseX, int mouseY, CharacterClass selectedClass, int level, int[] finalSkills,
+            boolean skillRequirementWarning) {
         WynnItemTooltip tooltip = new WynnItemTooltip(font, selectedClass, level, finalSkills);
         String tier = item.tier() == null ? "normal" : item.tier().toLowerCase(Locale.ROOT);
         if ("set".equals(tier)) tier = "rare";
-        screen.renderPlannerTooltip(context, tooltip.lines(item), Identifier.ofVanilla(tier), mouseX, mouseY);
+        screen.renderPlannerTooltip(context, tooltip.lines(item, item.displayName(), skillRequirementWarning),
+                Identifier.ofVanilla(tier), mouseX, mouseY);
     }
 
     static void renderIngredient(PlannerScreen screen, DrawContext context, TextRenderer font,
@@ -94,12 +96,20 @@ final class WynnItemTooltip {
     }
 
     private List<Text> lines(WynnItem item) {
-        return lines(item, item.displayName());
+        return lines(item, item.displayName(), false);
     }
 
     private List<Text> lines(WynnItem item, String displayName) {
+        return lines(item, displayName, false);
+    }
+
+    private List<Text> lines(WynnItem item, String displayName, boolean skillRequirementWarning) {
         int tooltipWidth = tooltipWidth(item, displayName);
         List<Text> tooltip = new ArrayList<>();
+        if (skillRequirementWarning) {
+            tooltip.add(Text.literal("§lSkill point requirements are not met!")
+                    .formatted(Formatting.RED));
+        }
         tooltip.add(Text.empty());
         tooltip.add(nameLine(item, displayName));
         tooltip.add(typeLine(item));

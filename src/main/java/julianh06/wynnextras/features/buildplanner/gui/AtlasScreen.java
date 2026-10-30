@@ -418,7 +418,7 @@ final class AtlasScreen extends PlannerScreen {
                     List.of(new BuildCalculator.EquippedItem(item, "", item.type().equals("weapon"))));
             String id = workspace.add(ToolWorkspaceManager.Type.BUILDER);
             workspace.updateBuild(id, new SavedBuild(item.displayName(), abilityClass.apiName(), 121,
-                    Map.of(slot, item.reference()), Map.of(), skills.assigned(), Map.of(), Map.of(), Map.of(), 0));
+                    Map.of(slot, item.reference()), Map.of(), List.of(), skills.assigned(), Map.of(), Map.of(), Map.of(), 0));
         } else {
             var ingredient = selected.ingredient();
             var recipe = CraftedItemCodec.recipeChoices().stream().filter(ingredient::supports)

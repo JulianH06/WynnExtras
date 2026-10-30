@@ -51,8 +51,7 @@ public final class WorkspaceTabs {
     static void openCrafter(BuilderScreen source, String slot, WynnItem current) {
         var workspace = ToolWorkspaceManager.getInstance();
         String id = workspace.add(ToolWorkspaceManager.Type.CRAFTER);
-        String type = slot.startsWith("RING_") ? "ring"
-                : slot.equals("WEAPON") ? "bow" : slot.toLowerCase(java.util.Locale.ROOT);
+        String type = source.crafterType(slot, current);
         workspace.updateCraft(id, current != null && current.isCrafted()
                 ? CraftedItemCodec.readCraft(current.craftedCode()) : CraftedItemCodec.emptyCraft(type));
         workspace.bindCraft(id, source.toolTabId(), slot);

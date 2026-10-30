@@ -176,7 +176,8 @@ public final class ToolWorkspaceManager {
         return replace(new Tab(tab.id(), tab.type(), cleaned,
                 tab.type() == Type.BUILDER
                         ? new SavedBuild(cleaned, tab.build().characterClass(), tab.build().level(),
-                                tab.build().equipment(), tab.build().powders(), tab.build().assignedSkills(),
+                                tab.build().equipment(), tab.build().powders(), tab.build().offhands(),
+                                tab.build().assignedSkills(),
                                 tab.build().tomes(), tab.build().aspects(), tab.build().abilityTrees(),
                                 tab.build().savedAt())
                         : tab.build(),
@@ -235,7 +236,8 @@ public final class ToolWorkspaceManager {
     private static String id() { return UUID.randomUUID().toString(); }
     private static Tab builder(String name, SavedBuild build) { return new Tab(id(), Type.BUILDER, name, build, null, null); }
     private static SavedBuild emptyBuild(String name) {
-        return new SavedBuild(name, "archer", 121, Map.of(), Map.of(), new int[5], Map.of(), Map.of(), Map.of(), 0);
+        return new SavedBuild(name, "archer", 121, Map.of(), Map.of(), List.of(),
+                new int[5], Map.of(), Map.of(), Map.of(), 0);
     }
     private void rememberAllActiveTabs() {
         if (activeId != null) {
@@ -254,13 +256,16 @@ public final class ToolWorkspaceManager {
             activeId, activeType, Map.copyOf(activeByType), Map.copyOf(craftTargets))); }
 
     private static boolean validSlot(String slot) {
-        return slot != null && List.of("HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS", "WEAPON",
-                "RING_1", "RING_2", "BRACELET", "NECKLACE").contains(slot);
+        return slot != null && (List.of("HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS", "WEAPON",
+                "RING_1", "RING_2", "BRACELET", "NECKLACE").contains(slot)
+                || slot.matches("OFFHAND_[1-3]"));
     }
 
     public record CraftTarget(String buildId, String slot) {
         public String slotType() {
-            return slot.startsWith("RING_") ? "ring" : slot.toLowerCase(java.util.Locale.ROOT);
+            if (slot.startsWith("RING_")) return "ring";
+            if (slot.startsWith("OFFHAND_")) return "weapon";
+            return slot.toLowerCase(java.util.Locale.ROOT);
         }
     }
 

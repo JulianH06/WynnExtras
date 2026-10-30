@@ -92,6 +92,8 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int ITEM_INFO_WIDTH = 106;
     private static final int SKILL_CARD_HEIGHT = 82;
     private static final int AUTO_ASSIGN_WIDTH = 92;
+    private static final int AUTO_ASSIGN_MAIN_WIDTH = 150;
+    private static final int AUTO_ASSIGN_ALL_WIDTH = 150;
     private static final int POSITIVE = 0xFF00FF40;
     private static final int NEGATIVE = 0xFFFF3030;
     private static final int EARTH = 0xFF20C020;
@@ -214,16 +216,20 @@ public final class BuilderScreen extends PlannerScreen {
     private int workspaceTicks;
     private final Map<BuildSlot, WynnItem> equipped = new EnumMap<>(BuildSlot.class);
     private final Map<BuildSlot, String> powderCodes = new EnumMap<>(BuildSlot.class);
+    private final List<Offhand> offhands = new ArrayList<>();
     private final Map<String, WynnTome> selectedTomes = new LinkedHashMap<>();
     private final Map<String, AspectSelection> selectedAspects = new LinkedHashMap<>();
     private final Map<WynnItem, ItemStack> iconCache = new IdentityHashMap<>();
+    private final Map<WynnItem, BuildCalculator.Result> offhandStatsCache = new IdentityHashMap<>();
     private final int[] assignedSkills = new int[5];
     private final AbilityTreeState abilityTreeState = new AbilityTreeState();
     private final List<ThemedButton> dynamicButtons = new ArrayList<>();
     private final List<ThemedButton> pickerButtons = new ArrayList<>();
     private final List<TextInputWidget> dynamicFields = new ArrayList<>();
+    private final List<TextInputWidget> skillFields = new ArrayList<>();
     private final List<TextWidget> dynamicLabels = new ArrayList<>();
     private BuildSlot pickerSlot;
+    private int pickerOffhandIndex = -1;
     private WynnItem detailItem;
     private final SmoothScroll detailScroll = new SmoothScroll();
     private int detailMaxScroll;
@@ -324,6 +330,7 @@ public final class BuilderScreen extends PlannerScreen {
         pickerButtons.clear();
         for (TextInputWidget field : dynamicFields) removeRootWidget(field);
         dynamicFields.clear();
+        skillFields.clear();
         removeRootWidget(pickerOverlay);
         removeRootWidget(pickerList);
         removeRootWidget(classSelector);
@@ -382,80 +389,104 @@ public final class BuilderScreen extends PlannerScreen {
             });
             addDynamicField(powderField);
         }
+        for (int i = 0; i < offhands.size(); i++) {
+            int index = i;
+            Offhand offhand = offhands.get(i);
+            SlotPosition position = offhandPosition(layout, i);
+            int controlWidth = position.width - ITEM_INFO_WIDTH - 9;
+            int removeWidth = 20;
+            int itemButtonWidth = controlWidth - removeWidth - 4;
+            String fittedName = fitText(offhand.item().displayName(), itemButtonWidth - 10);
+            addDynamic(new ThemedButton(
+                    position.x + ITEM_INFO_WIDTH + 5, position.y + 3,
+                    itemButtonWidth, 20, Text.literal(fittedName).formatted(tierColor(offhand.item().tier())),
+                    () -> openOffhandPicker(index)));
+            addDynamic(new ThemedButton(
+                    position.x + ITEM_INFO_WIDTH + 9 + itemButtonWidth, position.y + 3,
+                    removeWidth, 20, Text.literal("X"), () -> removeOffhand(index))
+                    .setHoverText(Text.literal("Remove this offhand from the build.")));
+
+            TextInputWidget powderField = textInput(
+                    position.x + ITEM_INFO_WIDTH + 5, position.y + 25,
+                    controlWidth, 18, "Powders");
+            int powderSlots = offhand.item().stat("powderSlots");
+            powderField.setMaxLength(Math.max(1, powderSlots * 2));
+            powderField.setInput(offhand.powders());
+            powderField.setPlaceholder(powderSlots + " powder slots");
+            powderField.setEnabled(powderSlots > 0);
+            powderField.setCharacterFilter(character -> "etwfaETWFA1234567".indexOf(character) >= 0);
+            powderField.setInputPredicate(text -> validPowderText(text, powderSlots));
+            powderField.setOnChange(text -> {
+                Offhand current = offhands.get(index);
+                offhands.set(index, new Offhand(current.item(), text.toLowerCase(Locale.ROOT)));
+            });
+            addDynamicField(powderField);
+        }
 
         int skillY = layout.skillTop + 11;
         int skillCardWidth = (layout.leftWidth - 8) / 5;
+        int[] currentSkills = calculateStats().skills();
         for (int i = 0; i < SKILL_NAMES.length; i++) {
             int index = i;
             int cardX = MARGIN + 4 + i * skillCardWidth;
             TextInputWidget skillField = textInput(
                     cardX + 8, skillY + 11, skillCardWidth - 16, 20, SKILL_NAMES[i]);
-            int itemBonus = skillPointPlan.finalSkills()[i] - skillPointPlan.assigned()[i];
-            skillField.setMaxLength(4);
+            int itemBonus = currentSkills[i] - assignedSkills[i];
+            skillField.setMaxLength(5);
             skillField.setCentered(true);
             skillField.setTextScale(2.5F);
             skillField.setCharacterFilter(character -> Character.isDigit(character) || character == '-');
-            skillField.setInputPredicate(text -> text.matches("-?\\d{0,3}"));
+            skillField.setInputPredicate(text -> text.matches("-?\\d{0,4}"));
             skillField.setInput(Integer.toString(assignedSkills[i] + itemBonus));
             skillField.setOnChange(text -> {
-                if (!text.isEmpty() && !"-".equals(text)) {
-                    assignedSkills[index] = Math.max(0,
-                            Math.min(999, Integer.parseInt(text) - itemBonus));
-                    invalidateStats();
-                    skillPointError = "";
-                    skillPointSuccess = "";
-                }
-            });
-            addDynamicField(skillField);
-        }
-        addDynamic(new ThemedButton(
-                MARGIN + 8, layout.skillTop + layout.skillHeight - 25,
-                AUTO_ASSIGN_WIDTH, 20, Text.literal("Auto Assign"), this::autoAssignSkillPoints));
-
-        BuilderFooterLayout footerLayout = builderFooterLayout(layout);
-        SlotPosition weaponPosition = slotPosition(layout, BuildSlot.WEAPON);
-        int levelControlY = weaponPosition.y + (ITEM_ROW_HEIGHT - 20) / 2;
-        int levelControlX = weaponPosition.x + weaponPosition.width + 6
-                + (weaponPosition.width - 140) / 2;
-        TextWidget levelLabel = new TextWidget(Text.literal("Lv."), this.textRenderer);
-        levelLabel.setPosition(levelControlX, levelControlY + 6);
-        dynamicLabels.add(this.addDrawableChild(levelLabel));
-        TextInputWidget levelField = textInput(
-                levelControlX + 22, levelControlY, 48, 20, "Level");
-        levelField.setMaxLength(3);
-        levelField.setCharacterFilter(Character::isDigit);
-        levelField.setInput(Integer.toString(level));
-        levelField.setOnChange(text -> {
-            if (!text.isEmpty()) {
-                int newLevel = Math.max(1, Math.min(121, Integer.parseInt(text)));
-                if (newLevel < level) {
-                    resetAbilityTrees();
-                }
-                level = newLevel;
+                int activeItemBonus = calculateStats().skills()[index] - assignedSkills[index];
+                assignedSkills[index] = text.isEmpty() || "-".equals(text)
+                        ? 0
+                        : Math.clamp(Integer.parseInt(text) - activeItemBonus, 0, 999);
                 invalidateStats();
-                skillPointPlan = BuildCalculator.optimizeSkillPoints(
-                        level, equippedItems(), new ArrayList<>(selectedTomes.values()));
                 skillPointError = "";
                 skillPointSuccess = "";
-            }
-        });
-        addDynamicField(levelField);
-        addDynamic(new ThemedButton(
-                levelControlX + 76, levelControlY, 64, 20, Text.literal("Reset"), () -> {
-                    equipped.clear();
-                    powderCodes.clear();
-                    selectedTomes.clear();
-                    selectedAspects.clear();
-                    resetAbilityTrees();
-                    for (int i = 0; i < assignedSkills.length; i++) assignedSkills[i] = 0;
-                    invalidateStats();
-                    skillPointPlan = BuildCalculator.optimizeSkillPoints(level, List.of());
-                    skillPointError = "";
-                    skillPointSuccess = "";
-                    tabName = workspace.defaultBuildName(toolTabId);
-                    saveWorkspace();
-                    rebuildWidgets();
-                }));
+                refreshSkillFields(false);
+            });
+            skillField.setOnBlur(ignored -> refreshSkillFields(true));
+            skillFields.add(skillField);
+            addDynamicField(skillField);
+        }
+        if (offhands.isEmpty()) {
+            addDynamic(new ThemedButton(
+                    MARGIN + 8, layout.skillTop + layout.skillHeight - 25,
+                    AUTO_ASSIGN_WIDTH, 20, Text.literal("Auto Assign"),
+                    () -> autoAssignSkillPoints(false)));
+        } else {
+            addDynamic(new ThemedButton(
+                    MARGIN + 8, layout.skillTop + layout.skillHeight - 25,
+                    AUTO_ASSIGN_MAIN_WIDTH, 20, Text.literal("Auto SP: Main Weapon Only"),
+                    () -> autoAssignSkillPoints(false))
+                    .setHoverText(Text.literal("Assign skill points for the main weapon only.")));
+            addDynamic(new ThemedButton(
+                    MARGIN + 12 + AUTO_ASSIGN_MAIN_WIDTH, layout.skillTop + layout.skillHeight - 25,
+                    AUTO_ASSIGN_ALL_WIDTH, 20, Text.literal("Auto SP: Main + Offhand" + (offhands.size() > 1 ? "s" : "")),
+                    () -> autoAssignSkillPoints(true))
+                    .setHoverText(Text.literal(
+                            "Assign enough skill points for the main weapon and every offhand.")));
+        }
+
+        BuilderFooterLayout footerLayout = builderFooterLayout(layout);
+        if (offhands.size() < 3) {
+            SlotPosition position = offhandPosition(layout, offhands.size());
+            int buttonWidth = 140;
+            addDynamic(new ThemedButton(
+                    position.x + (position.width - buttonWidth) / 2,
+                    position.y + (ITEM_ROW_HEIGHT - 20) / 2,
+                    buttonWidth, 20, Text.literal("Add Offhand"),
+                    () -> openOffhandPicker(offhands.size()))
+                    .setHoverLines(List.of(
+                            Text.literal("§lOffhand info:"),
+                            Text.literal("Offhands are supported only in the WynnExtras builder."),
+                            Text.literal("They are excluded from stat and damage calculations."),
+                            Text.literal("They are not available when opening the build in WynnBuilder"),
+                            Text.literal("using the Browser button in the bottom right."))));
+        }
 
         if (!abilityTreeVisible) {
             int summaryButtonGap = 4;
@@ -516,7 +547,7 @@ public final class BuilderScreen extends PlannerScreen {
         } else {
             abilityPresetOverlay = AbilityPresetOverlay.NONE;
         }
-        if (pickerSlot != null) {
+        if (pickerOpen()) {
             for (ThemedButton button : dynamicButtons) button.active = false;
             for (TextInputWidget field : dynamicFields) {
                 field.setEnabled(false);
@@ -537,7 +568,7 @@ public final class BuilderScreen extends PlannerScreen {
 
         searchField = textInput(
                 left + 14, top + 34, pickerWidth - 28, 20,
-                "Search " + pickerSlot.label.toLowerCase() + "...");
+                "Search " + pickerLabel().toLowerCase(Locale.ROOT) + "...");
         searchField.setMaxLength(100);
         searchField.setOnChange(query -> {
             pickerScroll.jump(0.0F);
@@ -548,38 +579,40 @@ public final class BuilderScreen extends PlannerScreen {
 
         addPicker(new ThemedButton(
                 left + pickerWidth - 78, top + pickerHeight - 28, 64, 20, Text.literal("Cancel"), () -> {
-                    pickerSlot = null;
-                    pickerScroll.jump(0.0F);
+                    closePicker();
                     rebuildWidgets();
                 }));
-        if (equipped.containsKey(pickerSlot)) {
+        if (currentPickerItem() != null) {
             addPicker(new ThemedButton(
                     left + 14, top + pickerHeight - 28, 64, 20, Text.literal("Remove"), () -> {
-                            if (pickerSlot == BuildSlot.WEAPON) {
-                                selectedAspects.clear();
-                            }
-                            equipped.remove(pickerSlot);
-                        powderCodes.remove(pickerSlot);
-                        recalculateSkillPointPlan();
-                        pickerSlot = null;
+                        removePickerItem();
                         rebuildWidgets();
                     }));
         }
         addPicker(new ThemedButton(
                 left + 88, top + pickerHeight - 28, 78, 20, Text.literal("Crafted"), () -> {
                     BuildSlot slot = pickerSlot;
-                    client.setScreen(new CraftedItemScreen(this, slot.searchType, slot.name(), equipped.get(slot),
-                            item -> equipItem(slot, item)));
+                    int offhandIndex = pickerOffhandIndex;
+                    client.setScreen(new CraftedItemScreen(
+                            this, pickerSearchType(), pickerSlotId(), currentPickerItem(),
+                            item -> equipPickerItem(slot, offhandIndex, item)));
                 }));
         rebuildPickerResults(left, top, pickerWidth);
     }
 
     private void rebuildPickerResults(int left, int top, int pickerWidth) {
-        if (pickerSlot == null) return;
+        if (!pickerOpen()) return;
         List<WynnItem> results = ItemDatabase.getInstance()
-                .searchItems(searchField == null ? "" : searchField.getInput(), pickerSlot.searchType);
+                .searchItems(searchField == null ? "" : searchField.getInput(), pickerSearchType());
         List<PlannerPickerList.Row<WynnItem>> rows = new ArrayList<>();
-        if (pickerSlot == BuildSlot.WEAPON) {
+        if (pickerOffhandIndex >= 0) {
+            results.stream()
+                    .filter(item -> CharacterClass.fromWeaponSubtype(item.subType()) == selectedClass)
+                    .filter(item -> offhands.stream().noneMatch(offhand -> offhand.item().reference().equals(item.reference()))
+                            || currentPickerItem() != null
+                            && currentPickerItem().reference().equals(item.reference()))
+                    .forEach(item -> rows.add(PlannerPickerList.Row.value(item, PICKER_ROW_HEIGHT)));
+        } else if (pickerSlot == BuildSlot.WEAPON) {
             List<WynnItem> active = results.stream()
                     .filter(item -> CharacterClass.fromWeaponSubtype(item.subType()) == selectedClass).toList();
             List<WynnItem> others = results.stream()
@@ -599,8 +632,9 @@ public final class BuilderScreen extends PlannerScreen {
         if (pickerList == null) {
             pickerList = new PlannerPickerList<>(left + 14, top + 62, pickerWidth - 28, listHeight, rows,
                     pickerScroll, this::renderPickerRow,
-                    (context, item, mouseX, mouseY) -> renderItemTooltip(context, item, mouseX, mouseY),
-                    item -> equipItem(pickerSlot, item));
+                    (context, item, mouseX, mouseY) -> renderItemTooltip(
+                            context, item, mouseX, mouseY, false),
+                    this::equipSelectedPickerItem);
             addRootWidget(pickerList);
         } else {
             pickerList.setRows(rows);
@@ -612,6 +646,7 @@ public final class BuilderScreen extends PlannerScreen {
             CharacterClass weaponClass = CharacterClass.fromWeaponSubtype(item.subType());
             if (selectedClass != weaponClass) {
                 selectedAspects.clear();
+                offhands.clear();
             }
             selectedClass = weaponClass;
         }
@@ -619,16 +654,116 @@ public final class BuilderScreen extends PlannerScreen {
         String powders = powderCodes.getOrDefault(slot, "");
         powderCodes.put(slot, powders.substring(0, Math.min(powders.length(), item.stat("powderSlots") * 2)));
         recalculateSkillPointPlan();
-        pickerSlot = null;
-        pickerScroll.jump(0.0F);
+        closePicker();
         rebuildWidgets();
         saveWorkspace();
     }
 
     private void openPicker(BuildSlot slot) {
         pickerSlot = slot;
+        pickerOffhandIndex = -1;
         pickerScroll.jump(0.0F);
         rebuildWidgets();
+    }
+
+    private void openOffhandPicker(int index) {
+        closePicker();
+        pickerOffhandIndex = index;
+        pickerScroll.jump(0.0F);
+        rebuildWidgets();
+    }
+
+    private void equipSelectedPickerItem(WynnItem item) {
+        equipPickerItem(pickerSlot, pickerOffhandIndex, item);
+    }
+
+    private void equipPickerItem(BuildSlot slot, int offhandIndex, WynnItem item) {
+        if (offhandIndex >= 0) {
+            equipOffhand(offhandIndex, item);
+        } else {
+            equipItem(slot, item);
+        }
+    }
+
+    private void equipOffhand(int index, WynnItem item) {
+        if (index < 0 || index > offhands.size() || index >= 3
+                || !"weapon".equals(item.type())
+                || CharacterClass.fromWeaponSubtype(item.subType()) != selectedClass
+                || hasDuplicateOffhand(item, index)) {
+            return;
+        }
+        if (index == offhands.size()) {
+            offhands.add(new Offhand(item, ""));
+        } else {
+            Offhand current = offhands.get(index);
+            String powders = current.powders().substring(
+                    0, Math.min(current.powders().length(), item.stat("powderSlots") * 2));
+            offhands.set(index, new Offhand(item, powders));
+        }
+        recalculateSkillPointPlan();
+        closePicker();
+        rebuildWidgets();
+        saveWorkspace();
+    }
+
+    private boolean hasDuplicateOffhand(WynnItem item, int replacedIndex) {
+        for (int i = 0; i < offhands.size(); i++) {
+            if (i != replacedIndex && offhands.get(i).item().reference().equals(item.reference())) return true;
+        }
+        return false;
+    }
+
+    private void removeOffhand(int index) {
+        if (index < 0 || index >= offhands.size()) return;
+        offhands.remove(index);
+        recalculateSkillPointPlan();
+        saveWorkspace();
+        rebuildWidgets();
+    }
+
+    private void removePickerItem() {
+        if (pickerOffhandIndex >= 0) {
+            int index = pickerOffhandIndex;
+            closePicker();
+            removeOffhand(index);
+            return;
+        }
+        if (pickerSlot == BuildSlot.WEAPON) {
+            selectedAspects.clear();
+        }
+        equipped.remove(pickerSlot);
+        powderCodes.remove(pickerSlot);
+        recalculateSkillPointPlan();
+        closePicker();
+    }
+
+    private boolean pickerOpen() {
+        return pickerSlot != null || pickerOffhandIndex >= 0;
+    }
+
+    private void closePicker() {
+        pickerSlot = null;
+        pickerOffhandIndex = -1;
+        pickerScroll.jump(0.0F);
+    }
+
+    private String pickerLabel() {
+        return pickerOffhandIndex >= 0 ? "Offhand" : pickerSlot.label;
+    }
+
+    private String pickerSearchType() {
+        return pickerOffhandIndex >= 0 ? "weapon" : pickerSlot.searchType;
+    }
+
+    private String pickerSlotId() {
+        return pickerOffhandIndex >= 0 ? "OFFHAND_" + (pickerOffhandIndex + 1) : pickerSlot.name();
+    }
+
+    private WynnItem currentPickerItem() {
+        if (pickerOffhandIndex >= 0) {
+            return pickerOffhandIndex < offhands.size() ? offhands.get(pickerOffhandIndex).item() : null;
+        }
+        return equipped.get(pickerSlot);
     }
 
     private void toggleAbilityTree() {
@@ -1069,6 +1204,10 @@ public final class BuilderScreen extends PlannerScreen {
                 level,
                 items,
                 powders,
+                offhands.stream().map(offhand -> new SavedBuild.SavedOffhand(
+                        offhand.item().reference(),
+                        offhand.powders().matches(draft ? "(?i)([etwfa][1-7])*[etwfa]?" : "(?i)([etwfa][1-7])*")
+                                ? offhand.powders() : "")).toList(),
                 assignedSkills,
                 selectedTomes.entrySet().stream().collect(Collectors.toMap(
                         Map.Entry::getKey, entry -> entry.getValue().displayName())),
@@ -1124,6 +1263,18 @@ public final class BuilderScreen extends PlannerScreen {
                 ? classForName(build.characterClass())
                 : CharacterClass.fromWeaponSubtype(loadedWeapon.subType());
         selectedClass = loadedClass;
+        offhands.clear();
+        for (SavedBuild.SavedOffhand savedOffhand : build.offhands()) {
+            WynnItem item = ItemDatabase.getInstance().getItem(savedOffhand.item());
+            if (item != null && "weapon".equals(item.type())
+                    && CharacterClass.fromWeaponSubtype(item.subType()) == loadedClass
+                    && !hasDuplicateOffhand(item, -1)) {
+                int powderSlots = item.stat("powderSlots");
+                String powders = validPowderText(savedOffhand.powders(), powderSlots)
+                        ? savedOffhand.powders() : "";
+                offhands.add(new Offhand(item, powders));
+            }
+        }
         AbilityTreeDatabase.getInstance().loadAsync(loadedClass);
         for (Map.Entry<String, SavedBuild.SavedAspect> entry : build.aspects().entrySet()) {
             WynnAspect aspect = AspectDatabase.getInstance().get(
@@ -1138,7 +1289,7 @@ public final class BuilderScreen extends PlannerScreen {
         int[] savedSkills = build.assignedSkills();
         System.arraycopy(savedSkills, 0, assignedSkills, 0, assignedSkills.length);
         abilityTreeState.restore(build.abilityTrees());
-        pickerSlot = null;
+        closePicker();
         detailItem = null;
         summaryScroll.jump(0.0F);
         damageScroll.jump(0.0F);
@@ -1146,6 +1297,7 @@ public final class BuilderScreen extends PlannerScreen {
         damageCacheKey = Integer.MIN_VALUE;
         statsCache = null;
         iconCache.clear();
+        offhandStatsCache.clear();
         damageCards.clear();
         detailed = false;
         boostSection = "Ability Boosts";
@@ -1153,7 +1305,9 @@ public final class BuilderScreen extends PlannerScreen {
 
     private void restorePendingBuild() {
         SavedBuild build = pendingBuild;
-        if (build.equipment().values().stream().anyMatch(value -> !CraftedItemCodec.isReference(value))
+        if ((build.equipment().values().stream().anyMatch(value -> !CraftedItemCodec.isReference(value))
+                || build.offhands().stream().anyMatch(
+                        offhand -> !CraftedItemCodec.isReference(offhand.item())))
                 && !ItemDatabase.getInstance().isReady()) {
             restoreError = ItemDatabase.getInstance().isLoading()
                     ? "Loading item data. Your tab is preserved."
@@ -1266,6 +1420,7 @@ public final class BuilderScreen extends PlannerScreen {
                 && first.level() == second.level()
                 && first.equipment().equals(second.equipment())
                 && first.powders().equals(second.powders())
+                && first.offhands().equals(second.offhands())
                 && Arrays.equals(first.assignedSkills(), second.assignedSkills())
                 && first.tomes().equals(second.tomes())
                 && first.aspects().equals(second.aspects())
@@ -1275,9 +1430,17 @@ public final class BuilderScreen extends PlannerScreen {
     private void buildTabWidgets(Layout layout) {
         WorkspaceTabs.add(parent, toolTabId, 12, 8, width - 24, this::addDynamic);
         int classWidth = 116;
+        int headerY = layout.equipmentTop + PANEL_TOP_INSET;
+        int classX = MARGIN + layout.leftWidth - classWidth - 8;
+        int resetWidth = 72;
+        int resetX = classX - resetWidth - 6;
+        int levelFieldWidth = 40;
+        int levelFieldX = resetX - levelFieldWidth - 6;
+        Text levelLabelText = Text.literal("Level");
+        int levelLabelX = levelFieldX - textRenderer.getWidth(levelLabelText) - 6;
+        int nameX = MARGIN + 10;
         TextInputWidget nameField = textInput(
-                MARGIN + 10, layout.equipmentTop + PANEL_TOP_INSET,
-                layout.leftWidth - classWidth - 24, 20, "Tab name");
+                nameX, headerY, levelLabelX - nameX - 6, 20, "Tab name");
         nameField.setMaxLength(64);
         nameField.setInput(tabName);
         nameField.setOnChange(value -> {
@@ -1287,17 +1450,69 @@ public final class BuilderScreen extends PlannerScreen {
             }
         });
         addDynamicField(nameField);
+
+        TextWidget levelLabel = new TextWidget(levelLabelText, this.textRenderer);
+        levelLabel.setPosition(levelLabelX, headerY + 6);
+        dynamicLabels.add(this.addDrawableChild(levelLabel));
+        TextInputWidget levelField = textInput(levelFieldX, headerY, levelFieldWidth, 20, "Level");
+        levelField.setMaxLength(3);
+        levelField.setCharacterFilter(Character::isDigit);
+        levelField.setInput(Integer.toString(level));
+        levelField.setOnChange(text -> {
+            if (!text.isEmpty()) {
+                int newLevel = Math.clamp(Integer.parseInt(text), 1, 121);
+                if (newLevel < level) resetAbilityTrees();
+                level = newLevel;
+                invalidateStats();
+                skillPointPlan = BuildCalculator.optimizeSkillPoints(
+                        level, equippedItems(), new ArrayList<>(selectedTomes.values()));
+                skillPointError = "";
+                skillPointSuccess = "";
+            }
+        });
+        addDynamicField(levelField);
+        addDynamic(new ThemedButton(
+                resetX, headerY, resetWidth, 20, Text.literal("Reset Build"), this::resetBuild)
+                .setHoverText(Text.of("You can always use ctrl + z to undo, in case you clicked this accidentally")));
+
         classSelector = new ClassSelectorWidget(
-                MARGIN + layout.leftWidth - classWidth - 8,
-                layout.equipmentTop + PANEL_TOP_INSET, classWidth, 20);
+                classX, headerY, classWidth, 20);
         addRootWidget(classSelector);
+    }
+
+    private void resetBuild() {
+        equipped.clear();
+        powderCodes.clear();
+        offhands.clear();
+        selectedTomes.clear();
+        selectedAspects.clear();
+        resetAbilityTrees();
+        for (int i = 0; i < assignedSkills.length; i++) assignedSkills[i] = 0;
+        invalidateStats();
+        skillPointPlan = BuildCalculator.optimizeSkillPoints(level, List.of());
+        skillPointError = "";
+        skillPointSuccess = "";
+        tabName = workspace.defaultBuildName(toolTabId);
+        saveWorkspace();
+        rebuildWidgets();
     }
 
     String toolTabId() { return toolTabId; }
     Screen workspaceParent() { return parent; }
+    String crafterType(String slot, WynnItem current) {
+        if (slot.startsWith("RING_")) return "ring";
+        if (slot.equals("WEAPON") || slot.startsWith("OFFHAND_")) {
+            return current == null ? selectedClass.weaponSubtype() : current.subType();
+        }
+        return slot.toLowerCase(Locale.ROOT);
+    }
     void equipFromTool(String slot, WynnItem item) {
         if (pendingBuild != null) throw new IllegalStateException("Restore the destination build's missing data before equipping.");
-        equipItem(BuildSlot.valueOf(slot), item);
+        if (slot.startsWith("OFFHAND_")) {
+            equipOffhand(Integer.parseInt(slot.substring("OFFHAND_".length())) - 1, item);
+        } else {
+            equipItem(BuildSlot.valueOf(slot), item);
+        }
     }
 
     @Override
@@ -1367,7 +1582,7 @@ public final class BuilderScreen extends PlannerScreen {
                     detailMaxScroll);
             return true;
         }
-        if (pickerSlot != null) {
+        if (pickerOpen()) {
             if (pickerList != null && pickerList.containsLogical(logicalX, logicalY)) {
                 pickerList.scroll(verticalAmount);
             }
@@ -1448,20 +1663,19 @@ public final class BuilderScreen extends PlannerScreen {
         if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
             return super.mouseClicked(click, doubled);
         }
-        if (pickerSlot != null && logical.button() == 0) {
+        if (pickerOpen() && logical.button() == 0) {
             int pickerWidth = Math.min(520, this.width - 60);
             int pickerHeight = Math.min(326, this.height - 50);
             int left = (this.width - pickerWidth) / 2;
             int top = (this.height - pickerHeight) / 2;
             if (logical.x() < left || logical.x() >= left + pickerWidth
                     || logical.y() < top || logical.y() >= top + pickerHeight) {
-                pickerSlot = null;
-                pickerScroll.jump(0.0F);
+                closePicker();
                 rebuildWidgets();
                 return true;
             }
         }
-        if (pickerSlot == null && logical.button() == 0) {
+        if (!pickerOpen() && logical.button() == 0) {
             if (abilityTreeVisible
                     && (abilityTreeScrollbar.mouseClicked(logical.x(), logical.y(), logical.button())
                     || abilitySidebarScrollbar.mouseClicked(logical.x(), logical.y(), logical.button()))) return true;
@@ -1474,6 +1688,14 @@ public final class BuilderScreen extends PlannerScreen {
                 if (logical.x() >= position.x + 4 && logical.x() < position.x + 46
                         && logical.y() >= position.y + 3 && logical.y() < position.y + 44) {
                     openPicker(slot);
+                    return true;
+                }
+            }
+            for (int i = 0; i < offhands.size(); i++) {
+                SlotPosition position = offhandPosition(layout, i);
+                if (logical.x() >= position.x + 4 && logical.x() < position.x + 46
+                        && logical.y() >= position.y + 3 && logical.y() < position.y + 44) {
+                    openOffhandPicker(i);
                     return true;
                 }
             }
@@ -1528,19 +1750,25 @@ public final class BuilderScreen extends PlannerScreen {
             redoBuildChange();
             return true;
         }
+        if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER) {
+            for (TextInputWidget skillField : skillFields) {
+                if (!skillField.isFocused()) continue;
+                skillField.setFocused(false);
+                return true;
+            }
+        }
         if (abilityPresetOverlay != AbilityPresetOverlay.NONE
                 && input.key() == GLFW.GLFW_KEY_ESCAPE) {
             closeAbilityPresetOverlay();
             return true;
         }
-        if (pickerSlot != null) {
+        if (pickerOpen()) {
             if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER) {
                 if (pickerList != null) pickerList.chooseFirst();
                 return true;
             }
             if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
-                pickerSlot = null;
-                pickerScroll.jump(0.0F);
+                closePicker();
                 rebuildWidgets();
                 return true;
             }
@@ -1591,7 +1819,7 @@ public final class BuilderScreen extends PlannerScreen {
 
     @Override
     protected void drawPlannerForeground(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (pickerSlot != null) {
+        if (pickerOpen()) {
             for (ThemedButton button : pickerButtons) button.render(context, mouseX, mouseY, delta);
             return;
         }
@@ -1995,7 +2223,7 @@ public final class BuilderScreen extends PlannerScreen {
             abilityTreeWarningDismissButton.setPosition(x + width - 14, contentY - 2);
             abilityTreeWarningDismissButton.visible = !abilityTreeNotices.isEmpty()
                     && abilityPresetOverlay == AbilityPresetOverlay.NONE
-                    && pickerSlot == null
+                    && !pickerOpen()
                     && contentY >= listTop && contentY + 12 <= listBottom;
         }
 
@@ -2266,6 +2494,7 @@ public final class BuilderScreen extends PlannerScreen {
             }
             if (item != null) {
                 drawEquipmentIcon(context, slot, item, position.x + 11, position.y + 9);
+                renderSkillRequirementWarning(position, item);
                 String powders = powderCodes.getOrDefault(slot, "");
                 String primary = slot == BuildSlot.WEAPON
                         ? format(BuildCalculator.weaponBaseDps(item, powders))
@@ -2285,20 +2514,56 @@ public final class BuilderScreen extends PlannerScreen {
                         position.x + 51, position.y + 28, 0xFFFFFFFF);
             }
         }
+        for (int i = 0; i < offhands.size(); i++) {
+            Offhand offhand = offhands.get(i);
+            SlotPosition position = offhandPosition(layout, i);
+            WynnItem item = offhand.item();
+            UiTheme.drawRoundedBox(
+                    ui, position.x + 4, position.y + 3, 42, 41,
+                    UiTheme.SURFACE, tierRgb(item.tier()));
+            drawEquipmentIcon(context, BuildSlot.WEAPON, item, position.x + 11, position.y + 9);
+            renderSkillRequirementWarning(position, item);
+            int primaryX = position.x + 51;
+            drawPixelWeapon(context, primaryX, position.y + 9);
+            primaryX += 11;
+            ui.drawTextWithShadow(this.textRenderer,
+                    format(BuildCalculator.weaponBaseDps(item, offhand.powders())),
+                    primaryX, position.y + 10, 0xFFFFAA00);
+            ui.drawTextWithShadow(this.textRenderer, "Lv. " + item.stat("lvl"),
+                    position.x + 51, position.y + 28, 0xFFFFFFFF);
+        }
     }
 
     private void renderEquipmentTooltip(DrawContext context, Layout layout, int mouseX, int mouseY) {
-        if (pickerSlot != null) return;
+        if (pickerOpen()) return;
         for (BuildSlot slot : BuildSlot.values()) {
             WynnItem item = equipped.get(slot);
             if (item == null) continue;
             SlotPosition position = slotPosition(layout, slot);
             if (mouseX >= position.x + 11 && mouseX < position.x + 39
                     && mouseY >= position.y + 9 && mouseY < position.y + 37) {
-                renderItemTooltip(context, item, mouseX, mouseY);
+                renderItemTooltip(context, item, mouseX, mouseY, true);
                 return;
             }
         }
+        for (int i = 0; i < offhands.size(); i++) {
+            SlotPosition position = offhandPosition(layout, i);
+            if (mouseX >= position.x + 11 && mouseX < position.x + 39
+                    && mouseY >= position.y + 9 && mouseY < position.y + 37) {
+                renderItemTooltip(context, offhands.get(i).item(), mouseX, mouseY, true);
+                return;
+            }
+        }
+    }
+
+    private void renderSkillRequirementWarning(SlotPosition position, WynnItem item) {
+        if (meetsCurrentSkillRequirements(item)) return;
+        ui.pushMatrix();
+        ui.translate(position.x + 25, position.y + 12);
+        ui.scale(3.0F, 3.0F);
+        ui.drawCenteredTextWithShadow(
+                textRenderer, Text.literal("!").formatted(Formatting.BOLD), 0, 0, NEGATIVE);
+        ui.popMatrix();
     }
 
     private void drawPixelHeart(DrawContext context, int x, int y) {
@@ -2419,7 +2684,9 @@ public final class BuilderScreen extends PlannerScreen {
         String remainingPrefix = "Assigned " + totalAssigned() + " skillpoints. Remaining: ";
         String remainingValue = Integer.toString(remaining);
         int remainingWidth = this.textRenderer.getWidth(remainingPrefix + remainingValue);
-        int statusLeft = MARGIN + 8 + AUTO_ASSIGN_WIDTH + 8;
+        int statusLeft = offhands.isEmpty()
+                ? MARGIN + 8 + AUTO_ASSIGN_WIDTH + 8
+                : MARGIN + 16 + AUTO_ASSIGN_MAIN_WIDTH + AUTO_ASSIGN_ALL_WIDTH;
         int statusWidth = layout.leftWidth - (statusLeft - MARGIN) - 8;
         int remainingX = statusLeft + (statusWidth - remainingWidth) / 2;
         ui.drawTextWithShadow(this.textRenderer,
@@ -2993,7 +3260,7 @@ public final class BuilderScreen extends PlannerScreen {
         ui.fill(0, 0, this.width, this.height, 0x99000000);
         UiTheme.drawPanel(ui, left, top, pickerWidth, pickerHeight);
         ui.drawTextWithShadow(this.textRenderer,
-                Text.literal("Choose " + pickerSlot.label).styled(style -> style.withColor(UiTheme.accentRgb())),
+                Text.literal("Choose " + pickerLabel()).styled(style -> style.withColor(UiTheme.accentRgb())),
                 left + 14, top + 13, 0xFFFFFF);
     }
 
@@ -3003,7 +3270,8 @@ public final class BuilderScreen extends PlannerScreen {
         UiTheme.drawRoundedBox(ui, x, y, width, height - 2,
                 hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
                 hovered ? UiTheme.accent() : UiTheme.BORDER);
-        drawEquipmentIcon(context, pickerSlot, item, x + 3, y + 1, 18);
+        drawEquipmentIcon(context, pickerOffhandIndex >= 0 ? BuildSlot.WEAPON : pickerSlot,
+                item, x + 3, y + 1, 18);
         Text name = Text.literal(fitText(item.displayName(), width - 94)).formatted(tierColor(item.tier()));
         ui.drawTextWithShadow(textRenderer, name, x + 25, y + 7, 0xFFFFFFFF);
         String levelText = "Lv. " + item.stat("lvl");
@@ -3109,9 +3377,16 @@ public final class BuilderScreen extends PlannerScreen {
         return tooltip;
     }
 
-    private void renderItemTooltip(DrawContext context, WynnItem item, int mouseX, int mouseY) {
+    private void renderItemTooltip(
+            DrawContext context, WynnItem item, int mouseX, int mouseY, boolean equipped
+    ) {
+        int[] currentSkills = equipped ? currentSkillsForItem(item) : calculateStats().skills();
+        int[] requirementSkills = equipped
+                ? BuildCalculator.skillsAvailableForItemRequirements(item, currentSkills)
+                : currentSkills;
         WynnItemTooltip.render(this, context, textRenderer, item, mouseX, mouseY,
-                selectedClass, level, skillPointPlan.finalSkills());
+                selectedClass, level, requirementSkills,
+                equipped && !meetsCurrentSkillRequirements(item));
     }
 
     private int tooltipWidth(WynnItem item) {
@@ -3458,6 +3733,7 @@ public final class BuilderScreen extends PlannerScreen {
         if (selectedClass != abilityClass) {
             selectedClass = abilityClass;
             selectedAspects.clear();
+            offhands.clear();
             WynnItem weapon = equipped.get(BuildSlot.WEAPON);
             if (weapon != null && CharacterClass.fromWeaponSubtype(weapon.subType()) != abilityClass) {
                 equipped.remove(BuildSlot.WEAPON);
@@ -3485,7 +3761,8 @@ public final class BuilderScreen extends PlannerScreen {
     private void renderItemDetails(DrawContext context, float delta) {
         BuildSlot detailSlot = slotForItem(detailItem);
         detailMaxScroll = ItemInspectionCard.render(context, textRenderer, detailItem,
-                powderCodes.getOrDefault(detailSlot, ""), width, height, tierRgb(detailItem.tier()), detailScroll, delta,
+                powderCodeForItem(detailItem, detailSlot), width, height,
+                tierRgb(detailItem.tier()), detailScroll, delta,
                 (x, y, size) -> drawEquipmentIcon(context, detailSlot, detailItem, x, y, size));
     }
 
@@ -3498,6 +3775,13 @@ public final class BuilderScreen extends PlannerScreen {
         return BuildSlot.WEAPON;
     }
 
+    private String powderCodeForItem(WynnItem item, BuildSlot slot) {
+        for (Offhand offhand : offhands) {
+            if (offhand.item() == item) return offhand.powders();
+        }
+        return powderCodes.getOrDefault(slot, "");
+    }
+
     private BuildCalculator.Result calculateStats() {
         if (statsCache == null) {
             statsCache = BuildCalculator.calculate(
@@ -3506,8 +3790,48 @@ public final class BuilderScreen extends PlannerScreen {
         return statsCache;
     }
 
+    private void refreshSkillFields(boolean includeFocused) {
+        int[] skills = calculateStats().skills();
+        for (int i = 0; i < skillFields.size() && i < skills.length; i++) {
+            TextInputWidget field = skillFields.get(i);
+            if (includeFocused || !field.isFocused()) field.setInput(Integer.toString(skills[i]));
+        }
+    }
+
+    private boolean meetsCurrentSkillRequirements(WynnItem item) {
+        BuildCalculator.Result stats = currentStatsForItem(item);
+        return stats.activeItems().contains(item)
+                && BuildCalculator.meetsCurrentSkillRequirements(item, stats.skills());
+    }
+
+    private int[] currentSkillsForItem(WynnItem item) {
+        return currentStatsForItem(item).skills();
+    }
+
+    private BuildCalculator.Result currentStatsForItem(WynnItem item) {
+        for (Offhand offhand : offhands) {
+            if (offhand.item() == item) {
+                return offhandStatsCache.computeIfAbsent(item, ignored -> calculateOffhandStats(offhand));
+            }
+        }
+        return calculateStats();
+    }
+
+    private BuildCalculator.Result calculateOffhandStats(Offhand offhand) {
+        List<BuildCalculator.EquippedItem> items = new ArrayList<>();
+        for (Map.Entry<BuildSlot, WynnItem> entry : equipped.entrySet()) {
+            if (entry.getKey() == BuildSlot.WEAPON) continue;
+            items.add(new BuildCalculator.EquippedItem(
+                    entry.getValue(), powderCodes.getOrDefault(entry.getKey(), ""), false));
+        }
+        items.add(new BuildCalculator.EquippedItem(offhand.item(), offhand.powders(), true));
+        return BuildCalculator.calculate(
+                level, assignedSkills, items, new ArrayList<>(selectedTomes.values()));
+    }
+
     private void invalidateStats() {
         statsCache = null;
+        offhandStatsCache.clear();
         damageCacheKey = Integer.MIN_VALUE;
     }
 
@@ -3584,8 +3908,15 @@ public final class BuilderScreen extends PlannerScreen {
         skillPointSuccess = "";
     }
 
-    private void autoAssignSkillPoints() {
-        recalculateSkillPointPlan();
+    private void autoAssignSkillPoints(boolean includeOffhands) {
+        invalidateStats();
+        skillPointPlan = includeOffhands
+                ? BuildCalculator.optimizeSkillPointsForAllWeapons(
+                        level, equippedItems(), offhandItems(), new ArrayList<>(selectedTomes.values()))
+                : BuildCalculator.optimizeSkillPoints(
+                        level, equippedItems(), new ArrayList<>(selectedTomes.values()));
+        skillPointError = "";
+        skillPointSuccess = "";
         if (!skillPointPlan.underPerSkillCap() || !skillPointPlan.withinAvailablePoints()) {
             notice = "";
             skillPointError = "Cannot auto assign: " + skillPointPlan.problem();
@@ -3596,9 +3927,15 @@ public final class BuilderScreen extends PlannerScreen {
         int remaining = availableSkillPoints() - totalAssigned();
         notice = "";
         skillPointError = "";
-        skillPointSuccess = "Assigned the required skill points. " + remaining + " remain freely assignable.";
+        skillPointSuccess = "Assigned the required skill points for "
+                + (includeOffhands ? "all weapons. " : "the main weapon. ")
+                + remaining + " remain freely assignable.";
         saveWorkspace();
         rebuildWidgets();
+    }
+
+    private List<WynnItem> offhandItems() {
+        return offhands.stream().map(Offhand::item).toList();
     }
 
     private String[] spellNames() {
@@ -3637,7 +3974,7 @@ public final class BuilderScreen extends PlannerScreen {
         int middleX = MARGIN + leftWidth + GAP;
         int rightX = middleX + middleWidth + GAP;
         int equipmentTop = CONTENT_TOP;
-        int equipmentHeight = 280;
+        int equipmentHeight = offhands.isEmpty() ? 280 : 328;
         int skillTop = equipmentTop + equipmentHeight + GAP;
         int skillHeight = 121;
         int boostTop = skillTop + skillHeight + GAP;
@@ -3655,6 +3992,16 @@ public final class BuilderScreen extends PlannerScreen {
         int x = MARGIN + 6 + (rightColumn ? columnWidth + columnGap : 0);
         int y = layout.equipmentTop + 32 + row * ITEM_ROW_HEIGHT;
         return new SlotPosition(x, y, columnWidth);
+    }
+
+    private SlotPosition offhandPosition(Layout layout, int index) {
+        SlotPosition weapon = slotPosition(layout, BuildSlot.WEAPON);
+        boolean rightColumn = index == 0 || index == 2;
+        int row = index == 0 ? 0 : 1;
+        return new SlotPosition(
+                weapon.x + (rightColumn ? weapon.width + 6 : 0),
+                weapon.y + row * ITEM_ROW_HEIGHT,
+                weapon.width);
     }
 
     private int totalAssigned() {
@@ -3866,4 +4213,6 @@ public final class BuilderScreen extends PlannerScreen {
             int boostHeight) {}
 
     private record SlotPosition(int x, int y, int width) {}
+
+    private record Offhand(WynnItem item, String powders) {}
 }

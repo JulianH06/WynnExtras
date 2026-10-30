@@ -129,7 +129,7 @@ public final class WynnBuilderLinkImporter {
         Integer[] encodedSkills = decoded.assignedSkillPoints();
         for (int i = 0; i < skills.length; i++) skills[i] = encodedSkills[i] == null ? 0 : encodedSkills[i];
         SavedBuild build = new SavedBuild("Imported Build", abilityClass.apiName(), decoded.level(), equipment,
-                powders, skills, tomes, aspects, trees, 0);
+                powders, List.of(), skills, tomes, aspects, trees, 0);
         return new Result(version, build, List.copyOf(warnings));
     }
 

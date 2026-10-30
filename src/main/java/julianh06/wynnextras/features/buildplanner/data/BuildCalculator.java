@@ -42,8 +42,20 @@ public final class BuildCalculator {
         Map<String, Integer> ids = new LinkedHashMap<>();
         WynnItem weapon = null;
         String problem = "";
+        List<EquippedItem> activeEquipment = activeEquipment(
+                assigned, equipment, tomeSkillBonuses(tomes));
+        List<WynnItem> activeItems = activeEquipment.stream()
+                .map(EquippedItem::item)
+                .toList();
 
         for (EquippedItem equipped : equipment) {
+            if (equipped.item() == null) continue;
+            int requiredLevel = equipped.item().stat(equipped.item().isCrafted() ? "lvlLow" : "lvl");
+            if (requiredLevel > safeLevel && problem.isEmpty()) {
+                problem = equipped.item().displayName() + " requires level " + requiredLevel;
+            }
+        }
+        for (EquippedItem equipped : activeEquipment) {
             WynnItem item = equipped.item();
             if (item == null) {
                 continue;
@@ -66,10 +78,6 @@ public final class BuildCalculator {
                     rawDefenses[(selection.element() + 4) % 5] -= powder.defenceMinus();
                 }
             }
-            int requiredLevel = item.stat(item.isCrafted() ? "lvlLow" : "lvl");
-            if (requiredLevel > safeLevel && problem.isEmpty()) {
-                problem = item.displayName() + " requires level " + requiredLevel;
-            }
         }
 
         for (WynnTome tome : tomes) {
@@ -90,7 +98,8 @@ public final class BuildCalculator {
         }
         health = Math.max(5, health + ids.getOrDefault("rawHealth", 0));
 
-        if (!hasValidEquipOrder(assigned, equipment, tomeSkillBonuses(tomes)) && problem.isEmpty()) {
+        long equippedItemCount = equipment.stream().filter(equipped -> equipped.item() != null).count();
+        if (activeEquipment.size() != equippedItemCount && problem.isEmpty()) {
             problem = "No valid equip order for the skill requirements";
         }
         int assignedTotal = Arrays.stream(assigned).sum();
@@ -137,7 +146,7 @@ public final class BuildCalculator {
                 health, effectiveHp, effectiveHpNoAgility, healthRegen,
                 skills, defenses, ids, weaponDamage,
                 baseAttackTier, effectiveAttackTier, 0,
-                null, null, problem.isEmpty(), problem);
+                null, null, activeItems, problem.isEmpty(), problem);
         DamageResult melee = calculateDamage(base, SpellPart.mainAttack());
         double critChance = skillPercentage(skills[1]);
         double averageHit = melee.normal().average() * (1.0 - critChance)
@@ -147,7 +156,7 @@ public final class BuildCalculator {
                 skills, defenses, ids, weaponDamage,
                 baseAttackTier, effectiveAttackTier,
                 averageHit * ATTACK_SPEED_MULTIPLIERS[effectiveAttackTier],
-                melee.normal(), melee.critical(), problem.isEmpty(), problem);
+                melee.normal(), melee.critical(), activeItems, problem.isEmpty(), problem);
     }
 
     public static DamageResult calculateDamage(Result build, SpellPart part) {
@@ -307,7 +316,35 @@ public final class BuildCalculator {
                 .filter(item -> item != null)
                 .toList();
 
-        SkillPointSearch search = new SkillPointSearch(level, items, weapon);
+        SkillPointSearch search = new SkillPointSearch(
+                level, items, weapon == null ? List.of() : List.of(weapon), weapon);
+        search.search(
+                new boolean[items.size()], new int[5], tomeSkillBonuses(tomes), new ArrayList<>());
+        return search.result();
+    }
+
+    public static SkillPointPlan optimizeSkillPointsForAllWeapons(
+            int level,
+            List<EquippedItem> equipment,
+            List<WynnItem> offhands,
+            List<WynnTome> tomes
+    ) {
+        List<WynnItem> weapons = new ArrayList<>();
+        WynnItem mainWeapon = equipment.stream()
+                .filter(EquippedItem::weapon)
+                .map(EquippedItem::item)
+                .filter(item -> item != null)
+                .findFirst()
+                .orElse(null);
+        if (mainWeapon != null) weapons.add(mainWeapon);
+        offhands.stream().filter(item -> item != null).forEach(weapons::add);
+        List<WynnItem> items = equipment.stream()
+                .filter(equipped -> !equipped.weapon())
+                .map(EquippedItem::item)
+                .filter(item -> item != null)
+                .toList();
+
+        SkillPointSearch search = new SkillPointSearch(level, items, weapons, mainWeapon);
         search.search(
                 new boolean[items.size()], new int[5], tomeSkillBonuses(tomes), new ArrayList<>());
         return search.result();
@@ -323,36 +360,32 @@ public final class BuildCalculator {
         return damage;
     }
 
-    private static boolean hasValidEquipOrder(
+    private static List<EquippedItem> activeEquipment(
             int[] assigned, List<EquippedItem> equipment, int[] permanentBonuses
     ) {
-        List<WynnItem> items = equipment.stream()
-                .map(EquippedItem::item)
-                .filter(item -> item != null)
+        List<EquippedItem> items = equipment.stream()
+                .filter(equipped -> equipped.item() != null)
                 .toList();
         if (items.size() > 30) {
-            return false;
+            return List.of();
         }
         int stateCount = 1 << items.size();
         boolean[] reachable = new boolean[stateCount];
         reachable[0] = true;
         int[][] bonuses = new int[items.size()][5];
         for (int itemIndex = 0; itemIndex < items.size(); itemIndex++) {
-            WynnItem item = items.get(itemIndex);
+            WynnItem item = items.get(itemIndex).item();
             if (item.isCrafted()) {
                 continue;
             }
-            for (int skill = 0; skill < 5; skill++) {
-                Identification normalized = item.identifications().get(SKILL_KEYS[skill]);
-                Identification raw = item.identifications().get(RAW_SKILL_KEYS[skill]);
-                bonuses[itemIndex][skill] = (normalized == null ? 0 : normalized.max())
-                        + (raw == null ? 0 : raw.max());
-            }
+            bonuses[itemIndex] = itemSkillBonuses(item);
         }
+        int bestState = 0;
         for (int state = 0; state < stateCount; state++) {
             if (!reachable[state]) {
                 continue;
             }
+            if (Integer.bitCount(state) > Integer.bitCount(bestState)) bestState = state;
             int[] current = Arrays.copyOf(assigned, 5);
             for (int skill = 0; skill < current.length; skill++) {
                 current[skill] += permanentBonuses[skill];
@@ -367,13 +400,41 @@ public final class BuildCalculator {
             }
             for (int itemIndex = 0; itemIndex < items.size(); itemIndex++) {
                 int bit = 1 << itemIndex;
-                if ((state & bit) != 0 || !meetsRequirements(items.get(itemIndex), current)) {
+                WynnItem item = items.get(itemIndex).item();
+                if ((state & bit) != 0 || !meetsRequirements(item, current)) {
                     continue;
                 }
-                reachable[state | bit] = true;
+                int nextState = state | bit;
+                int[] nextSkills = Arrays.copyOf(current, current.length);
+                for (int skill = 0; skill < nextSkills.length; skill++) {
+                    nextSkills[skill] += bonuses[itemIndex][skill];
+                }
+                if (stateMeetsRequirements(nextState, items, bonuses, nextSkills)) {
+                    reachable[nextState] = true;
+                }
             }
         }
-        return reachable[stateCount - 1];
+        List<EquippedItem> active = new ArrayList<>();
+        for (int itemIndex = 0; itemIndex < items.size(); itemIndex++) {
+            if ((bestState & (1 << itemIndex)) != 0) active.add(items.get(itemIndex));
+        }
+        return List.copyOf(active);
+    }
+
+    private static boolean stateMeetsRequirements(
+            int state, List<EquippedItem> items, int[][] bonuses, int[] skills
+    ) {
+        for (int itemIndex = 0; itemIndex < items.size(); itemIndex++) {
+            if ((state & (1 << itemIndex)) == 0) continue;
+            int[] available = Arrays.copyOf(skills, skills.length);
+            if (!items.get(itemIndex).item().isCrafted()) {
+                for (int skill = 0; skill < available.length; skill++) {
+                    available[skill] -= bonuses[itemIndex][skill];
+                }
+            }
+            if (!meetsRequirements(items.get(itemIndex).item(), available)) return false;
+        }
+        return true;
     }
 
     private static int[] tomeSkillBonuses(List<WynnTome> tomes) {
@@ -397,6 +458,23 @@ public final class BuildCalculator {
             }
         }
         return true;
+    }
+
+    public static boolean meetsCurrentSkillRequirements(WynnItem item, int[] finalSkills) {
+        int[] available = skillsAvailableForItemRequirements(item, finalSkills);
+        for (int skill = 0; skill < REQUIREMENT_KEYS.length; skill++) {
+            if (item.stat(REQUIREMENT_KEYS[skill]) > available[skill]) return false;
+        }
+        return true;
+    }
+
+    public static int[] skillsAvailableForItemRequirements(WynnItem item, int[] finalSkills) {
+        int[] available = Arrays.copyOf(finalSkills, 5);
+        if (!item.isCrafted()) {
+            int[] ownBonuses = itemSkillBonuses(item);
+            for (int skill = 0; skill < available.length; skill++) available[skill] -= ownBonuses[skill];
+        }
+        return available;
     }
 
     private static int[] itemSkillBonuses(WynnItem item) {
@@ -450,17 +528,21 @@ public final class BuildCalculator {
     private static final class SkillPointSearch {
         private final int available;
         private final List<WynnItem> items;
-        private final WynnItem weapon;
+        private final List<WynnItem> weapons;
+        private final WynnItem mainWeapon;
         private int[] bestAssigned;
         private int[] bestFinal;
         private List<WynnItem> bestOrder = List.of();
         private int bestTotal = Integer.MAX_VALUE;
         private boolean bestUnderCap;
 
-        private SkillPointSearch(int level, List<WynnItem> items, WynnItem weapon) {
-            this.available = levelToSkillPoints(Math.max(1, Math.min(121, level)));
+        private SkillPointSearch(
+                int level, List<WynnItem> items, List<WynnItem> weapons, WynnItem mainWeapon
+        ) {
+            this.available = levelToSkillPoints(Math.clamp(level, 1, 121));
             this.items = items;
-            this.weapon = weapon;
+            this.weapons = List.copyOf(weapons);
+            this.mainWeapon = mainWeapon;
         }
 
         private void search(
@@ -493,14 +575,7 @@ public final class BuildCalculator {
         }
 
         private void evaluate(int[] assigned, int[] current, List<WynnItem> order) {
-            int[] candidateAssigned = Arrays.copyOf(assigned, assigned.length);
-            int[] candidateCurrent = Arrays.copyOf(current, current.length);
-            if (weapon != null) {
-                assignToFit(candidateAssigned, candidateCurrent, weapon);
-            }
-            for (WynnItem item : items) {
-                keepEquipped(candidateAssigned, candidateCurrent, item);
-            }
+            int[] candidateAssigned = requiredForEveryWeapon(assigned, current);
 
             int total = Arrays.stream(candidateAssigned).sum();
             boolean underCap = Arrays.stream(candidateAssigned).allMatch(value -> value <= 100);
@@ -510,20 +585,45 @@ public final class BuildCalculator {
                 return;
             }
 
-            int[] finalSkills = Arrays.copyOf(candidateCurrent, candidateCurrent.length);
+            int[] finalSkills = Arrays.copyOf(current, current.length);
+            for (int skill = 0; skill < finalSkills.length; skill++) {
+                finalSkills[skill] += candidateAssigned[skill] - assigned[skill];
+            }
             for (WynnItem item : items) {
                 if (item.isCrafted()) {
                     applyItemSkills(finalSkills, item);
                 }
             }
-            if (weapon != null) {
-                applyItemSkills(finalSkills, weapon);
+            if (mainWeapon != null) {
+                applyItemSkills(finalSkills, mainWeapon);
             }
             bestAssigned = candidateAssigned;
             bestFinal = finalSkills;
             bestOrder = List.copyOf(order);
             bestTotal = total;
             bestUnderCap = underCap;
+        }
+
+        private int[] requiredForEveryWeapon(int[] assigned, int[] current) {
+            int[] required = Arrays.copyOf(assigned, assigned.length);
+            if (weapons.isEmpty()) {
+                keepItemsEquipped(required, Arrays.copyOf(current, current.length));
+                return required;
+            }
+            for (WynnItem weapon : weapons) {
+                int[] weaponAssigned = Arrays.copyOf(assigned, assigned.length);
+                int[] weaponCurrent = Arrays.copyOf(current, current.length);
+                assignToFit(weaponAssigned, weaponCurrent, weapon);
+                keepItemsEquipped(weaponAssigned, weaponCurrent);
+                for (int skill = 0; skill < required.length; skill++) {
+                    required[skill] = Math.max(required[skill], weaponAssigned[skill]);
+                }
+            }
+            return required;
+        }
+
+        private void keepItemsEquipped(int[] assigned, int[] current) {
+            for (WynnItem item : items) keepEquipped(assigned, current, item);
         }
 
         private SkillPointPlan result() {
@@ -675,9 +775,13 @@ public final class BuildCalculator {
             double meleeDps,
             DamageRange meleeNormal,
             DamageRange meleeCritical,
+            List<WynnItem> activeItems,
             boolean valid,
             String problem
     ) {
+        public Result {
+            activeItems = List.copyOf(activeItems);
+        }
     }
 
     public record SpellPart(
