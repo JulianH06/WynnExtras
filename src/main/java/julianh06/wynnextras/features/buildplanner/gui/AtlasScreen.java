@@ -486,6 +486,7 @@ final class AtlasScreen extends PlannerScreen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        clearUiFocus();
         Click logical = logicalClick(click);
         if (scrollbar.mouseClicked(logical.x(), logical.y(), logical.button())) return true;
         if (logical.button() == 0 && logical.y() >= BODY_TOP && logical.y() < height - 54) {

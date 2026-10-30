@@ -112,9 +112,13 @@ public final class WynnBuilderLinkImporter {
                 warnings.add("Ability tree is loading; paste the link again to import it");
             } else {
                 try {
-                    trees.put(abilityClass.apiName(), new LinkedHashSet<>(
-                            WynnBuilderTreeCodec.decodeBuildPayload(definition,
-                                    decoded.abilityTree().base64(), decoded.abilityTree().bitLength())));
+                    WynnBuilderTreeCodec.DecodeResult tree = WynnBuilderTreeCodec.decodeBuildPayloadBestEffort(
+                            definition, decoded.abilityTree().base64(), decoded.abilityTree().bitLength());
+                    trees.put(abilityClass.apiName(), new LinkedHashSet<>(tree.selected()));
+                    if (!tree.skippedAbilities().isEmpty()) {
+                        warnings.add("Skipped incompatible abilities: "
+                                + String.join(", ", tree.skippedAbilities()));
+                    }
                 } catch (IllegalArgumentException exception) {
                     warnings.add("Skipped ability tree: " + exception.getMessage());
                 }

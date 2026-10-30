@@ -1491,6 +1491,9 @@ public class WynncraftApiHandler {
             if (style.contains("font-weight:bold") || style.contains("font-weight:bolder")) {
                 newStyle = newStyle.withBold(true);
             }
+            if (style.contains("text-decoration: underline")) {
+                newStyle = newStyle.withUnderline(true);
+            }
 
             if (classAttr != null && !classAttr.isEmpty()) {
                 if (classAttr.contains("font-common")) {

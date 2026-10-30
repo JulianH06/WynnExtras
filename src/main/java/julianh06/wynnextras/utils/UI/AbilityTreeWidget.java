@@ -11,11 +11,12 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 import static julianh06.wynnextras.utils.WynncraftApiHandler.parseStyledHtml;
 
 public class AbilityTreeWidget extends Widget {
+    private static final int SEARCH_OVERLAY_PADDING = 4;
     static Identifier backgroundTexture = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground.png");
     static Identifier backgroundTextureDark = Identifier.of("wynnextras", "textures/gui/profileviewer/treetabbackground_dark.png");
 
@@ -126,10 +127,22 @@ public class AbilityTreeWidget extends Widget {
     private final List<NodeWidget> nodeWidgets = new ArrayList<>();
 
     private String searchInput = "";
+    private Set<String> searchIds = Set.of();
+    private boolean searchActive;
     private Set<String> selectedIds;
-    private Consumer<String> nodeClickListener;
+    private Set<String> warningIds = Set.of();
+    private Set<String> errorIds = Set.of();
+    private BiConsumer<String, Boolean> nodeClickListener;
+    private boolean draggingNodes;
+    private boolean dragNodeState;
+    private final Set<String> draggedNodeIds = new HashSet<>();
 
     int botLimit;
+    private boolean clipEnabled;
+    private int clipX;
+    private int clipY;
+    private int clipWidth;
+    private int clipHeight;
 
     public AbilityTreeWidget(String className, int x, int y, int width, int height, int botLimit) {
         super(x, y, width, height);
@@ -173,8 +186,59 @@ public class AbilityTreeWidget extends Widget {
         refreshState();
     }
 
-    public void setNodeClickListener(Consumer<String> listener) {
+    public void setNodeClickListener(BiConsumer<String, Boolean> listener) {
         this.nodeClickListener = listener;
+    }
+
+    private boolean beginNodeDrag(AbilityMapData.Node node) {
+        if (node.meta == null || node.meta.id == null || nodeClickListener == null) return false;
+        draggingNodes = true;
+        dragNodeState = !node.unlocked;
+        draggedNodeIds.clear();
+        applyDraggedNode(node);
+        return true;
+    }
+
+    private void applyDraggedNode(AbilityMapData.Node node) {
+        if (node.meta == null || node.meta.id == null || !draggedNodeIds.add(node.meta.id)) return;
+        nodeClickListener.accept(node.meta.id, dragNodeState);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (!insideClip(mouseX, mouseY)) return false;
+        return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (button != 0 || !draggingNodes) return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        if (!insideClip(mouseX, mouseY)) return true;
+        for (NodeWidget widget : nodeWidgets) {
+            if (widget.contains((int) mouseX, (int) mouseY)) {
+                applyDraggedNode(widget.node);
+                break;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && draggingNodes) {
+            draggingNodes = false;
+            draggedNodeIds.clear();
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    private boolean insideClip(double mouseX, double mouseY) {
+        if (!clipEnabled || ui == null) return true;
+        float left = ui.sx(clipX);
+        float top = ui.sy(clipY);
+        return mouseX >= left && mouseX < left + ui.sw(clipWidth)
+                && mouseY >= top && mouseY < top + ui.sh(clipHeight);
     }
 
     public void setViewport(int x, int y, int width, int height, int botLimit) {
@@ -196,6 +260,14 @@ public class AbilityTreeWidget extends Widget {
 
         this.scrollOffset = scrollOffset;
         refreshState();
+    }
+
+    public void setClipBounds(int x, int y, int width, int height) {
+        clipEnabled = true;
+        clipX = x;
+        clipY = y;
+        clipWidth = Math.max(0, width);
+        clipHeight = Math.max(0, height);
     }
 
     public void refreshState() {
@@ -244,8 +316,44 @@ public class AbilityTreeWidget extends Widget {
         this.searchInput = input == null ? "" : input;
     }
 
+    public void setSearchIds(Set<String> searchIds) {
+        this.searchIds = searchIds == null ? Set.of() : Set.copyOf(searchIds);
+    }
+
+    public void setSearchActive(boolean searchActive) {
+        this.searchActive = searchActive;
+    }
+
+    public void setHighlightedIds(Set<String> warningIds, Set<String> errorIds) {
+        this.warningIds = warningIds == null ? Set.of() : Set.copyOf(warningIds);
+        this.errorIds = errorIds == null ? Set.of() : Set.copyOf(errorIds);
+    }
+
     public AbilityMapData.Node getCurrentHoveredNode() {
         return currentHoveredNode;
+    }
+
+    @Override
+    public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
+        if (!clipEnabled) {
+            super.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            return;
+        }
+        this.ui = ui;
+        if (!visible || this.ui == null) return;
+        hovered = contains(mouseX, mouseY);
+        updateValues();
+        ui.enableScissor(clipX, clipY, clipX + clipWidth, clipY + clipHeight);
+        try {
+            drawBackground(ctx, mouseX, mouseY, tickDelta);
+            drawContent(ctx, mouseX, mouseY, tickDelta);
+            for (Widget child : children) {
+                child.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            }
+            drawForeground(ctx, mouseX, mouseY, tickDelta);
+        } finally {
+            ui.disableScissor();
+        }
     }
 
     @Override
@@ -258,7 +366,7 @@ public class AbilityTreeWidget extends Widget {
         for (AbilityMapData.Node node : state.connectors) {
             int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
             Identifier tex = connectorTextureFor(node);
-            if (tex != null && yStart - 25 > y && yStart - 25 < y + botLimit) {
+            if (tex != null && yStart + 111 > y && yStart - 34 < y + botLimit) {
                 ui.drawImage(tex, x + node.coordinates.x * 75 + 917, yStart - 34, 145, 145);
             }
         }
@@ -280,7 +388,9 @@ public class AbilityTreeWidget extends Widget {
                     .mapToInt(node -> y + 75 + node.coordinates.y * 75 - scrollOffset)
                     .max().orElse(y);
             page++;
-            if (page >= state.classTree.pages.size() || yStart + 75 <= y || yStart + 75 >= y + botLimit) {
+            if (page >= state.classTree.pages.size()
+                    || yStart + 125 <= y
+                    || yStart + 75 >= y + botLimit) {
                 continue;
             }
             ui.drawImage(pageLineTexture, x + 1000, yStart + 75, 730, 32);
@@ -293,24 +403,87 @@ public class AbilityTreeWidget extends Widget {
     protected void drawForeground(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
         if (!loaded) return;
 
+        if (searchActive && clipEnabled) drawSearchOverlay(ctx, mouseX, mouseY, tickDelta);
+
+        if (!searchIds.isEmpty()) {
+            for (AbilityMapData.Node node : state.abilities) {
+                if (node.meta == null || node.meta.id == null || !searchIds.contains(node.meta.id)) continue;
+                int xStart = x + node.coordinates.x * 75 + 925;
+                int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
+                if (yStart + 88 > y && yStart - 12 < y + botLimit) {
+                    ui.drawRectBorders(xStart + 13, yStart - 12, 100, 100,
+                            CustomColor.fromHexString("FFFF00"));
+                }
+            }
+        }
+
         AbilityTreeData treeData = AbilityTreeCache.getClassTree(this.className);
         if (treeData != null && treeData.pages != null && searchInput != null && !searchInput.isEmpty()) {
-            String search = searchInput.toLowerCase();
-            for (Map<String, AbilityTreeData.Ability> page : treeData.pages.values()) {
-                for (AbilityTreeData.Ability ability : page.values()) {
-                    if (ability.name == null) continue;
-                    if (ability.name.toLowerCase().contains(search)) {
-                        int yStart = y + 75 + ability.coordinates.y * 75 - scrollOffset + (450 * (ability.page - 1));
-                        if (yStart - 25 > y && yStart - 25 < y + botLimit) {
-                            ui.drawRectBorders(x + ability.coordinates.x * 75 + 943, yStart - 7,
-                                    90, 90,
-                                    CustomColor.fromHexString("FFFF00"));
-                        }
+            String search = normalizedSearchText(searchInput);
+            if (!search.isEmpty()) {
+                for (AbilityMapData.Node node : state.abilities) {
+                    if (node.meta == null || node.meta.id == null) continue;
+                    Map<String, AbilityTreeData.Ability> page = treeData.pages.get(node.meta.page);
+                    if (page == null) continue;
+                    AbilityTreeData.Ability ability = findAbilityMatchForHovered(page, node);
+                    if (ability == null || ability.name == null
+                            || !normalizedSearchText(ability.name).contains(search)) continue;
+                    int xStart = x + node.coordinates.x * 75 + 925;
+                    int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
+                    if (yStart + 88 > y && yStart - 12 < y + botLimit) {
+                        ui.drawRectBorders(xStart + 13, yStart - 12, 100, 100,
+                                CustomColor.fromHexString("FFFF00"));
                     }
                 }
             }
         }
 
+        if (!warningIds.isEmpty() || !errorIds.isEmpty()) {
+            for (AbilityMapData.Node node : state.abilities) {
+                if (node.meta == null || node.meta.id == null) continue;
+                boolean warning = warningIds.contains(node.meta.id);
+                boolean error = errorIds.contains(node.meta.id);
+                if (!warning && !error) continue;
+                int xStart = x + node.coordinates.x * 75 + 925;
+                int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
+                if (yStart + 84 <= y || yStart - 8 >= y + botLimit) continue;
+                if (warning) {
+                    ui.drawRectBorders(xStart + 17, yStart - 8, 92, 92,
+                            CustomColor.fromHexString("FFAA00"));
+                }
+                if (error) {
+                    ui.drawRectBorders(xStart + 22, yStart - 3, 82, 82,
+                            CustomColor.fromHexString("FF5555"));
+                }
+            }
+        }
+
+    }
+
+    private void drawSearchOverlay(DrawContext ctx, int mouseX, int mouseY, float tickDelta) {
+        ui.disableScissor();
+        ui.drawRect(
+                clipX - SEARCH_OVERLAY_PADDING,
+                clipY - SEARCH_OVERLAY_PADDING,
+                clipWidth + SEARCH_OVERLAY_PADDING * 2,
+                clipHeight + SEARCH_OVERLAY_PADDING * 2,
+                CustomColor.fromInt(0x88000000));
+        ui.enableScissor(clipX, clipY, clipX + clipWidth, clipY + clipHeight);
+
+        for (NodeWidget nodeWidget : nodeWidgets) {
+            if (nodeWidget.node.meta != null && nodeWidget.node.meta.id != null
+                    && searchIds.contains(nodeWidget.node.meta.id)) {
+                nodeWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            }
+        }
+    }
+
+    private String normalizedSearchText(String value) {
+        return value.toLowerCase(Locale.ROOT)
+                .replaceAll("(?i)§[0-9A-FK-ORX]", "")
+                .replaceAll("<[^>]+>", "")
+                .replaceAll("[^\\p{L}\\p{N}]+", " ")
+                .trim();
     }
 
     public void drawNodeTooltip(DrawContext ctx, int mouseX, int mouseY) {
@@ -596,12 +769,14 @@ public class AbilityTreeWidget extends Widget {
                     }
                 }
             }
-            if(texture != null && yStart - 25 > y && yStart - 25 < y + botLimit) {
+            if(texture != null && yStart + 100 > y && yStart - 25 < y + botLimit) {
                 ui.drawImage(texture, xStart, yStart - 25, 125, 125);
                 if(overlay != null) {
                     ui.drawImage(overlay, xStart, yStart - 25, 125, 125);
                 }
-                if(contains(mouseX, mouseY) && mouseY < ui.sy(y + botLimit + 25) && mouseY > ui.sy(y + 100)) {
+                if(contains(mouseX, mouseY)
+                        && mouseY < ui.sy(y + botLimit)
+                        && mouseY >= ui.sy(y)) {
                     if (parent instanceof AbilityTreeWidget tree) tree.currentHoveredNode = node;
                 }
             }
@@ -613,9 +788,7 @@ public class AbilityTreeWidget extends Widget {
                     || !(parent instanceof AbilityTreeWidget tree) || tree.nodeClickListener == null) {
                 return false;
             }
-            tree.nodeClickListener.accept(node.meta.id);
-            return true;
+            return tree.beginNodeDrag(node);
         }
     }
 }
-

@@ -63,17 +63,23 @@ public final class AbilityTreeState {
     }
 
     public SelectionResult toggle(AbilityTreeDefinition definition, String nodeId, int combatLevel) {
+        return setSelected(definition, nodeId,
+                !selected(definition.abilityClass()).contains(nodeId), combatLevel);
+    }
+
+    public SelectionResult setSelected(
+            AbilityTreeDefinition definition,
+            String nodeId,
+            boolean active,
+            int combatLevel
+    ) {
         LinkedHashSet<String> selected = selectedByClass.computeIfAbsent(
                 definition.abilityClass(), ignored -> new LinkedHashSet<>());
         if (!definition.nodes().containsKey(nodeId)) {
             return new SelectionResult(false, "Unknown ability");
         }
-        if (selected.contains(nodeId)) {
-            selected.remove(nodeId);
-            return new SelectionResult(true, "");
-        }
-        selected.add(nodeId);
-        return new SelectionResult(true, "");
+        boolean changed = active ? selected.add(nodeId) : selected.remove(nodeId);
+        return new SelectionResult(changed, "");
     }
 
     public void reset(CharacterClass abilityClass) {
@@ -101,7 +107,7 @@ public final class AbilityTreeState {
     }
 
     public String exportTree(AbilityTreeDefinition definition) {
-        return WynnBuilderTreeCodec.encode(definition, selected(definition.abilityClass()));
+        return WynnBuilderTreeCodec.encodeBestEffort(definition, selected(definition.abilityClass())).hash();
     }
 
     public SelectionResult importTree(

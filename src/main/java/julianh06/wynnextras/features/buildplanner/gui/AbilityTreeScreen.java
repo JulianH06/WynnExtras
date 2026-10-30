@@ -100,7 +100,7 @@ public final class AbilityTreeScreen extends PlannerScreen {
                     146, this.height - 27, 64, 20, Text.literal("Paste"), this::pasteTree))
                     .setTooltip(Tooltip.of(Text.literal(
                             "Paste a WynnBuilder code for " + abilityClass.displayName()
-                                    + " (2.2.3.0). Codes contain no class/version. Old WynnQOL codes also work.")));
+                                    + " (2.2.5.0). Codes contain no class/version. Old WynnQOL codes also work.")));
             this.addDrawableChild(new ThemedButton(
                     this.width - 74, this.height - 27, 64, 20,
                     Text.literal("Done"), this::close));
@@ -168,9 +168,9 @@ public final class AbilityTreeScreen extends PlannerScreen {
                 this.height - FOOTER_HEIGHT);
     }
 
-    private void toggleNode(String nodeId) {
+    private void toggleNode(String nodeId, boolean active) {
         if (definition == null || presetOverlay != PresetOverlay.NONE) return;
-        AbilityTreeState.SelectionResult result = state.toggle(definition, nodeId, combatLevel);
+        AbilityTreeState.SelectionResult result = state.setSelected(definition, nodeId, active, combatLevel);
         if (!result.changed()) setStatus(result.message());
         else status = "";
         abilityWidget.setSelectedIds(state.selected(abilityClass));

@@ -252,6 +252,8 @@ public abstract class WEScreen extends Screen {
     }
 
     protected void clearUiFocus() {
+        if (getFocused() != null) getFocused().setFocused(false);
+        setFocused(null);
         for (Widget w : rootWidgets) {
             w.clearFocusTree();
         }

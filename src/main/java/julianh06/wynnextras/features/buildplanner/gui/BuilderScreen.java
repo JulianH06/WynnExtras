@@ -1,6 +1,9 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
 import julianh06.wynnextras.compat.wynntils.WynntilsCustomModelAdapter;
+import julianh06.wynnextras.features.buildplanner.PlannerLog;
+import julianh06.wynnextras.features.buildplanner.config.SavedAbilityTree;
+import julianh06.wynnextras.features.buildplanner.config.SavedAbilityTreeManager;
 import julianh06.wynnextras.features.buildplanner.config.SavedBuild;
 import julianh06.wynnextras.features.buildplanner.config.SavedBuildManager;
 import julianh06.wynnextras.features.buildplanner.config.ToolWorkspaceManager;
@@ -24,7 +27,12 @@ import julianh06.wynnextras.features.buildplanner.data.WynnBuilderLinkImporter;
 import julianh06.wynnextras.features.buildplanner.data.WynnBuilderItemIndex;
 import julianh06.wynnextras.features.buildplanner.data.WynnBuilderTreeCodec;
 import julianh06.wynnextras.features.buildplanner.data.TomeDatabase;
+import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
+import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
 import julianh06.wynnextras.utils.LinkUtils;
+import julianh06.wynnextras.utils.MinecraftUtils;
+import julianh06.wynnextras.utils.WynncraftApiHandler;
+import julianh06.wynnextras.utils.UI.AbilityTreeWidget;
 import julianh06.wynnextras.utils.UI.SmoothScroll;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -35,9 +43,12 @@ import julianh06.wynnextras.wynncraft.codec.WynnBuilderCraft;
 import julianh06.wynnextras.wynncraft.codec.WynnBuilderLegacyBuildCodec;
 import julianh06.wynnextras.wynncraft.codec.WynnBuilderVersions;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.EnumMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -55,6 +66,7 @@ import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.Registries;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.StyleSpriteSource;
@@ -64,10 +76,18 @@ import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public final class BuilderScreen extends PlannerScreen {
+    private static boolean abilityTreeVisibleSession;
+    private static final SmoothScroll ABILITY_TREE_SCROLL = new SmoothScroll();
+    private static final SmoothScroll ABILITY_SIDEBAR_SCROLL = new SmoothScroll();
     private static final Identifier EQUIPMENT_TEXTURE = Identifier.of("wynnextras", "textures/gui/buildplanner/equipment.png");
+    private static final Identifier TREE_BACKGROUND = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/treetabbackground.png");
+    private static final Identifier ARCHETYPE_ICONS = Identifier.of(
+            "wynnextras", "textures/gui/buildplanner/archetypes.png");
     private static final int MARGIN = 8;
     private static final int GAP = 8;
     private static final int CONTENT_TOP = 58;
+    private static final int PANEL_TOP_INSET = 6;
     private static final int ITEM_ROW_HEIGHT = 48;
     private static final int ITEM_INFO_WIDTH = 106;
     private static final int SKILL_CARD_HEIGHT = 97;
@@ -179,6 +199,9 @@ public final class BuilderScreen extends PlannerScreen {
     private String tabName = "Build 1";
     private String restoreError = "";
     private String notice = "";
+    private List<String> abilityTreeNotices = List.of();
+    private Set<String> abilityTreeNoticeNodeIds = Set.of();
+    private String abilityTreeSearch = "";
     private NoticeSource noticeSource = NoticeSource.IMPORT;
     private String notifiedWorkspaceError = "";
     private int workspaceTicks;
@@ -213,6 +236,28 @@ public final class BuilderScreen extends PlannerScreen {
     private PlannerPickerList<WynnItem> pickerList;
     private ClassSelectorWidget classSelector;
     private ThemedButton abilityTreeButton;
+    private ThemedButton abilityTreeWarningDismissButton;
+    private AbilityTreeWidget abilityTreeWidget;
+    private Widget abilityPresetOverlayWidget;
+    private final List<ThemedButton> abilityPresetButtons = new ArrayList<>();
+    private List<SavedAbilityTree> visibleAbilityPresets = List.of();
+    private AbilityPresetOverlay abilityPresetOverlay = AbilityPresetOverlay.NONE;
+    private int abilityPresetScroll;
+    private final SmoothScroll abilityTreeScroll = ABILITY_TREE_SCROLL;
+    private final PlannerScrollbar abilityTreeScrollbar = new PlannerScrollbar(abilityTreeScroll, 32);
+    private int abilityTreeMaxScroll;
+    private final SmoothScroll abilitySidebarScroll = ABILITY_SIDEBAR_SCROLL;
+    private final PlannerScrollbar abilitySidebarScrollbar = new PlannerScrollbar(abilitySidebarScroll, 24);
+    private int abilitySidebarMaxScroll;
+    private int abilitySidebarEntriesCacheKey = Integer.MIN_VALUE;
+    private List<AbilitySidebarEntry> abilitySidebarEntriesCache = List.of();
+    private boolean abilityTreeVisible;
+    private String abilityTreeStatus = "";
+    private long abilityTreeStatusUntil;
+    private AbilityTreeDefinition.Archetype hoveredArchetype;
+    private final Deque<SavedBuild> undoHistory = new ArrayDeque<>();
+    private final Deque<SavedBuild> redoHistory = new ArrayDeque<>();
+    private SavedBuild lastHistoryState;
     private BuildCalculator.SkillPointPlan skillPointPlan =
             BuildCalculator.optimizeSkillPoints(121, List.of());
     private final SmoothScroll pickerScroll = new SmoothScroll();
@@ -231,6 +276,7 @@ public final class BuilderScreen extends PlannerScreen {
         super(Text.literal("Builder"));
         this.parent = parent;
         this.toolTabId = toolTabId;
+        this.abilityTreeVisible = abilityTreeVisibleSession;
     }
 
     @Override
@@ -258,6 +304,9 @@ public final class BuilderScreen extends PlannerScreen {
             restorePendingBuild();
         }
         rebuildWidgets();
+        if (lastHistoryState == null && pendingBuild == null) {
+            lastHistoryState = historySnapshot();
+        }
     }
 
     private void rebuildWidgets() {
@@ -271,9 +320,14 @@ public final class BuilderScreen extends PlannerScreen {
         removeRootWidget(pickerOverlay);
         removeRootWidget(pickerList);
         removeRootWidget(classSelector);
+        removeRootWidget(abilityTreeWidget);
+        removeRootWidget(abilityPresetOverlayWidget);
         pickerOverlay = null;
         pickerList = null;
         classSelector = null;
+        abilityPresetOverlayWidget = null;
+        abilityTreeWarningDismissButton = null;
+        abilityPresetButtons.clear();
         for (TextWidget label : dynamicLabels) {
             this.remove(label);
         }
@@ -350,8 +404,11 @@ public final class BuilderScreen extends PlannerScreen {
                 MARGIN + 8, layout.skillTop + layout.skillHeight - 25,
                 AUTO_ASSIGN_WIDTH, 20, Text.literal("Auto Assign"), this::autoAssignSkillPoints));
 
-        int levelControlX = layout.middleX + (layout.middleWidth - 148) / 2;
-        int levelControlY = this.height - MARGIN - 24;
+        BuilderFooterLayout footerLayout = builderFooterLayout(layout);
+        SlotPosition weaponPosition = slotPosition(layout, BuildSlot.WEAPON);
+        int levelControlY = weaponPosition.y + (ITEM_ROW_HEIGHT - 20) / 2;
+        int levelControlX = weaponPosition.x + weaponPosition.width + 6
+                + (weaponPosition.width - 140) / 2;
         TextWidget levelLabel = new TextWidget(Text.literal("Lv."), this.textRenderer);
         levelLabel.setPosition(levelControlX, levelControlY + 6);
         dynamicLabels.add(this.addDrawableChild(levelLabel));
@@ -392,22 +449,28 @@ public final class BuilderScreen extends PlannerScreen {
                     rebuildWidgets();
                 }));
 
-        addDynamic(new ThemedButton(
-                layout.middleX + 4, layout.equipmentTop + 4, (layout.middleWidth - 8) / 2, 20,
-                Text.literal("Summary"), () -> {
-                    detailed = false;
-                    summaryScroll.jump(0.0F);
-                }));
-        addDynamic(new ThemedButton(
-                layout.middleX + 4 + (layout.middleWidth - 8) / 2, layout.equipmentTop + 4,
-                (layout.middleWidth - 8) / 2, 20, Text.literal("Detailed"), () -> {
-                    detailed = true;
-                    summaryScroll.jump(0.0F);
-                }));
-        int footerX = layout.rightX + 8;
+        if (!abilityTreeVisible) {
+            int summaryButtonGap = 4;
+            int summaryButtonWidth = (layout.middleWidth - 8 - summaryButtonGap) / 2;
+            addDynamic(new ThemedButton(
+                    layout.middleX + 4, layout.equipmentTop + PANEL_TOP_INSET,
+                    summaryButtonWidth, 20,
+                    Text.literal("Summary"), () -> {
+                        detailed = false;
+                        summaryScroll.jump(0.0F);
+                    }));
+            addDynamic(new ThemedButton(
+                    layout.middleX + 4 + summaryButtonWidth + summaryButtonGap,
+                    layout.equipmentTop + PANEL_TOP_INSET,
+                    summaryButtonWidth, 20, Text.literal("Detailed"), () -> {
+                        detailed = true;
+                        summaryScroll.jump(0.0F);
+                    }));
+        }
         int footerY = this.height - MARGIN - 24;
         int footerGap = 4;
-        int footerButtonWidth = (layout.rightWidth - 16 - footerGap * 4) / 5;
+        int footerX = footerLayout.buttonX();
+        int footerButtonWidth = footerLayout.buttonWidth();
         addDynamic(new ThemedButton(
                 footerX, footerY, footerButtonWidth, 20,
                 Text.literal("Import"), this::importWynnBuilderLink));
@@ -437,14 +500,21 @@ public final class BuilderScreen extends PlannerScreen {
                 Text.literal("Tomes & Aspects"), () -> client.setScreen(new TomeScreen(this))));
         abilityTreeButton = new ThemedButton(
                 MARGIN + 10 + boostButtonWidth, secondRowY, boostButtonWidth, 20,
-                Text.literal("Ability Tree"), this::openAbilityTree);
+                Text.literal(abilityTreeVisible ? "Stats & Damage" : "Ability Tree"),
+                this::toggleAbilityTree);
         addDynamic(abilityTreeButton);
+        if (abilityTreeVisible) {
+            buildAbilityTreeWidgets(layout);
+        } else {
+            abilityPresetOverlay = AbilityPresetOverlay.NONE;
+        }
         if (pickerSlot != null) {
             for (ThemedButton button : dynamicButtons) button.active = false;
             for (TextInputWidget field : dynamicFields) {
                 field.setEnabled(false);
                 field.setDisabledTooltip(null);
             }
+            if (abilityTreeWidget != null) abilityTreeWidget.setVisible(false);
             pickerOverlay = new PickerOverlay();
             addRootWidget(pickerOverlay);
             buildPickerWidgets();
@@ -553,10 +623,296 @@ public final class BuilderScreen extends PlannerScreen {
         rebuildWidgets();
     }
 
-    private void openAbilityTree() {
-        if (this.client != null) {
-            this.client.setScreen(new AbilityTreeScreen(this, abilityTreeState, selectedClass, level));
+    private void toggleAbilityTree() {
+        abilityTreeVisible = !abilityTreeVisible;
+        abilityTreeVisibleSession = abilityTreeVisible;
+        abilityPresetOverlay = AbilityPresetOverlay.NONE;
+        if (abilityTreeVisible) {
+            AbilityTreeDatabase.getInstance().loadAsync(selectedClass);
         }
+        rebuildWidgets();
+    }
+
+    private void buildAbilityTreeWidgets(Layout layout) {
+        abilityTreeWidget = new AbilityTreeWidget(selectedClass.apiName(), 0, 0, 0, 0, 0);
+        abilityTreeWidget.setNodeClickListener(this::setAbilityTreeNode);
+        addRootWidget(abilityTreeWidget);
+
+        AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
+        int toolbarX = treeLayout.treeLeft() + 4;
+        int toolbarY = layout.equipmentTop + PANEL_TOP_INSET;
+        int toolbarWidth = treeLayout.treeWidth() - 8;
+        int gap = 4;
+        int buttonWidth = (toolbarWidth - gap * 2) / 3;
+        addDynamic(new ThemedButton(
+                toolbarX, toolbarY, buttonWidth, 20, Text.literal("Reset Tree"), () -> {
+                    abilityTreeState.reset(selectedClass);
+                    abilityTreeNotices = List.of();
+                    abilityTreeNoticeNodeIds = Set.of();
+                    abilityTreeWidget.setSelectedIds(abilityTreeState.selected(selectedClass));
+                    invalidateStats();
+                    setAbilityTreeStatus("Tree reset");
+                    saveWorkspace();
+                }));
+        addDynamic(new ThemedButton(
+                toolbarX + buttonWidth + gap, toolbarY, buttonWidth, 20,
+                Text.literal("Copy Tree"), this::copyAbilityTree));
+        addDynamic(new ThemedButton(
+                toolbarX + (buttonWidth + gap) * 2, toolbarY, buttonWidth, 20,
+                Text.literal("Paste Tree"), this::pasteAbilityTree));
+        TextInputWidget treeSearchField = textInput(
+                toolbarX, toolbarY + 24, toolbarWidth, 18, "Search abilities...");
+        treeSearchField.setMaxLength(80);
+        treeSearchField.setInput(abilityTreeSearch);
+        treeSearchField.setOnChange(value -> {
+            abilityTreeSearch = value;
+            AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+            abilityTreeWidget.setSearchIds(abilityTreeSearchNodeIds(definition));
+            abilityTreeWidget.setSearchActive(!value.isBlank());
+        });
+        abilityTreeWidget.setSearchInput("");
+        abilityTreeWidget.setSearchIds(abilityTreeSearchNodeIds(
+                AbilityTreeDatabase.getInstance().get(selectedClass)));
+        abilityTreeWidget.setSearchActive(!abilityTreeSearch.isBlank());
+        addDynamicField(treeSearchField);
+        abilityTreeWarningDismissButton = new ThemedButton(
+                0, 0, 14, 12, Text.literal("x"), this::dismissAbilityTreeWarnings);
+        abilityTreeWarningDismissButton.visible = false;
+        abilityTreeWarningDismissButton.setHoverText(Text.literal("Ignore warnings"));
+        addDynamic(abilityTreeWarningDismissButton);
+
+        int sidebarButtonGap = 4;
+        int sidebarButtonWidth = (treeLayout.sidebarWidth() - 12 - sidebarButtonGap) / 2;
+        int sidebarButtonY = abilityTreeBottom(layout) - 25;
+        addDynamic(new ThemedButton(
+                treeLayout.sidebarX() + 6, sidebarButtonY, sidebarButtonWidth, 20,
+                Text.literal("Save Tree"), () -> openAbilityPresetOverlay(AbilityPresetOverlay.SAVE)));
+        addDynamic(new ThemedButton(
+                treeLayout.sidebarX() + 6 + sidebarButtonWidth + sidebarButtonGap,
+                sidebarButtonY, sidebarButtonWidth, 20,
+                Text.literal("Saved Trees"), () -> openAbilityPresetOverlay(AbilityPresetOverlay.SAVED)));
+        if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
+            buildAbilityPresetOverlay();
+        }
+    }
+
+    private void setAbilityTreeNode(String nodeId, boolean active) {
+        AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+        if (definition == null) return;
+        AbilityTreeState.SelectionResult result = abilityTreeState.setSelected(
+                definition, nodeId, active, level);
+        if (!result.changed()) {
+            setAbilityTreeWarning(result.message());
+            abilityTreeNoticeNodeIds = Set.of(nodeId);
+            return;
+        }
+        abilityTreeNotices = List.of();
+        abilityTreeNoticeNodeIds = Set.of();
+        abilityTreeWidget.setSelectedIds(abilityTreeState.selected(selectedClass));
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+        invalidateStats();
+        abilityTreeStatus = "";
+        saveWorkspace();
+    }
+
+    private void copyAbilityTree() {
+        if (client == null) return;
+        AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+        if (definition == null) {
+            setAbilityTreeWarning("Ability tree is still loading");
+            return;
+        }
+        try {
+            WynnBuilderTreeCodec.EncodeResult encoded = WynnBuilderTreeCodec.encodeBestEffort(
+                    definition, abilityTreeState.selected(selectedClass));
+            client.keyboard.setClipboard(encoded.hash());
+            abilityTreeNotices = encoded.skippedAbilities().isEmpty()
+                    ? List.of()
+                    : List.of("Copy skipped incompatible abilities: "
+                            + String.join(", ", encoded.skippedAbilities()));
+            abilityTreeNoticeNodeIds = skippedAbilityIds(encoded);
+            setAbilityTreeStatus("WynnBuilder tree copied");
+        } catch (IllegalArgumentException exception) {
+            setAbilityTreeWarning(exception.getMessage());
+        } catch (IllegalStateException exception) {
+            PlannerLog.LOGGER.error("Failed to copy WynnBuilder ability tree.", exception);
+            setAbilityTreeWarning("Could not copy ability tree. See the log.");
+        }
+    }
+
+    private void pasteAbilityTree() {
+        if (client == null) return;
+        AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+        if (definition == null) {
+            setAbilityTreeWarning("Ability tree is still loading");
+            return;
+        }
+        try {
+            AbilityTreeState.SelectionResult result = abilityTreeState.importTree(
+                    definition, client.keyboard.getClipboard(), level);
+            if (result.changed()) {
+                abilityTreeNotices = List.of();
+                abilityTreeNoticeNodeIds = Set.of();
+                setAbilityTreeStatus(selectedClass.displayName() + " tree imported");
+                abilityTreeWidget.setSelectedIds(abilityTreeState.selected(selectedClass));
+                invalidateStats();
+                saveWorkspace();
+            } else {
+                setAbilityTreeWarning(result.message());
+            }
+        } catch (IllegalStateException exception) {
+            PlannerLog.LOGGER.error("Failed to paste WynnBuilder ability tree.", exception);
+            setAbilityTreeWarning("Could not paste ability tree. See the log.");
+        }
+    }
+
+    private void setAbilityTreeStatus(String message) {
+        abilityTreeStatus = message == null ? "" : message;
+        abilityTreeStatusUntil = System.currentTimeMillis() + 3500;
+    }
+
+    private void setAbilityTreeWarning(String message) {
+        abilityTreeNotices = message == null || message.isBlank()
+                ? List.of() : List.of(message);
+        AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+        abilityTreeNoticeNodeIds = definition == null
+                ? Set.of() : nodeIdsMentionedInWarnings(definition, abilityTreeNotices);
+        abilityTreeStatus = "";
+    }
+
+    private void dismissAbilityTreeWarnings() {
+        abilityTreeNotices = List.of();
+        abilityTreeNoticeNodeIds = Set.of();
+        if (abilityTreeWarningDismissButton != null) {
+            abilityTreeWarningDismissButton.visible = false;
+        }
+    }
+
+    private void openAbilityPresetOverlay(AbilityPresetOverlay overlay) {
+        abilityPresetOverlay = overlay;
+        abilityPresetScroll = 0;
+        rebuildWidgets();
+    }
+
+    private void closeAbilityPresetOverlay() {
+        abilityPresetOverlay = AbilityPresetOverlay.NONE;
+        abilityPresetScroll = 0;
+        rebuildWidgets();
+    }
+
+    private void buildAbilityPresetOverlay() {
+        for (ThemedButton button : dynamicButtons) button.active = false;
+        for (TextInputWidget field : dynamicFields) field.setEnabled(false);
+        abilityTreeWidget.setVisible(false);
+        abilityPresetOverlayWidget = new AbilityPresetOverlayWidget();
+        addRootWidget(abilityPresetOverlayWidget);
+
+        AbilityPresetPanel panel = abilityPresetPanel();
+        addAbilityPresetButton(new ThemedButton(
+                panel.x() + 16, panel.y() + panel.height() - 32, 80, 20,
+                Text.literal("Back"), this::closeAbilityPresetOverlay));
+        if (abilityPresetOverlay == AbilityPresetOverlay.SAVE) {
+            TextInputWidget nameField = textInput(
+                    panel.x() + 16, panel.y() + 38, panel.width() - 32, 20,
+                    "Tree preset name");
+            nameField.setMaxLength(64);
+            nameField.setPlaceholder("Name (&a and §a colors supported)...");
+            addDynamicField(nameField);
+            setFocusedWidget(nameField);
+            addAbilityPresetButton(new ThemedButton(
+                    panel.x() + panel.width() - 96,
+                    panel.y() + panel.height() - 32,
+                    80, 20, Text.literal("Save"), () -> saveAbilityPreset(nameField)));
+            return;
+        }
+
+        visibleAbilityPresets = SavedAbilityTreeManager.getInstance().getAll(selectedClass);
+        int rowTop = panel.y() + 38;
+        int rowHeight = 24;
+        int visibleRows = Math.max(1, (panel.height() - 82) / rowHeight);
+        int maxScroll = Math.max(0, visibleAbilityPresets.size() - visibleRows);
+        abilityPresetScroll = Math.min(abilityPresetScroll, maxScroll);
+        int count = Math.min(visibleRows, visibleAbilityPresets.size() - abilityPresetScroll);
+        for (int index = 0; index < count; index++) {
+            SavedAbilityTree preset = visibleAbilityPresets.get(index + abilityPresetScroll);
+            int y = rowTop + index * rowHeight;
+            Text label = MinecraftColorText.parse(preset.name()).copy()
+                    .append(Text.literal("  (" + preset.selectedNodes().size() + ")")
+                            .formatted(Formatting.GRAY));
+            addAbilityPresetButton(new ThemedButton(
+                    panel.x() + 16, y, panel.width() - 66, rowHeight - 3,
+                    label, () -> equipAbilityPreset(preset)));
+            addAbilityPresetButton(new ThemedButton(
+                    panel.x() + panel.width() - 42, y, 26, rowHeight - 3,
+                    Text.literal("X").formatted(Formatting.RED),
+                    () -> removeAbilityPreset(preset)));
+        }
+    }
+
+    private void addAbilityPresetButton(ThemedButton button) {
+        abilityPresetButtons.add(button);
+        addDynamic(button);
+    }
+
+    private void saveAbilityPreset(TextInputWidget nameField) {
+        String name = nameField.getInput().trim();
+        if (MinecraftColorText.plain(name).isBlank()) {
+            setAbilityTreeStatus("Enter a preset name");
+            return;
+        }
+        boolean saved = SavedAbilityTreeManager.getInstance().save(new SavedAbilityTree(
+                name,
+                selectedClass.apiName(),
+                abilityTreeState.selected(selectedClass),
+                System.currentTimeMillis()));
+        if (saved) {
+            closeAbilityPresetOverlay();
+            setAbilityTreeStatus("Tree preset saved");
+        } else {
+            setAbilityTreeStatus("Could not save tree preset");
+        }
+    }
+
+    private void equipAbilityPreset(SavedAbilityTree preset) {
+        AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+        if (definition == null) {
+            setAbilityTreeStatus("Ability tree is still loading");
+            return;
+        }
+        String encoded = "wq-atree:1:" + selectedClass.apiName() + ":"
+                + preset.selectedNodes().stream().sorted().collect(Collectors.joining(","));
+        AbilityTreeState.SelectionResult result = abilityTreeState.importTree(
+                definition, encoded, level);
+        if (result.changed()) {
+            invalidateStats();
+            saveWorkspace();
+            closeAbilityPresetOverlay();
+            setAbilityTreeStatus("Tree preset equipped");
+        } else {
+            setAbilityTreeStatus(result.message());
+        }
+    }
+
+    private void removeAbilityPreset(SavedAbilityTree preset) {
+        if (!SavedAbilityTreeManager.getInstance().remove(preset)) {
+            setAbilityTreeStatus("Could not remove tree preset");
+        }
+        rebuildWidgets();
+    }
+
+    private AbilityPresetPanel abilityPresetPanel() {
+        Layout layout = layout();
+        int areaLeft = layout.middleX;
+        int areaRight = layout.rightX + layout.rightWidth;
+        int areaTop = layout.equipmentTop;
+        int areaBottom = this.height - MARGIN;
+        int panelWidth = Math.min(390, areaRight - areaLeft - 24);
+        int panelHeight = Math.min(270, areaBottom - areaTop - 24);
+        return new AbilityPresetPanel(
+                areaLeft + (areaRight - areaLeft - panelWidth) / 2,
+                areaTop + (areaBottom - areaTop - panelHeight) / 2,
+                panelWidth,
+                panelHeight);
     }
 
     CharacterClass selectedAbilityClass() {
@@ -582,25 +938,32 @@ public final class BuilderScreen extends PlannerScreen {
         try {
             WynnBuilderLinkImporter.Result imported = WynnBuilderLinkImporter.importLink(client.keyboard.getClipboard());
             loadBuild(imported.build());
-            notice = imported.warnings().isEmpty()
-                    ? ""
-                    : "Imported with " + imported.warnings().size() + " warning(s): " + imported.warnings().getFirst();
+            abilityTreeNotices = imported.warnings();
+            AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+            abilityTreeNoticeNodeIds = definition == null
+                    ? Set.of() : nodeIdsMentionedInWarnings(definition, abilityTreeNotices);
+            notice = "";
         } catch (IllegalArgumentException | IllegalStateException exception) {
-            notice = "Import failed: " + exception.getMessage();
+            setAbilityTreeWarning("Import failed: " + exception.getMessage());
+            notice = "";
         }
     }
 
     private void openInWynnBuilder() {
         noticeSource = NoticeSource.BROWSER;
         try {
-            LinkUtils.openLink("https://wynnbuilder.github.io/builder/#" + encodeCurrentBuild());
+            EncodedBuild encoded = encodeCurrentBuild();
+            LinkUtils.openLink("https://wynnbuilder.github.io/builder/#" + encoded.hash());
+            abilityTreeNotices = encoded.warnings();
+            abilityTreeNoticeNodeIds = encoded.warningNodeIds();
             notice = "";
         } catch (IllegalArgumentException | IllegalStateException exception) {
-            notice = "Could not open build: " + exception.getMessage();
+            setAbilityTreeWarning("Could not open build: " + exception.getMessage());
+            notice = "";
         }
     }
 
-    private String encodeCurrentBuild() {
+    private EncodedBuild encodeCurrentBuild() {
         var itemIndex = WynnBuilderItemIndex.getInstance();
         if (!itemIndex.isReady()) throw new IllegalStateException("WynnBuilder item IDs are still loading");
         Map<WynnBuilderBuild.EquipmentSlot, WynnBuilderBuild.Equipment> equipment =
@@ -637,18 +1000,28 @@ public final class BuilderScreen extends PlannerScreen {
         }
         CharacterClass abilityClass = selectedAbilityClass();
         String tree = "";
+        List<String> warnings = new ArrayList<>();
+        Set<String> warningNodeIds = new LinkedHashSet<>();
         if (abilityClass != null && !abilityTreeState.selected(abilityClass).isEmpty()) {
             AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(abilityClass);
             if (definition == null) throw new IllegalStateException("Ability tree is still loading");
-            tree = WynnBuilderTreeCodec.encode(definition, abilityTreeState.selected(abilityClass));
+            WynnBuilderTreeCodec.EncodeResult encodedTree = WynnBuilderTreeCodec.encodeBestEffort(
+                    definition, abilityTreeState.selected(abilityClass));
+            tree = encodedTree.hash();
+            if (!encodedTree.skippedAbilities().isEmpty()) {
+                warnings.add("Skipped incompatible abilities: "
+                        + String.join(", ", encodedTree.skippedAbilities()) + ".");
+                warningNodeIds.addAll(skippedAbilityIds(encodedTree));
+            }
         }
         Integer[] skills = Arrays.stream(assignedSkills).boxed().toArray(Integer[]::new);
         WynnBuilderBuild build = new WynnBuilderBuild(
                 WynnBuilderVersions.latestIndex(), equipment, powders, tomes, skills, level, aspects,
                 new WynnBuilderBuild.BitPayload(tree, tree.length() * 6));
-        return equipment.get(WynnBuilderBuild.EquipmentSlot.WEAPON) instanceof WynnBuilderBuild.Equipment.None
+        String hash = equipment.get(WynnBuilderBuild.EquipmentSlot.WEAPON) instanceof WynnBuilderBuild.Equipment.None
                 ? WynnBuilderLegacyBuildCodec.encodeWithoutWeapon(build)
                 : WynnBuilderBuildCodec.encode(build);
+        return new EncodedBuild(hash, List.copyOf(warnings), Set.copyOf(warningNodeIds));
     }
 
     private static List<WynnBuilderBuild.Powder> parsePowders(String code) {
@@ -708,6 +1081,8 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void applyBuild(SavedBuild build) {
+        abilityTreeNotices = List.of();
+        abilityTreeNoticeNodeIds = Set.of();
         equipped.clear();
         powderCodes.clear();
         for (Map.Entry<String, String> entry : build.equipment().entrySet()) {
@@ -831,11 +1206,70 @@ public final class BuilderScreen extends PlannerScreen {
         notifiedWorkspaceError = error;
     }
 
+    private SavedBuild historySnapshot() {
+        CharacterClass abilityClass = selectedAbilityClass();
+        return snapshotBuild(tabName,
+                abilityClass == null ? selectedClass : abilityClass, true);
+    }
+
+    private void captureHistoryChange() {
+        SavedBuild current = historySnapshot();
+        if (lastHistoryState == null) {
+            lastHistoryState = current;
+            return;
+        }
+        if (sameBuildState(lastHistoryState, current)) return;
+        pushHistory(undoHistory, lastHistoryState);
+        redoHistory.clear();
+        lastHistoryState = current;
+    }
+
+    private void undoBuildChange() {
+        captureHistoryChange();
+        if (undoHistory.isEmpty()) return;
+        pushHistory(redoHistory, historySnapshot());
+        applyHistoryState(undoHistory.pop());
+    }
+
+    private void redoBuildChange() {
+        captureHistoryChange();
+        if (redoHistory.isEmpty()) return;
+        pushHistory(undoHistory, historySnapshot());
+        applyHistoryState(redoHistory.pop());
+    }
+
+    private void applyHistoryState(SavedBuild state) {
+        tabName = state.name();
+        applyBuild(state);
+        lastHistoryState = historySnapshot();
+        notice = "";
+        saveWorkspace();
+        rebuildWidgets();
+    }
+
+    private void pushHistory(Deque<SavedBuild> history, SavedBuild state) {
+        history.push(state);
+        if (history.size() > 100) history.removeLast();
+    }
+
+    private boolean sameBuildState(SavedBuild first, SavedBuild second) {
+        return first.name().equals(second.name())
+                && first.characterClass().equals(second.characterClass())
+                && first.level() == second.level()
+                && first.equipment().equals(second.equipment())
+                && first.powders().equals(second.powders())
+                && Arrays.equals(first.assignedSkills(), second.assignedSkills())
+                && first.tomes().equals(second.tomes())
+                && first.aspects().equals(second.aspects())
+                && first.abilityTrees().equals(second.abilityTrees());
+    }
+
     private void buildTabWidgets(Layout layout) {
         WorkspaceTabs.add(parent, toolTabId, 12, 8, width - 24, this::addDynamic);
         int classWidth = 116;
         TextInputWidget nameField = textInput(
-                MARGIN + 10, layout.equipmentTop + 6, layout.leftWidth - classWidth - 24, 20, "Tab name");
+                MARGIN + 10, layout.equipmentTop + PANEL_TOP_INSET,
+                layout.leftWidth - classWidth - 24, 20, "Tab name");
         nameField.setMaxLength(64);
         nameField.setInput(tabName);
         nameField.setOnChange(value -> {
@@ -846,7 +1280,8 @@ public final class BuilderScreen extends PlannerScreen {
         });
         addDynamicField(nameField);
         classSelector = new ClassSelectorWidget(
-                MARGIN + layout.leftWidth - classWidth - 8, layout.equipmentTop + 6, classWidth, 20);
+                MARGIN + layout.leftWidth - classWidth - 8,
+                layout.equipmentTop + PANEL_TOP_INSET, classWidth, 20);
         addRootWidget(classSelector);
     }
 
@@ -860,6 +1295,7 @@ public final class BuilderScreen extends PlannerScreen {
     @Override
     public void tick() {
         super.tick();
+        if (pendingBuild == null) captureHistoryChange();
         if (++workspaceTicks % 40 == 0) {
             if (pendingBuild != null) {
                 restorePendingBuild();
@@ -932,6 +1368,44 @@ public final class BuilderScreen extends PlannerScreen {
         Layout layout = layout();
         if (WorkspaceTabs.scroll(parent, toolTabId, 12, 8, width - 24,
                 logicalX, logicalY, horizontalAmount, verticalAmount)) return true;
+        if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
+            if (abilityPresetOverlay == AbilityPresetOverlay.SAVED) {
+                AbilityPresetPanel panel = abilityPresetPanel();
+                if (logicalX >= panel.x() && logicalX < panel.x() + panel.width()
+                        && logicalY >= panel.y() && logicalY < panel.y() + panel.height()) {
+                    int visibleRows = Math.max(1, (panel.height() - 82) / 24);
+                    int maxScroll = Math.max(0, visibleAbilityPresets.size() - visibleRows);
+                    int next = Math.clamp(
+                            abilityPresetScroll - (int) Math.signum(verticalAmount),
+                            0, maxScroll);
+                    if (next != abilityPresetScroll) {
+                        abilityPresetScroll = next;
+                        rebuildWidgets();
+                    }
+                }
+            }
+            return true;
+        }
+        if (abilityTreeVisible && isInAbilityTreeSidebar(layout, logicalX, logicalY)) {
+            abilitySidebarScroll.move(
+                    (float) -Math.signum(verticalAmount) * 24.0F,
+                    0.0F,
+                    abilitySidebarMaxScroll);
+            return true;
+        }
+        if (abilityTreeVisible && isInAbilityTreeArea(layout, logicalX, logicalY)) {
+            AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+            if (definition != null) {
+                int viewportHeight = abilityTreeBottom(layout) - abilityTreeTop(layout);
+                int contentHeight = definition.maxY() * 40 + 24;
+                int maxScroll = Math.max(0, contentHeight - viewportHeight);
+                abilityTreeScroll.move(
+                        (float) -Math.signum(verticalAmount) * 36.0F,
+                        0.0F,
+                        maxScroll);
+            }
+            return true;
+        }
         if (logicalX >= layout.middleX && logicalX < layout.middleX + layout.middleWidth
                 && logicalY >= layout.equipmentTop + 30 && logicalY < this.height - MARGIN - 28) {
             summaryScroll.move(
@@ -963,6 +1437,9 @@ public final class BuilderScreen extends PlannerScreen {
             detailScroll.jump(0.0F);
             return true;
         }
+        if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
+            return super.mouseClicked(click, doubled);
+        }
         if (pickerSlot != null && logical.button() == 0) {
             int pickerWidth = Math.min(520, this.width - 60);
             int pickerHeight = Math.min(326, this.height - 50);
@@ -977,8 +1454,12 @@ public final class BuilderScreen extends PlannerScreen {
             }
         }
         if (pickerSlot == null && logical.button() == 0) {
-            if (summaryScrollbar.mouseClicked(logical.x(), logical.y(), logical.button())
-                    || damageScrollbar.mouseClicked(logical.x(), logical.y(), logical.button())) return true;
+            if (abilityTreeVisible
+                    && (abilityTreeScrollbar.mouseClicked(logical.x(), logical.y(), logical.button())
+                    || abilitySidebarScrollbar.mouseClicked(logical.x(), logical.y(), logical.button()))) return true;
+            if (!abilityTreeVisible
+                    && (summaryScrollbar.mouseClicked(logical.x(), logical.y(), logical.button())
+                    || damageScrollbar.mouseClicked(logical.x(), logical.y(), logical.button()))) return true;
             Layout layout = layout();
             for (BuildSlot slot : BuildSlot.values()) {
                 SlotPosition position = slotPosition(layout, slot);
@@ -988,12 +1469,14 @@ public final class BuilderScreen extends PlannerScreen {
                     return true;
                 }
             }
-            for (DamageCardBounds card : damageCards) {
-                if (logical.x() >= card.left() && logical.x() < card.right()
-                        && logical.y() >= card.top() && logical.y() < card.bottom()) {
-                    expandedSpell = expandedSpell == card.spell() ? -1 : card.spell();
-                    damageScroll.jump(0.0F);
-                    return true;
+            if (!abilityTreeVisible) {
+                for (DamageCardBounds card : damageCards) {
+                    if (logical.x() >= card.left() && logical.x() < card.right()
+                            && logical.y() >= card.top() && logical.y() < card.bottom()) {
+                        expandedSpell = expandedSpell == card.spell() ? -1 : card.spell();
+                        damageScroll.jump(0.0F);
+                        return true;
+                    }
                 }
             }
         }
@@ -1003,23 +1486,45 @@ public final class BuilderScreen extends PlannerScreen {
     @Override
     public boolean mouseDragged(Click click, double deltaX, double deltaY) {
         Click logical = logicalClick(click);
-        if (summaryScrollbar.mouseDragged(logical.x(), logical.y(), logical.button(),
+        if (abilityTreeVisible && (abilityTreeScrollbar.mouseDragged(
+                logical.x(), logical.y(), logical.button(), deltaX / matrixScale, deltaY / matrixScale)
+                || abilitySidebarScrollbar.mouseDragged(
+                logical.x(), logical.y(), logical.button(), deltaX / matrixScale, deltaY / matrixScale))) return true;
+        if (!abilityTreeVisible && (summaryScrollbar.mouseDragged(logical.x(), logical.y(), logical.button(),
                 deltaX / matrixScale, deltaY / matrixScale)
                 || damageScrollbar.mouseDragged(logical.x(), logical.y(), logical.button(),
-                deltaX / matrixScale, deltaY / matrixScale)) return true;
+                deltaX / matrixScale, deltaY / matrixScale))) return true;
         return super.mouseDragged(click, deltaX, deltaY);
     }
 
     @Override
     public boolean mouseReleased(Click click) {
         Click logical = logicalClick(click);
-        if (summaryScrollbar.mouseReleased(logical.x(), logical.y(), logical.button())
-                || damageScrollbar.mouseReleased(logical.x(), logical.y(), logical.button())) return true;
+        if (abilityTreeVisible
+                && (abilityTreeScrollbar.mouseReleased(logical.x(), logical.y(), logical.button())
+                || abilitySidebarScrollbar.mouseReleased(logical.x(), logical.y(), logical.button()))) return true;
+        if (!abilityTreeVisible
+                && (summaryScrollbar.mouseReleased(logical.x(), logical.y(), logical.button())
+                || damageScrollbar.mouseReleased(logical.x(), logical.y(), logical.button()))) return true;
         return super.mouseReleased(click);
     }
 
     @Override
     public boolean keyPressed(KeyInput input) {
+        boolean control = (input.modifiers() & GLFW.GLFW_MOD_CONTROL) != 0;
+        if (control && matchesPrintableKey(input, GLFW.GLFW_KEY_Z, "z")) {
+            undoBuildChange();
+            return true;
+        }
+        if (control && matchesPrintableKey(input, GLFW.GLFW_KEY_Y, "y")) {
+            redoBuildChange();
+            return true;
+        }
+        if (abilityPresetOverlay != AbilityPresetOverlay.NONE
+                && input.key() == GLFW.GLFW_KEY_ESCAPE) {
+            closeAbilityPresetOverlay();
+            return true;
+        }
         if (pickerSlot != null) {
             if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER) {
                 if (pickerList != null) pickerList.chooseFirst();
@@ -1033,6 +1538,11 @@ public final class BuilderScreen extends PlannerScreen {
             }
         }
         return super.keyPressed(input);
+    }
+
+    private static boolean matchesPrintableKey(KeyInput input, int fallbackKey, String name) {
+        String keyName = GLFW.glfwGetKeyName(input.key(), input.scancode());
+        return keyName == null ? input.key() == fallbackKey : keyName.equalsIgnoreCase(name);
     }
 
     @Override
@@ -1052,8 +1562,12 @@ public final class BuilderScreen extends PlannerScreen {
         renderPanels(context, layout);
         renderEquipment(context, layout);
         renderSkills(context, layout, stats);
-        renderSummary(context, layout, stats, mouseX, mouseY, delta);
-        renderDamage(context, layout, stats, mouseX, mouseY, delta);
+        if (abilityTreeVisible) {
+            renderAbilityTree(context, layout, mouseX, mouseY, delta);
+        } else {
+            renderSummary(context, layout, stats, mouseX, mouseY, delta);
+            renderDamage(context, layout, stats, mouseX, mouseY, delta);
+        }
         renderBoostArea(context, layout, stats);
         renderVanillaChildren(context, mouseX, mouseY, delta);
         if (detailItem == null) {
@@ -1069,8 +1583,190 @@ public final class BuilderScreen extends PlannerScreen {
 
     @Override
     protected void drawPlannerForeground(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (pickerSlot == null) return;
-        for (ThemedButton button : pickerButtons) button.render(context, mouseX, mouseY, delta);
+        if (pickerSlot != null) {
+            for (ThemedButton button : pickerButtons) button.render(context, mouseX, mouseY, delta);
+            return;
+        }
+        if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
+            for (ThemedButton button : abilityPresetButtons) {
+                button.render(context, mouseX, mouseY, delta);
+            }
+            return;
+        }
+        if (abilityTreeVisible && abilityTreeWidget != null) {
+            renderAbilityTreeStatus();
+            if (hoveredArchetype != null) renderArchetypeTooltip(mouseX, mouseY);
+            else renderAbilityTreeTooltip(mouseX, mouseY);
+        }
+    }
+
+    private void renderArchetypeTooltip(int mouseX, int mouseY) {
+        List<Text> lines = new ArrayList<>();
+        lines.add(Text.literal(hoveredArchetype.name() + " Archetype")
+                .formatted(Formatting.BOLD)
+                .styled(style -> style.withColor(hoveredArchetype.color())));
+        if (!hoveredArchetype.description().isBlank()) {
+            lines.add(Text.empty());
+            String description = hoveredArchetype.description().trim();
+            int qualifierStart = description.lastIndexOf(" (");
+            String main = qualifierStart < 0 ? description : description.substring(0, qualifierStart).trim();
+            String qualifier = qualifierStart < 0 ? "" : description.substring(qualifierStart + 1).trim();
+            lines.addAll(wrapTooltipText(main, 220, 0xFFDDDDDD));
+            lines.addAll(wrapTooltipText(qualifier, 220, 0xFF666666));
+        }
+        renderPlannerTooltip(drawContext, lines, mouseX, mouseY);
+    }
+
+    private List<Text> wrapTooltipText(String value, int width, int color) {
+        if (value.isBlank()) return List.of();
+        List<Text> result = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : value.split("\\s+")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && textRenderer.getWidth(candidate) > width) {
+                result.add(Text.literal(line.toString()).styled(style -> style.withColor(color)));
+                line.setLength(0);
+            }
+            if (!line.isEmpty()) line.append(' ');
+            line.append(word);
+        }
+        if (!line.isEmpty()) {
+            result.add(Text.literal(line.toString()).styled(style -> style.withColor(color)));
+        }
+        return List.copyOf(result);
+    }
+
+    private void renderAbilityTreeStatus() {
+        if (abilityTreeStatus.isEmpty()
+                || System.currentTimeMillis() >= abilityTreeStatusUntil) return;
+        Layout layout = layout();
+        int left = layout.middleX + 4;
+        int right = layout.rightX + layout.rightWidth - 4;
+        ui.drawCenteredTextWithShadow(
+                textRenderer,
+                abilityTreeStatus,
+                left + (right - left) / 2,
+                abilityTreeBottom(layout) - 13,
+                abilityTreeStatus.contains("copied")
+                        || abilityTreeStatus.contains("imported")
+                        || abilityTreeStatus.contains("reset")
+                        ? 0xFF55FF55 : 0xFFFF5555);
+    }
+
+    private void renderAbilityTreeTooltip(int mouseX, int mouseY) {
+        AbilityMapData.Node hovered = abilityTreeWidget.getCurrentHoveredNode();
+        AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+        if (hovered == null || hovered.meta == null || definition == null) return;
+        AbilityTreeDefinition.Node node = definition.nodes().get(hovered.meta.id);
+        if (node == null) return;
+
+        List<Text> lines = abilityTooltipLines(definition, node);
+        renderPlannerTooltip(drawContext, lines, mouseX, mouseY);
+    }
+
+    private List<Text> abilityTooltipLines(
+            AbilityTreeDefinition definition,
+            AbilityTreeDefinition.Node node
+    ) {
+        List<Text> lines = new ArrayList<>();
+        List<Text> name = WynncraftApiHandler.parseStyledHtml(List.of(node.formattedName()));
+        lines.add(name.isEmpty()
+                ? Text.literal(node.name()).formatted(Formatting.BOLD)
+                        .styled(style -> style.withColor(node.color()))
+                : name.getFirst());
+        lines.addAll(WynncraftApiHandler.parseStyledHtml(abilityDescriptionLines(node)));
+
+        AbilityTreeDefinition.Archetype archetype = definition.archetypes().get(node.archetype());
+        if (archetype != null) {
+            lines.add(Text.empty());
+            lines.add(Text.literal(archetype.name() + " Archetype")
+                    .formatted(Formatting.BOLD)
+                    .styled(style -> style.withColor(archetype.color())));
+        }
+
+        lines.add(Text.empty());
+        Set<String> selected = abilityTreeState.selected(selectedClass);
+        int remaining = abilityTreeState.remaining(definition, level);
+        boolean alreadySelected = selected.contains(node.id());
+        lines.add(abilityRequirementLine(
+                alreadySelected || remaining >= node.abilityPointCost(),
+                "Ability Points: ", Integer.toString(node.abilityPointCost())));
+        for (String requiredId : node.requiredNodes()) {
+            AbilityTreeDefinition.Node required = definition.nodes().get(requiredId);
+            lines.add(abilityRequirementLine(
+                    selected.contains(requiredId),
+                    "Required Ability: ",
+                    required == null ? requiredId : required.name()));
+        }
+        if (node.archetypeRequirement() != null) {
+            AbilityTreeDefinition.ArchetypeRequirement requirement = node.archetypeRequirement();
+            AbilityTreeDefinition.Archetype requiredArchetype =
+                    definition.archetypes().get(requirement.archetype());
+            int current = abilityTreeState.archetypeCounts(definition)
+                    .getOrDefault(requirement.archetype(), 0);
+            lines.add(abilityArchetypeRequirementLine(
+                    current >= requirement.amount(),
+                    "Min " + (requiredArchetype == null
+                            ? requirement.archetype() : requiredArchetype.name()) + " Archetype: ",
+                    current, requirement.amount()));
+        }
+        if (node.combatLevel() > 0) {
+            lines.add(abilityRequirementLine(
+                    level >= node.combatLevel(),
+                    "Combat Lv. min: ", Integer.toString(node.combatLevel())));
+        }
+        for (String lockedId : node.locks()) {
+            AbilityTreeDefinition.Node locked = definition.nodes().get(lockedId);
+            lines.add(Text.literal("\u2716 ").formatted(Formatting.RED)
+                    .append(Text.literal("Blocks Ability: ").formatted(Formatting.GRAY))
+                    .append(Text.literal(locked == null ? lockedId : locked.name())
+                            .formatted(Formatting.WHITE)));
+        }
+        return lines;
+    }
+
+    private List<String> abilityDescriptionLines(AbilityTreeDefinition.Node node) {
+        List<String> result = new ArrayList<>();
+        for (String formattedLine : node.formattedDescription()) {
+            String plain = WynncraftApiHandler.stripHtml(formattedLine).trim();
+            if (plain.startsWith("Ability Points:")
+                    || plain.startsWith("Required Ability:")
+                    || plain.startsWith("Archetype Requirement:")
+                    || (plain.startsWith("Min ") && plain.contains(" Archetype:"))
+                    || plain.startsWith("Combat Lv")
+                    || plain.startsWith("Unlocking will block:")
+                    || (!node.locks().isEmpty() && plain.startsWith("- "))
+                    || plain.endsWith(" Archetype")) {
+                continue;
+            }
+            if (plain.isEmpty()) {
+                if (!result.isEmpty() && !result.getLast().isEmpty()) result.add("");
+            } else {
+                result.add(formattedLine);
+            }
+        }
+        while (!result.isEmpty() && result.getLast().isEmpty()) result.removeLast();
+        return result;
+    }
+
+    private MutableText abilityRequirementLine(boolean fulfilled, String label, String value) {
+        return Text.literal(fulfilled ? "\u2714 " : "\u2716 ")
+                .formatted(fulfilled ? Formatting.GREEN : Formatting.RED)
+                .append(Text.literal(label).formatted(Formatting.GRAY))
+                .append(Text.literal(value).formatted(Formatting.WHITE));
+    }
+
+    private MutableText abilityArchetypeRequirementLine(
+            boolean fulfilled,
+            String label,
+            int current,
+            int required
+    ) {
+        return Text.literal(fulfilled ? "\u2714 " : "\u2716 ")
+                .formatted(fulfilled ? Formatting.GREEN : Formatting.RED)
+                .append(Text.literal(label).formatted(Formatting.GRAY))
+                .append(Text.literal(Integer.toString(current)).formatted(Formatting.WHITE))
+                .append(Text.literal("/" + required).formatted(Formatting.GRAY));
     }
 
     private void renderWorkspaceError(DrawContext context) {
@@ -1083,18 +1779,18 @@ public final class BuilderScreen extends PlannerScreen {
 
     private void renderNotice(Layout layout) {
         if (!notice.isBlank()) {
-            int footerGap = 4;
-            int footerButtonWidth = (layout.rightWidth - 16 - footerGap * 4) / 5;
-            int footerX = layout.rightX + 8;
-            int anchorIndex = noticeSource == NoticeSource.IMPORT ? 0 : 1;
-            int anchorX = footerX + anchorIndex * (footerButtonWidth + footerGap) + footerButtonWidth / 2;
-            int maxWidth = layout.rightWidth - 24;
-            String message = fitText(notice, maxWidth);
-            int messageWidth = textRenderer.getWidth(message);
-            int textX = Math.clamp(anchorX - messageWidth / 2,
-                    layout.rightX + 12, layout.rightX + layout.rightWidth - 12 - messageWidth);
-            ui.drawTextWithShadow(textRenderer, message, textX,
-                    this.height - MARGIN - 35, 0xFFFFAA55);
+            int left = layout.middleX + 8;
+            int width = layout.rightX + layout.rightWidth - left - 8;
+            List<net.minecraft.text.OrderedText> lines = textRenderer.wrapLines(
+                    Text.literal(notice), width - 12);
+            int visibleLines = Math.min(4, lines.size());
+            int height = visibleLines * 11 + 8;
+            int top = this.height - MARGIN - 29 - height;
+            UiTheme.drawSquarePanel(ui, left, top, width, height);
+            for (int i = 0; i < visibleLines; i++) {
+                ui.drawText(textRenderer, lines.get(i), left + 6, top + 5 + i * 11,
+                        0xFFFFAA55, true);
+            }
         }
     }
 
@@ -1107,11 +1803,446 @@ public final class BuilderScreen extends PlannerScreen {
         UiTheme.drawPanel(ui, MARGIN, layout.equipmentTop, layout.leftWidth, layout.equipmentHeight);
         UiTheme.drawPanel(ui, MARGIN, layout.skillTop, layout.leftWidth, layout.skillHeight);
         UiTheme.drawPanel(ui, MARGIN, layout.boostTop, layout.leftWidth, layout.boostHeight);
-        UiTheme.drawPanel(ui, layout.middleX, layout.equipmentTop, layout.middleWidth,
-                this.height - MARGIN - layout.equipmentTop);
-        UiTheme.drawPanel(ui, layout.rightX, layout.equipmentTop, layout.rightWidth,
-                this.height - MARGIN - layout.equipmentTop);
+        if (abilityTreeVisible) {
+            AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
+            UiTheme.drawPanel(ui, treeLayout.treeLeft(), layout.equipmentTop,
+                    treeLayout.treeWidth(),
+                    this.height - MARGIN - layout.equipmentTop);
+            UiTheme.drawPanel(ui, treeLayout.sidebarX(), layout.equipmentTop,
+                    treeLayout.sidebarWidth(),
+                    this.height - MARGIN - layout.equipmentTop);
+        } else {
+            UiTheme.drawPanel(ui, layout.middleX, layout.equipmentTop, layout.middleWidth,
+                    this.height - MARGIN - layout.equipmentTop);
+            UiTheme.drawPanel(ui, layout.rightX, layout.equipmentTop, layout.rightWidth,
+                    this.height - MARGIN - layout.equipmentTop);
+        }
+    }
 
+    private void renderAbilityTree(
+            DrawContext context,
+            Layout layout,
+            int mouseX,
+            int mouseY,
+            float delta
+    ) {
+        AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
+        int left = treeLayout.treeLeft() + 4;
+        int right = treeLayout.treeLeft() + treeLayout.treeWidth() - 10;
+        int top = abilityTreeTop(layout);
+        int bottom = abilityTreeBottom(layout);
+        int width = right - left;
+        AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
+        AbilityMapData classMap = AbilityTreeCache.getClassMap(selectedClass.apiName());
+
+        ui.fill(left, top, right, bottom, 0xFF383A45);
+        ui.enableScissor(left, top, right, bottom);
+        ui.drawTexture(
+                RenderPipelines.GUI_TEXTURED,
+                TREE_BACKGROUND,
+                left - 24, top - 24,
+                315, 23,
+                width + 48, bottom - top + 48,
+                274, 174,
+                590, 220);
+        ui.disableScissor();
+
+        renderAbilityTreeSidebar(context, layout, treeLayout, definition, mouseX, mouseY, delta);
+
+        if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
+            abilityTreeWidget.setVisible(false);
+            return;
+        }
+
+        if (definition == null || classMap == null) {
+            String error = AbilityTreeDatabase.getInstance().error(selectedClass);
+            ui.drawCenteredTextWithShadow(
+                    textRenderer,
+                    error.isEmpty() ? "Loading live Wynncraft ability tree..." : error,
+                    left + width / 2,
+                    (top + bottom) / 2,
+                    error.isEmpty() ? 0xFFAAAAAA : 0xFFFF5555);
+            abilityTreeWidget.setVisible(false);
+            return;
+        }
+
+        int treeTop = top;
+        int viewportHeight = bottom - treeTop;
+        int contentHeight = definition.maxY() * 40 + 24;
+        abilityTreeMaxScroll = Math.max(0, contentHeight - viewportHeight);
+        abilityTreeScroll.clamp(0.0F, abilityTreeMaxScroll);
+        int minNodeX = definition.nodes().values().stream()
+                .mapToInt(AbilityTreeDefinition.Node::x).min().orElse(5);
+        int maxNodeX = definition.nodes().values().stream()
+                .mapToInt(AbilityTreeDefinition.Node::x).max().orElse(5);
+        int contentCenter = Math.round((minNodeX + maxNodeX) * 37.5F + 987.5F);
+        int widgetX = left + right - contentCenter;
+        int widgetTopOffset = 30;
+        int widgetY = treeTop * 2 - widgetTopOffset;
+        int widgetBotLimit = viewportHeight * 2 + widgetTopOffset;
+        abilityTreeWidget.setVisible(true);
+        abilityTreeWidget.setClassName(selectedClass.apiName());
+        abilityTreeWidget.setViewport(
+                widgetX, widgetY, width * 2, viewportHeight * 2, widgetBotLimit);
+        abilityTreeWidget.setClipBounds(
+                left * 2, treeTop * 2, width * 2, viewportHeight * 2);
+        if (abilityTreeWidget.classTree != classMap) {
+            abilityTreeWidget.setClassTree(classMap);
+        }
+        abilityTreeWidget.setScrollOffset(Math.round(abilityTreeScroll.update(delta) * 2));
+        abilityTreeWidget.setSelectedIds(abilityTreeState.selected(selectedClass));
+        abilityTreeWidget.setSearchIds(abilityTreeSearchNodeIds(definition));
+        abilityTreeWidget.setSearchActive(!abilityTreeSearch.isBlank());
+        Set<String> warningNodeIds = new LinkedHashSet<>(abilityTreeNoticeNodeIds);
+        warningNodeIds.addAll(nodeIdsMentionedInWarnings(definition, abilityTreeNotices));
+        abilityTreeWidget.setHighlightedIds(
+                warningNodeIds,
+                abilityTreeErrorNodeIds(
+                        definition,
+                        abilityTreeState.archetypeCounts(definition),
+                        AbilityTreeState.abilityPointsForLevel(level)));
+        abilityTreeScrollbar.configure(
+                treeLayout.treeLeft() + treeLayout.treeWidth() - 8,
+                treeTop - 2,
+                viewportHeight + 2,
+                abilityTreeMaxScroll);
+        abilityTreeScrollbar.draw(context, mouseX, mouseY, delta, ui);
+
+    }
+
+    private void renderAbilityTreeSidebar(
+            DrawContext context,
+            Layout layout,
+            AbilityTreeLayout treeLayout,
+            AbilityTreeDefinition definition,
+            int mouseX,
+            int mouseY,
+            float delta
+    ) {
+        int x = treeLayout.sidebarX() + 8;
+        int width = treeLayout.sidebarWidth() - 22;
+        int y = layout.equipmentTop + 8;
+        hoveredArchetype = null;
+        if (definition == null) {
+            ui.drawCenteredTextWithShadow(
+                    textRenderer, "Loading...", x + width / 2, y, 0xFFAAAAAA);
+            return;
+        }
+        Map<String, Integer> counts = abilityTreeState.archetypeCounts(definition);
+        int spent = abilityTreeState.spent(definition);
+        int capacity = AbilityTreeState.abilityPointsForLevel(level);
+        drawLargeCenteredText(
+                Text.literal(spent + "/" + capacity + " AP").formatted(Formatting.BOLD),
+                x + width / 2, y, 0xFFFFFFFF);
+        y += 18;
+        List<AbilityTreeDefinition.Archetype> archetypes = new ArrayList<>(
+                definition.archetypes().values());
+        int columnWidth = width / Math.max(1, archetypes.size());
+        int iconSize = 52;
+        for (int i = 0; i < archetypes.size(); i++) {
+            AbilityTreeDefinition.Archetype archetype = archetypes.get(i);
+            int centerX = x + columnWidth * i + columnWidth / 2;
+            int iconX = centerX - iconSize / 2;
+            int count = counts.getOrDefault(archetype.id(), 0);
+            ArchetypeIcon icon = archetypeIcon(archetype.name());
+            ui.drawTexture(RenderPipelines.GUI_TEXTURED, ARCHETYPE_ICONS, iconX, y,
+                    icon.u(), icon.v(), iconSize, iconSize, 32, 32, 96, 160);
+            if (mouseX >= iconX && mouseX < iconX + iconSize
+                    && mouseY >= y && mouseY < y + iconSize) {
+                hoveredArchetype = archetype;
+            }
+            ui.drawCenteredTextWithShadow(textRenderer, count + " pts",
+                    centerX, y + iconSize + 1, archetype.color());
+            ui.drawCenteredTextWithShadow(textRenderer,
+                    fitText(archetype.name(), columnWidth - 4),
+                    centerX, y + iconSize + 12, archetype.color());
+        }
+        y += iconSize + 30;
+        ui.drawTextWithShadow(
+                textRenderer,
+                Text.literal("Active Abilities").formatted(Formatting.BOLD),
+                x, y, 0xFFFFFFFF);
+
+        int listTop = y + 14;
+        int listBottom = abilityTreeBottom(layout) - 29;
+        List<String> warnings = abilityTreeWarnings(definition, counts, capacity);
+        List<net.minecraft.text.OrderedText> importWarningLines = new ArrayList<>();
+        for (String warning : abilityTreeNotices) {
+            importWarningLines.addAll(textRenderer.wrapLines(Text.literal(warning), width));
+        }
+        List<net.minecraft.text.OrderedText> warningLines = new ArrayList<>();
+        for (String warning : warnings) {
+            warningLines.addAll(textRenderer.wrapLines(Text.literal(warning), width));
+        }
+        List<AbilitySidebarEntry> entries = abilitySidebarEntries(definition, width - 10);
+        int contentHeight = abilityTreeNotices.isEmpty()
+                ? 0 : 15 + importWarningLines.size() * 11 + 5;
+        if (!warnings.isEmpty()) contentHeight += 15 + warningLines.size() * 11 + 5;
+        if (abilityTreeNotices.isEmpty() && warnings.isEmpty() && entries.isEmpty()) contentHeight = 11;
+        for (AbilitySidebarEntry entry : entries) contentHeight += entry.height() + 4;
+        abilitySidebarMaxScroll = Math.max(0, contentHeight - (listBottom - listTop));
+        abilitySidebarScroll.clamp(0.0F, abilitySidebarMaxScroll);
+        int contentY = listTop - Math.round(abilitySidebarScroll.update(delta));
+        if (abilityTreeWarningDismissButton != null) {
+            abilityTreeWarningDismissButton.setPosition(x + width - 14, contentY - 2);
+            abilityTreeWarningDismissButton.visible = !abilityTreeNotices.isEmpty()
+                    && abilityPresetOverlay == AbilityPresetOverlay.NONE
+                    && pickerSlot == null
+                    && contentY >= listTop && contentY + 12 <= listBottom;
+        }
+
+        ui.enableScissor(x - 2, listTop, x + width + 2, listBottom);
+        if (!abilityTreeNotices.isEmpty()) {
+            ui.drawTextWithShadow(textRenderer,
+                    Text.literal("ATree Warning!").formatted(Formatting.BOLD),
+                    x, contentY, 0xFFFFAA00);
+            contentY += 13;
+            for (net.minecraft.text.OrderedText warning : importWarningLines) {
+                ui.drawText(textRenderer, warning, x, contentY, 0xFFFFCC55, true);
+                contentY += 11;
+            }
+            contentY += 5;
+        }
+        if (!warnings.isEmpty()) {
+            ui.drawTextWithShadow(textRenderer,
+                    Text.literal("ATree Error!").formatted(Formatting.BOLD),
+                    x, contentY, 0xFFFF5555);
+            contentY += 13;
+            for (net.minecraft.text.OrderedText warning : warningLines) {
+                ui.drawText(textRenderer, warning, x, contentY, 0xFFFF7777, true);
+                contentY += 11;
+            }
+            contentY += 5;
+        } else if (entries.isEmpty()) {
+            ui.drawTextWithShadow(textRenderer, "No abilities selected", x, contentY, 0xFF777777);
+        }
+        for (AbilitySidebarEntry entry : entries) {
+            int cardY = contentY;
+            if (cardY + entry.height() >= listTop && cardY < listBottom) {
+                UiTheme.drawRoundedBox(ui, x, cardY, width, entry.height(),
+                        UiTheme.SURFACE, entry.node().color());
+                ui.drawTextWithShadow(textRenderer,
+                        Text.literal(entry.node().name()).formatted(Formatting.BOLD),
+                        x + 5, cardY + 4, entry.node().color());
+                int textY = cardY + 16;
+                for (net.minecraft.text.OrderedText line : entry.lines()) {
+                    ui.drawText(textRenderer, line, x + 5, textY, 0xFFAAAAAA, false);
+                    textY += 10;
+                }
+            }
+            contentY += entry.height() + 4;
+        }
+        ui.disableScissor();
+        abilitySidebarScrollbar.configure(
+                treeLayout.sidebarX() + treeLayout.sidebarWidth() - 8,
+                listTop,
+                listBottom - listTop,
+                abilitySidebarMaxScroll);
+        abilitySidebarScrollbar.draw(context, mouseX, mouseY, delta, ui);
+    }
+
+    private List<AbilitySidebarEntry> abilitySidebarEntries(
+            AbilityTreeDefinition definition,
+            int textWidth
+    ) {
+        Set<String> selected = abilityTreeState.selected(selectedClass);
+        int cacheKey = 31 * (31 * System.identityHashCode(definition) + selected.hashCode())
+                + textWidth;
+        if (cacheKey == abilitySidebarEntriesCacheKey) return abilitySidebarEntriesCache;
+        List<AbilitySidebarEntry> result = new ArrayList<>();
+        for (AbilityTreeDefinition.Node node : definition.nodes().values()) {
+            if (!selected.contains(node.id()) || !node.sidebarAbility()) continue;
+            List<net.minecraft.text.OrderedText> wrapped = new ArrayList<>();
+            for (Text line : WynncraftApiHandler.parseStyledHtml(abilityDescriptionLines(node))) {
+                if (line.getString().isEmpty()) {
+                    wrapped.add(Text.empty().asOrderedText());
+                } else {
+                    wrapped.addAll(textRenderer.wrapLines(line, textWidth));
+                }
+            }
+            result.add(new AbilitySidebarEntry(node, List.copyOf(wrapped),
+                    21 + wrapped.size() * 10));
+        }
+        abilitySidebarEntriesCacheKey = cacheKey;
+        abilitySidebarEntriesCache = List.copyOf(result);
+        return abilitySidebarEntriesCache;
+    }
+
+    private void drawLargeCenteredText(Text text, int x, int y, int color) {
+        ui.pushMatrix();
+        ui.translate(x, y);
+        ui.scale(1.25F, 1.25F);
+        ui.drawCenteredTextWithShadow(textRenderer, text, 0, 0, color);
+        ui.popMatrix();
+    }
+
+    private ArchetypeIcon archetypeIcon(String name) {
+        return switch (name.toLowerCase(Locale.ROOT)) {
+            case "boltslinger" -> new ArchetypeIcon(0, 0);
+            case "sharpshooter" -> new ArchetypeIcon(32, 0);
+            case "trapper" -> new ArchetypeIcon(64, 0);
+            case "acrobat" -> new ArchetypeIcon(0, 32);
+            case "shadestepper" -> new ArchetypeIcon(32, 32);
+            case "trickster" -> new ArchetypeIcon(64, 32);
+            case "arcanist" -> new ArchetypeIcon(0, 64);
+            case "light bender" -> new ArchetypeIcon(32, 64);
+            case "riftwalker" -> new ArchetypeIcon(64, 64);
+            case "acolyte" -> new ArchetypeIcon(0, 96);
+            case "ritualist" -> new ArchetypeIcon(32, 96);
+            case "summoner" -> new ArchetypeIcon(64, 96);
+            case "battle monk" -> new ArchetypeIcon(0, 128);
+            case "fallen" -> new ArchetypeIcon(32, 128);
+            case "paladin" -> new ArchetypeIcon(64, 128);
+            default -> new ArchetypeIcon(0, 0);
+        };
+    }
+
+    private List<String> abilityTreeWarnings(
+            AbilityTreeDefinition definition,
+            Map<String, Integer> archetypeCounts,
+            int capacity
+    ) {
+        List<String> warnings = new ArrayList<>();
+        Set<String> selected = abilityTreeState.selected(selectedClass);
+        if (abilityTreeState.spent(definition) > capacity) warnings.add("Too many ability points assigned");
+        for (AbilityTreeDefinition.Node node : definition.nodes().values()) {
+            if (!selected.contains(node.id())) continue;
+            if (node.combatLevel() > level) warnings.add(node.name() + ": requires combat level " + node.combatLevel());
+            for (String required : node.requiredNodes()) {
+                if (!selected.contains(required)) {
+                    AbilityTreeDefinition.Node requiredNode = definition.nodes().get(required);
+                    warnings.add(node.name() + ": requires "
+                            + (requiredNode == null ? required : requiredNode.name()));
+                }
+            }
+            if (node.archetypeRequirement() != null) {
+                AbilityTreeDefinition.ArchetypeRequirement requirement = node.archetypeRequirement();
+                int current = archetypeCounts.getOrDefault(requirement.archetype(), 0);
+                if (requirement.archetype().equals(node.archetype())) current--;
+                if (current < requirement.amount()) {
+                    AbilityTreeDefinition.Archetype archetype = definition.archetypes()
+                            .get(requirement.archetype());
+                    warnings.add(node.name() + ": requires " + requirement.amount() + " "
+                            + (archetype == null ? requirement.archetype() : archetype.name())
+                            + " points");
+                }
+            }
+            for (String locked : node.locks()) {
+                if (selected.contains(locked) && node.id().compareTo(locked) < 0) {
+                    AbilityTreeDefinition.Node lockedNode = definition.nodes().get(locked);
+                    warnings.add(node.name() + " blocks "
+                            + (lockedNode == null ? locked : lockedNode.name()));
+                }
+            }
+        }
+        return warnings;
+    }
+
+    private Set<String> abilityTreeErrorNodeIds(
+            AbilityTreeDefinition definition,
+            Map<String, Integer> archetypeCounts,
+            int capacity
+    ) {
+        Set<String> result = new LinkedHashSet<>();
+        Set<String> selected = abilityTreeState.selected(selectedClass);
+        if (abilityTreeState.spent(definition) > capacity) result.addAll(selected);
+        for (AbilityTreeDefinition.Node node : definition.nodes().values()) {
+            if (!selected.contains(node.id())) continue;
+            if (node.combatLevel() > level) result.add(node.id());
+            for (String required : node.requiredNodes()) {
+                if (!selected.contains(required)) {
+                    result.add(node.id());
+                    if (definition.nodes().containsKey(required)) result.add(required);
+                }
+            }
+            if (node.archetypeRequirement() != null) {
+                AbilityTreeDefinition.ArchetypeRequirement requirement = node.archetypeRequirement();
+                int current = archetypeCounts.getOrDefault(requirement.archetype(), 0);
+                if (requirement.archetype().equals(node.archetype())) current--;
+                if (current < requirement.amount()) result.add(node.id());
+            }
+            for (String locked : node.locks()) {
+                if (selected.contains(locked)) {
+                    result.add(node.id());
+                    result.add(locked);
+                }
+            }
+        }
+        return Set.copyOf(result);
+    }
+
+    private Set<String> skippedAbilityIds(WynnBuilderTreeCodec.EncodeResult encoded) {
+        Set<String> result = new LinkedHashSet<>(abilityTreeState.selected(selectedClass));
+        result.removeAll(encoded.encoded());
+        return Set.copyOf(result);
+    }
+
+    private Set<String> abilityTreeSearchNodeIds(AbilityTreeDefinition definition) {
+        if (definition == null || abilityTreeSearch.isBlank()) return Set.of();
+        String search = abilityTreeSearch.strip().toLowerCase(Locale.ROOT);
+        Set<String> result = new LinkedHashSet<>();
+        for (AbilityTreeDefinition.Node node : definition.nodes().values()) {
+            if (node.name().toLowerCase(Locale.ROOT).contains(search)) result.add(node.id());
+        }
+        return Set.copyOf(result);
+    }
+
+    private Set<String> nodeIdsMentionedInWarnings(
+            AbilityTreeDefinition definition,
+            List<String> warnings
+    ) {
+        Set<String> result = new LinkedHashSet<>();
+        for (AbilityTreeDefinition.Node node : definition.nodes().values()) {
+            for (String warning : warnings) {
+                if (warning.contains(node.name())) {
+                    result.add(node.id());
+                    break;
+                }
+            }
+        }
+        return Set.copyOf(result);
+    }
+
+    private int abilityTreeTop(Layout layout) {
+        return layout.equipmentTop + PANEL_TOP_INSET + 47;
+    }
+
+    private int abilityTreeBottom(Layout layout) {
+        return this.height - MARGIN - 28;
+    }
+
+    private boolean isInAbilityTreeArea(Layout layout, double mouseX, double mouseY) {
+        AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
+        return mouseX >= treeLayout.treeLeft()
+                && mouseX < treeLayout.treeLeft() + treeLayout.treeWidth()
+                && mouseY >= abilityTreeTop(layout)
+                && mouseY < abilityTreeBottom(layout);
+    }
+
+    private boolean isInAbilityTreeSidebar(Layout layout, double mouseX, double mouseY) {
+        AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
+        return mouseX >= treeLayout.sidebarX()
+                && mouseX < treeLayout.sidebarX() + treeLayout.sidebarWidth()
+                && mouseY >= layout.equipmentTop
+                && mouseY < abilityTreeBottom(layout) - 29;
+    }
+
+    private AbilityTreeLayout abilityTreeLayout(Layout layout) {
+        int areaLeft = layout.middleX;
+        int areaRight = layout.rightX + layout.rightWidth;
+        int areaWidth = areaRight - areaLeft;
+        int sidebarWidth = Math.clamp(areaWidth / 3, 180, 220);
+        int gap = GAP;
+        int treeWidth = areaWidth - sidebarWidth - gap;
+        return new AbilityTreeLayout(
+                areaLeft, treeWidth, areaLeft + treeWidth + gap, sidebarWidth);
+    }
+
+    private BuilderFooterLayout builderFooterLayout(Layout layout) {
+        int buttonX = layout.middleX + 4;
+        int buttonRight = layout.rightX + layout.rightWidth - 8;
+        int buttonWidth = (buttonRight - buttonX - 16) / 5;
+        return new BuilderFooterLayout(buttonX, buttonWidth);
     }
 
     private void renderEquipment(DrawContext context, Layout layout) {
@@ -1585,7 +2716,7 @@ public final class BuilderScreen extends PlannerScreen {
         int viewportTop = layout.equipmentTop + 4;
         int viewportBottom = this.height - MARGIN - 28;
         int visibleScroll = Math.round(damageScroll.update(delta));
-        int y = viewportTop + 4 - visibleScroll;
+        int y = layout.equipmentTop + PANEL_TOP_INSET - visibleScroll;
         damageCards.clear();
         ui.enableScissor(
                 layout.rightX + 3, viewportTop,
@@ -2619,6 +3750,90 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private record DamageCardBounds(int spell, int left, int top, int right, int bottom) {
+    }
+
+    private final class AbilityPresetOverlayWidget extends Widget {
+        private AbilityPresetOverlayWidget() {
+            super(0, 0, BuilderScreen.this.width, BuilderScreen.this.height);
+            setUiScaleFactor(1.0);
+        }
+
+        @Override
+        protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
+            Layout layout = layout();
+            int areaLeft = layout.middleX;
+            int areaRight = layout.rightX + layout.rightWidth;
+            int areaTop = layout.equipmentTop;
+            int areaBottom = BuilderScreen.this.height - MARGIN;
+            ui.fill(areaLeft, areaTop, areaRight, areaBottom, 0xBB000000);
+            AbilityPresetPanel panel = abilityPresetPanel();
+            UiTheme.drawPanel(ui, panel.x(), panel.y(), panel.width(), panel.height());
+            String title = abilityPresetOverlay == AbilityPresetOverlay.SAVE
+                    ? "Save Ability Tree" : "Saved Ability Trees";
+            ui.drawCenteredTextWithShadow(
+                    textRenderer,
+                    title,
+                    panel.x() + panel.width() / 2,
+                    panel.y() + 14,
+                    UiTheme.accentRgb());
+            if (abilityPresetOverlay == AbilityPresetOverlay.SAVE) {
+                ui.drawCenteredTextWithShadow(
+                        textRenderer,
+                        abilityTreeState.selected(selectedClass).size() + " selected abilities",
+                        panel.x() + panel.width() / 2,
+                        panel.y() + 70,
+                        selectedClass.color());
+            } else if (visibleAbilityPresets.isEmpty()) {
+                ui.drawCenteredTextWithShadow(
+                        textRenderer,
+                        "No saved trees yet.",
+                        panel.x() + panel.width() / 2,
+                        panel.y() + 70,
+                        0xFFAAAAAA);
+            }
+            if (!abilityTreeStatus.isEmpty()
+                    && System.currentTimeMillis() < abilityTreeStatusUntil) {
+                ui.drawCenteredTextWithShadow(
+                        textRenderer,
+                        abilityTreeStatus,
+                        panel.x() + panel.width() / 2,
+                        panel.y() + panel.height() - 48,
+                        0xFFFF5555);
+            }
+        }
+    }
+
+    private enum AbilityPresetOverlay {
+        NONE,
+        SAVE,
+        SAVED
+    }
+
+    private record AbilityPresetPanel(int x, int y, int width, int height) {
+    }
+
+    private record AbilityTreeLayout(
+            int treeLeft,
+            int treeWidth,
+            int sidebarX,
+            int sidebarWidth
+    ) {
+    }
+
+    private record AbilitySidebarEntry(
+            AbilityTreeDefinition.Node node,
+            List<net.minecraft.text.OrderedText> lines,
+            int height
+    ) {
+    }
+
+    private record ArchetypeIcon(int u, int v) {
+    }
+
+    private record BuilderFooterLayout(int buttonX, int buttonWidth) {
+    }
+
+    private record EncodedBuild(String hash, List<String> warnings, Set<String> warningNodeIds) {
     }
 
     private record Layout(

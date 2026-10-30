@@ -620,6 +620,7 @@ public final class CrafterScreen extends PlannerScreen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        clearUiFocus();
         Click logical = logicalClick(click);
         if (pageScrollbar.mouseClicked(logical.x(), logical.y(), logical.button())) return true;
         if ((logical.button() == 0 || logical.button() == 1)

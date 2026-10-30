@@ -21,7 +21,9 @@ public record AbilityTreeDefinition(
     public record Node(
             String id,
             String name,
+            String formattedName,
             List<String> description,
+            List<String> formattedDescription,
             int x,
             int y,
             int page,
@@ -32,7 +34,8 @@ public record AbilityTreeDefinition(
             List<String> locks,
             String archetype,
             int color,
-            String iconName
+            String iconName,
+            boolean sidebarAbility
     ) {
     }
 

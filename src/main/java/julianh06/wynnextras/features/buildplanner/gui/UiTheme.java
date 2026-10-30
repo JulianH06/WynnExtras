@@ -56,6 +56,15 @@ final class UiTheme {
         }
     }
 
+    static void drawSquarePanel(UIUtils ui, int x, int y, int width, int height) {
+        ui.fill(x + 2, y + 3, x + width + 2, y + height + 3, SHADOW);
+        ui.fill(x, y, x + width, y + height, BORDER);
+        ui.fill(x + 1, y + 1, x + width - 1, y + height - 1, PANEL);
+        if (width > 12 && height > 4) {
+            ui.fill(x + 6, y + 1, x + width - 6, y + 2, lerpColor(BORDER, ACCENT, 0.25F));
+        }
+    }
+
     static void drawControl(UIUtils ui, int x, int y, int width, int height) {
         drawRoundedBox(ui, x, y, width, height, SURFACE, BORDER);
     }

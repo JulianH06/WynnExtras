@@ -9,6 +9,7 @@ final class PlannerScrollbar extends Widget {
     private final int minimumThumbHeight;
     private int maxScroll;
     private boolean dragging;
+    private float dragOffset;
 
     PlannerScrollbar(SmoothScroll scroll, int minimumThumbHeight) {
         this.scroll = scroll;
@@ -27,14 +28,22 @@ final class PlannerScrollbar extends Widget {
         if (maxScroll <= 0) return;
         int thumbHeight = thumbHeight();
         int thumbY = y + Math.round(scroll.position() / maxScroll * (height - thumbHeight));
-        ui.fill(x + 2, y, x + 4, y + height, UiTheme.BORDER);
-        ui.fill(x + 2, thumbY, x + 4, thumbY + thumbHeight,
+        ui.fill(x, y, x + width, y + height, UiTheme.SURFACE);
+        ui.fill(x + 1, y, x + width - 1, y + height, UiTheme.BORDER);
+        ui.fill(x + 1, thumbY, x + width - 1, thumbY + thumbHeight,
                 dragging || hovered ? UiTheme.accent() : 0xFFAAAAAA);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button != 0 || !isVisible() || !contains((int) mouseX, (int) mouseY)) return false;
+        if (button != 0 || !isVisible()
+                || mouseX < x || mouseX >= x + width
+                || mouseY < y || mouseY >= y + height) return false;
+        int thumbHeight = thumbHeight();
+        int thumbY = y + Math.round(scroll.position() / maxScroll * (height - thumbHeight));
+        dragOffset = mouseY >= thumbY && mouseY < thumbY + thumbHeight
+                ? (float) mouseY - thumbY
+                : thumbHeight / 2.0F;
         dragging = true;
         moveTo(mouseY);
         return true;
@@ -61,7 +70,7 @@ final class PlannerScrollbar extends Widget {
             scroll.jump(0);
             return;
         }
-        float relative = (float) mouseY - y - thumbHeight / 2.0F;
+        float relative = (float) mouseY - y - dragOffset;
         scroll.jump(Math.clamp(relative / travel * maxScroll, 0.0F, maxScroll));
     }
 

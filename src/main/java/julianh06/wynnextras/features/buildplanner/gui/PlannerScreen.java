@@ -81,6 +81,16 @@ abstract class PlannerScreen extends WEScreen {
         return coordinate / matrixScale;
     }
 
+    @Override
+    public boolean mouseClicked(Click click, boolean doubled) {
+        boolean handled = super.mouseClicked(click, doubled);
+        if (getFocused() instanceof ThemedButton button) {
+            button.setFocused(false);
+            setFocused(null);
+        }
+        return handled;
+    }
+
     private final class PlannerCanvas extends Widget {
         private final boolean foreground;
 

@@ -502,6 +502,7 @@ public final class TomeScreen extends PlannerScreen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
+        clearUiFocus();
         Click logical = logicalClick(click);
         if (selectingTome != null && clickTomeResult(logical)) {
             return true;

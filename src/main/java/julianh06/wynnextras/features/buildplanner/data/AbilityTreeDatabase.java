@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.EnumMap;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -118,7 +118,7 @@ public final class AbilityTreeDatabase {
 
         try {
             AbilityTreeCache.cacheClassTree(abilityClass.apiName(), MAP_GSON.fromJson(map, AbilityMapData.class));
-            definitions.put(abilityClass, parse(abilityClass, tree, map));
+            definitions.put(abilityClass, parse(abilityClass, tree, map, true));
             errors.remove(abilityClass);
         } catch (Exception exception) {
             errors.put(abilityClass, "The Wynncraft ability tree response was invalid");
@@ -131,7 +131,18 @@ public final class AbilityTreeDatabase {
             JsonObject tree,
             JsonObject map
     ) {
+        return parse(abilityClass, tree, map, false);
+    }
+
+    private AbilityTreeDefinition parse(
+            CharacterClass abilityClass,
+            JsonObject tree,
+            JsonObject map,
+            boolean fetchSidebarMetadata
+    ) {
         Map<String, AbilityTreeDefinition.Archetype> archetypes = parseArchetypes(tree);
+        Set<String> sidebarAbilityNames = sidebarAbilityNames(
+                abilityClass, fetchSidebarMetadata);
         Map<String, Position> positions = new LinkedHashMap<>();
         List<AbilityTreeDefinition.Connector> connectors = new ArrayList<>();
         Map<String, Set<String>> adjacency = new LinkedHashMap<>();
@@ -149,7 +160,13 @@ public final class AbilityTreeDatabase {
                         new Position(
                                 getInt(source.getAsJsonObject("coordinates"), "x", 5),
                                 getInt(source.getAsJsonObject("coordinates"), "y", 1)));
-                List<String> description = stringList(source.getAsJsonArray("description"), true);
+                String formattedName = getString(source, "name");
+                List<String> formattedDescription = stringList(
+                        source.getAsJsonArray("description"), false);
+                List<String> description = formattedDescription.stream()
+                        .map(this::clean)
+                        .filter(value -> !value.isBlank())
+                        .toList();
                 JsonObject requirements = source.getAsJsonObject("requirements");
                 List<String> requiredNodes = requirements != null && requirements.has("NODE")
                         ? stringList(requirements.getAsJsonArray("NODE"), false)
@@ -164,8 +181,10 @@ public final class AbilityTreeDatabase {
                 }
                 nodes.put(id, new AbilityTreeDefinition.Node(
                         id,
-                        clean(getString(source, "name")),
+                        clean(formattedName),
+                        formattedName,
                         description,
+                        formattedDescription,
                         position.x(),
                         position.y(),
                         getInt(source, "page", Integer.parseInt(pageEntry.getKey())),
@@ -178,7 +197,9 @@ public final class AbilityTreeDatabase {
                                 : List.of(),
                         findArchetype(description, archetypes),
                         nodeColor(source),
-                        nodeIconName(source)));
+                        nodeIconName(source),
+                        sidebarAbilityNames == null || sidebarAbilityNames.contains(
+                                clean(formattedName))));
             }
         }
         nodes = canonicalizeReferences(nodes);
@@ -192,7 +213,7 @@ public final class AbilityTreeDatabase {
         }
         return new AbilityTreeDefinition(
                 abilityClass,
-                Map.copyOf(archetypes),
+                Collections.unmodifiableMap(new LinkedHashMap<>(archetypes)),
                 Map.copyOf(nodes),
                 List.copyOf(connectors),
                 immutableAdjacency(adjacency),
@@ -231,12 +252,42 @@ public final class AbilityTreeDatabase {
                     .map(id -> canonicalIds.getOrDefault(id.toLowerCase(Locale.ROOT), id))
                     .toList();
             result.put(node.id(), new AbilityTreeDefinition.Node(
-                    node.id(), node.name(), node.description(), node.x(), node.y(), node.page(),
+                    node.id(), node.name(), node.formattedName(), node.description(),
+                    node.formattedDescription(), node.x(), node.y(), node.page(),
                     node.abilityPointCost(), node.combatLevel(), requirements,
                     node.archetypeRequirement(), locks, node.archetype(), node.color(),
-                    node.iconName()));
+                    node.iconName(), node.sidebarAbility()));
         }
         return result;
+    }
+
+    private Set<String> sidebarAbilityNames(
+            CharacterClass abilityClass,
+            boolean fetchMetadata
+    ) {
+        try {
+            JsonElement data = fetchMetadata
+                    ? WynnBuilderDataFiles.read(WynnBuilderDataFiles.File.ABILITY_TREE)
+                    : WynnBuilderDataFiles.readCached(WynnBuilderDataFiles.File.ABILITY_TREE);
+            if (data == null) return null;
+            JsonObject root = data.getAsJsonObject();
+            JsonArray abilities = root.getAsJsonArray(abilityClass.displayName());
+            if (abilities == null) return null;
+            Set<String> result = new LinkedHashSet<>();
+            for (JsonElement element : abilities) {
+                if (!element.isJsonObject()) continue;
+                JsonObject ability = element.getAsJsonObject();
+                if (!ability.has("base_abil")) {
+                    result.add(getString(ability, "display_name"));
+                }
+            }
+            return Set.copyOf(result);
+        } catch (RuntimeException exception) {
+            PlannerLog.LOGGER.warn(
+                    "Could not load WynnBuilder active ability metadata for {}.",
+                    abilityClass.apiName(), exception);
+            return null;
+        }
     }
 
     private int parseMap(

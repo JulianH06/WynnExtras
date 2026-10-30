@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.buildplanner.gui;
 
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
+import java.util.List;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
@@ -13,9 +14,9 @@ import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 class ThemedButton extends ClickableWidget {
-    private static Text pendingTooltip;
+    private static List<Text> pendingTooltip;
     private final Runnable onPress;
-    private Text hoverText;
+    private List<Text> hoverText;
     private long lastFrameNanos = System.nanoTime();
     private float hoverProgress;
     private float pressProgress;
@@ -26,8 +27,12 @@ class ThemedButton extends ClickableWidget {
     }
 
     ThemedButton setHoverText(Text hoverText) {
-        this.hoverText = hoverText;
-        if (this.isHovered() && hoverText != null) pendingTooltip = hoverText;
+        return setHoverLines(hoverText == null ? null : List.of(hoverText));
+    }
+
+    ThemedButton setHoverLines(List<Text> hoverText) {
+        this.hoverText = hoverText == null ? null : List.copyOf(hoverText);
+        if (this.isHovered() && this.hoverText != null) pendingTooltip = this.hoverText;
         return this;
     }
 
@@ -50,12 +55,15 @@ class ThemedButton extends ClickableWidget {
 
     @Override
     public boolean keyPressed(KeyInput input) {
-        if (this.active && this.isFocused() && (input.key() == GLFW.GLFW_KEY_ENTER
-                || input.key() == GLFW.GLFW_KEY_KP_ENTER || input.key() == GLFW.GLFW_KEY_SPACE)) {
-            pressProgress = 1.0F;
-            playClickSound();
-            onPress.run();
-            return true;
+        if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER
+                || input.key() == GLFW.GLFW_KEY_SPACE) {
+            if (this.active && this.isFocused()) {
+                pressProgress = 1.0F;
+                playClickSound();
+                onPress.run();
+                return true;
+            }
+            return false;
         }
         return super.keyPressed(input);
     }
@@ -89,6 +97,11 @@ class ThemedButton extends ClickableWidget {
         if (getMessage().getString().equals("X")) {
             var color = getMessage().getStyle().getColor();
             drawCloseIcon(ui, this.active && color != null ? 0xFF000000 | color.getRgb() : text);
+        } else if (getMessage().getString().equals("i") || getMessage().getString().equals("+")) {
+            var renderer = MinecraftClient.getInstance().textRenderer;
+            int textX = getX() + Math.round((getWidth() - renderer.getWidth(getMessage())) / 2.0F);
+            int textY = getY() + Math.round((getHeight() - renderer.fontHeight) / 2.0F);
+            ui.drawText(renderer, getMessage(), textX, textY, text, false);
         } else {
             ui.drawCenteredTextWithShadow(
                     MinecraftClient.getInstance().textRenderer,

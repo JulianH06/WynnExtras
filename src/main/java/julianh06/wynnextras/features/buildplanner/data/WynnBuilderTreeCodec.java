@@ -31,32 +31,42 @@ public final class WynnBuilderTreeCodec {
     }
 
     public static String encode(AbilityTreeDefinition definition, Set<String> selected) {
+        EncodeResult result = encodeBestEffort(definition, selected);
+        if (!result.skippedAbilities().isEmpty()) {
+            throw new IllegalArgumentException("Abilities missing from WynnBuilder: "
+                    + String.join(", ", result.skippedAbilities()));
+        }
+        return result.hash();
+    }
+
+    public static EncodeResult encodeBestEffort(AbilityTreeDefinition definition, Set<String> selected) {
         Graph graph = graph(definition.abilityClass());
         Map<Integer, String> ids = matchNodes(graph, definition);
         if (selected.isEmpty()) {
             throw new IllegalArgumentException("Select the root ability before copying to WynnBuilder");
         }
-        if (!selected.contains(ids.get(graph.root()))) {
-            throw new IllegalArgumentException("The tree must include its root ability");
+        String rootId = ids.get(graph.root());
+        if (rootId == null) {
+            throw new IllegalArgumentException("WynnBuilder's root ability does not match the current tree");
         }
-        Set<String> unmatched = new LinkedHashSet<>(selected);
-        unmatched.removeAll(ids.values());
-        if (!unmatched.isEmpty()) {
-            throw new IllegalArgumentException("Selected abilities are missing from WynnBuilder's tree data");
+        if (!selected.contains(rootId)) {
+            throw new IllegalArgumentException("The tree must include its root ability");
         }
 
         List<Boolean> bits = new ArrayList<>();
         Set<Integer> visited = new HashSet<>();
         Set<String> encoded = new HashSet<>();
-        encoded.add(ids.get(graph.root()));
+        encoded.add(rootId);
         encodeChildren(graph, graph.root(), ids, selected, visited, encoded, bits);
-        if (!encoded.equals(selected)) {
-            throw new IllegalArgumentException("The selection is not connected in WynnBuilder's tree");
-        }
 
         WynnBuilderBitVector result = new WynnBuilderBitVector();
         bits.forEach(result::appendBit);
-        return result.toBase64();
+        Set<String> skippedIds = new LinkedHashSet<>(selected);
+        skippedIds.removeAll(encoded);
+        List<String> skipped = skippedIds.stream()
+                .map(id -> definition.nodes().containsKey(id) ? definition.nodes().get(id).name() : id)
+                .toList();
+        return new EncodeResult(result.toBase64(), Set.copyOf(encoded), skipped);
     }
 
     public static Set<String> decode(AbilityTreeDefinition definition, String hash) {
@@ -74,11 +84,19 @@ public final class WynnBuilderTreeCodec {
             String hash,
             int bitLength
     ) {
+        return decodeBuildPayloadBestEffort(definition, hash, bitLength).selected();
+    }
+
+    public static DecodeResult decodeBuildPayloadBestEffort(
+            AbilityTreeDefinition definition,
+            String hash,
+            int bitLength
+    ) {
         if (hash == null || bitLength < 0 || bitLength > hash.length() * 6
                 || (bitLength + 5) / 6 != hash.length()) {
             throw new IllegalArgumentException("Invalid ability tree payload length");
         }
-        Decoded decoded = decodeBits(definition, hash);
+        Decoded decoded = decodeBits(definition, hash, true);
         if (decoded.consumedBits() > bitLength || bitLength - decoded.consumedBits() > 5) {
             throw new IllegalArgumentException("Ability tree payload uses a different class/tree version");
         }
@@ -87,10 +105,18 @@ public final class WynnBuilderTreeCodec {
                 throw new IllegalArgumentException("Ability tree payload contains non-zero padding");
             }
         }
-        return decoded.selected();
+        return new DecodeResult(decoded.selected(), decoded.skippedAbilities());
     }
 
     private static Decoded decodeBits(AbilityTreeDefinition definition, String hash) {
+        return decodeBits(definition, hash, false);
+    }
+
+    private static Decoded decodeBits(
+            AbilityTreeDefinition definition,
+            String hash,
+            boolean skipUnmatched
+    ) {
         Graph graph = graph(definition.abilityClass());
         if (hash == null || hash.isEmpty() || hash.length() > (graph.nodes().size() + 5) / 6) {
             throw new IllegalArgumentException("Paste a WynnBuilder tree code, not a full build link");
@@ -100,10 +126,16 @@ public final class WynnBuilderTreeCodec {
         }
         Map<Integer, String> ids = matchNodes(graph, definition);
         Set<String> selected = new LinkedHashSet<>();
-        selected.add(requireApiId(graph, ids, graph.root()));
+        List<String> skipped = new ArrayList<>();
+        String rootId = ids.get(graph.root());
+        if (rootId == null) {
+            throw new IllegalArgumentException("Current tree has no matching root ability: "
+                    + graph.nodes().get(graph.root()).name());
+        }
+        selected.add(rootId);
         WynnBuilderBitCursor bits = new WynnBuilderBitCursor(hash);
-        decodeChildren(graph, graph.root(), ids, new HashSet<>(), selected, bits);
-        return new Decoded(Set.copyOf(selected), bits.bitIndex());
+        decodeChildren(graph, graph.root(), ids, new HashSet<>(), selected, skipped, bits, skipUnmatched);
+        return new Decoded(Set.copyOf(selected), bits.bitIndex(), List.copyOf(skipped));
     }
 
     private static boolean bit(String hash, int index) {
@@ -130,15 +162,22 @@ public final class WynnBuilderTreeCodec {
 
     private static void decodeChildren(
             Graph graph, int parent, Map<Integer, String> ids,
-            Set<Integer> visited, Set<String> selected, WynnBuilderBitCursor bits
+            Set<Integer> visited, Set<String> selected, List<String> skipped,
+            WynnBuilderBitCursor bits, boolean skipUnmatched
     ) {
         for (int child : graph.children().get(parent)) {
             if (!visited.add(child)) {
                 continue;
             }
             if (bits.readBit()) {
-                selected.add(requireApiId(graph, ids, child));
-                decodeChildren(graph, child, ids, visited, selected, bits);
+                String apiId = ids.get(child);
+                if (apiId == null) {
+                    if (!skipUnmatched) requireApiId(graph, ids, child);
+                    skipped.add(graph.nodes().get(child).name());
+                } else {
+                    selected.add(apiId);
+                }
+                decodeChildren(graph, child, ids, visited, selected, skipped, bits, skipUnmatched);
             }
         }
     }
@@ -168,7 +207,7 @@ public final class WynnBuilderTreeCodec {
             }
             if (matches != null) {
                 if (matches.size() != 1 || !used.add(matches.getFirst())) {
-                    throw new IllegalArgumentException("Ambiguous ability name in the current tree: " + node.name());
+                    continue;
                 }
                 result.put(node.id(), matches.getFirst());
             }
@@ -241,7 +280,13 @@ public final class WynnBuilderTreeCodec {
     private record Graph(int root, Map<Integer, BuilderNode> nodes, Map<Integer, List<Integer>> children) {
     }
 
-    private record Decoded(Set<String> selected, int consumedBits) {
+    public record EncodeResult(String hash, Set<String> encoded, List<String> skippedAbilities) {
+    }
+
+    public record DecodeResult(Set<String> selected, List<String> skippedAbilities) {
+    }
+
+    private record Decoded(Set<String> selected, int consumedBits, List<String> skippedAbilities) {
     }
 
 }

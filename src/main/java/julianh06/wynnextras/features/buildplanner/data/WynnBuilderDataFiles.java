@@ -45,6 +45,26 @@ public final class WynnBuilderDataFiles {
         return loaded.deepCopy();
     }
 
+    public static JsonElement readCached(File file) {
+        JsonElement loaded = DATA.get(file);
+        if (loaded != null) return loaded.deepCopy();
+        Path path = path(file);
+        if (!Files.isRegularFile(path)) return null;
+        synchronized (DATA) {
+            loaded = DATA.get(file);
+            if (loaded == null) {
+                try {
+                    loaded = JsonParser.parseString(Files.readString(path, StandardCharsets.UTF_8));
+                    DATA.put(file, loaded);
+                } catch (IOException | RuntimeException exception) {
+                    PlannerLog.LOGGER.warn("Ignoring invalid cached WynnBuilder data {}.", path, exception);
+                    return null;
+                }
+            }
+        }
+        return loaded.deepCopy();
+    }
+
     public static void refreshAll() {
         if (!REFRESH_STARTED.compareAndSet(false, true)) return;
         for (File file : File.values()) {

@@ -100,10 +100,12 @@ public final class WorkspaceTabs {
         add.accept(forward);
 
         int toolX = x + historyWidth + 6;
-        int toolWidth = Math.max(45, (width - historyWidth - 6) / ToolWorkspaceManager.Type.values().length);
-        int toolIndex = 0;
+        int controlsWidth = 22;
+        int controls = x + width - controlsWidth;
+        int toolWidth = Math.max(45, (controls - toolX - 3)
+                / ToolWorkspaceManager.Type.values().length);
+        int buttonX = toolX;
         for (var type : ToolWorkspaceManager.Type.values()) {
-            int buttonX = toolX + toolIndex++ * toolWidth;
             ThemedButton tool = new ThemedButton(buttonX, y, toolWidth - 3, 20,
                     Text.literal(shortToolName(type)).withColor(type == currentType
                             ? UiTheme.accentRgb() : UiTheme.TEXT & 0xFFFFFF), () -> {
@@ -113,11 +115,15 @@ public final class WorkspaceTabs {
                     });
             tool.setHoverText(Text.literal(toolName(type)));
             add.accept(tool);
+            buttonX += toolWidth;
         }
+        ThemedButton info = new ThemedButton(controls, y, 21, 20, Text.literal("i"), () -> {});
+        //TODO: REPLACE THIS
+        info.setHoverLines(List.of(Text.literal("PLACEHOLDER")));
+        add.accept(info);
 
         int tabY = y + 23;
         var tabs = workspace.tabs(currentType);
-        int controlsWidth = 22;
         int stripWidth = width - controlsWidth - 3;
         SmoothScroll scroll = SCROLL.computeIfAbsent(currentType, ignored -> new SmoothScroll());
         int maxScroll = Math.max(0, tabs.size() * (TAB_WIDTH + TAB_GAP) - TAB_GAP - stripWidth);
@@ -133,7 +139,6 @@ public final class WorkspaceTabs {
             add.accept(new TabStrip(parent, activeId, x, tabY, stripWidth, tabs, scroll, maxScroll, active));
         }
 
-        int controls = x + width - controlsWidth;
         ThemedButton plus = new ThemedButton(controls, tabY, 21, 20, Text.literal("+"),
                 () -> WorkspaceNavigation.add(parent, currentType));
         plus.setHoverText(Text.literal("New " + toolName(currentType) + " tab"));
