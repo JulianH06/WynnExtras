@@ -90,7 +90,7 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int PANEL_TOP_INSET = 6;
     private static final int ITEM_ROW_HEIGHT = 48;
     private static final int ITEM_INFO_WIDTH = 106;
-    private static final int SKILL_CARD_HEIGHT = 97;
+    private static final int SKILL_CARD_HEIGHT = 82;
     private static final int AUTO_ASSIGN_WIDTH = 92;
     private static final int POSITIVE = 0xFF00FF40;
     private static final int NEGATIVE = 0xFFFF3030;
@@ -103,6 +103,13 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int PICKER_HEADING_HEIGHT = 18;
     private static final String[] SKILL_NAMES = {"Strength", "Dexterity", "Intelligence", "Defense", "Agility"};
     private static final String[] SKILL_EFFECTS = {"damage", "crit", "cost red.", "resist", "dodge"};
+    private static final Identifier[] SKILL_ICONS = {
+            Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/strength.png"),
+            Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/dexterity.png"),
+            Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/intelligence.png"),
+            Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/defence.png"),
+            Identifier.of("wynnextras", "textures/gui/profileviewer/skillpoints/agility.png")
+    };
     private static final Formatting[] SKILL_COLORS = {
             Formatting.GREEN, Formatting.YELLOW, Formatting.AQUA, Formatting.RED, Formatting.WHITE
     };
@@ -376,7 +383,7 @@ public final class BuilderScreen extends PlannerScreen {
             addDynamicField(powderField);
         }
 
-        int skillY = layout.skillTop + 26;
+        int skillY = layout.skillTop + 11;
         int skillCardWidth = (layout.leftWidth - 8) / 5;
         for (int i = 0; i < SKILL_NAMES.length; i++) {
             int index = i;
@@ -386,6 +393,7 @@ public final class BuilderScreen extends PlannerScreen {
             int itemBonus = skillPointPlan.finalSkills()[i] - skillPointPlan.assigned()[i];
             skillField.setMaxLength(4);
             skillField.setCentered(true);
+            skillField.setTextScale(2.5F);
             skillField.setCharacterFilter(character -> Character.isDigit(character) || character == '-');
             skillField.setInputPredicate(text -> text.matches("-?\\d{0,3}"));
             skillField.setInput(Integer.toString(assignedSkills[i] + itemBonus));
@@ -2441,25 +2449,33 @@ public final class BuilderScreen extends PlannerScreen {
             BuildCalculator.Result stats
     ) {
         int cardWidth = (layout.leftWidth - 8) / 5;
-        int top = layout.skillTop + 26;
+        int top = layout.skillTop + 11;
         for (int i = 0; i < SKILL_NAMES.length; i++) {
             int x = MARGIN + 4 + i * cardWidth;
             int centerX = x + cardWidth / 2;
+            int iconSize = 12;
+            int iconGap = 4;
+            int nameWidth = Math.round(this.textRenderer.getWidth(SKILL_NAMES[i]));
+            int nameGroupWidth = iconSize + iconGap + nameWidth;
+            int iconX = centerX - nameGroupWidth / 2;
+            ui.drawTexture(RenderPipelines.GUI_TEXTURED, SKILL_ICONS[i], iconX, layout.skillTop + 8,
+                    0, 0, iconSize, iconSize, 16, 16, 16, 16);
             drawScaledCenteredText(context,
                     Text.literal(SKILL_NAMES[i]).formatted(SKILL_COLORS[i]),
-                    centerX, layout.skillTop + 10, 0xFFFFFFFF, 0.9F);
+                    iconX + iconSize + iconGap + nameWidth / 2,
+                    layout.skillTop + 10, 0xFFFFFFFF, 1);
             drawScaledCenteredText(context,
                     Text.literal("Assign: " + assignedSkills[i]).formatted(Formatting.WHITE),
-                    centerX, top + 36, 0xFFFFFFFF, 0.8F);
+                    centerX, top + 36, 0xFFFFFFFF, 1);
             drawScaledCenteredText(context,
                     Text.literal("Original: " + skillPointPlan.finalSkills()[i])
                             .formatted(Formatting.WHITE),
-                    centerX, top + 48, 0xFFFFFFFF, 0.8F);
+                    centerX, top + 48, 0xFFFFFFFF, 1);
             drawScaledCenteredText(context,
                     Text.literal(String.format("%.1f%% %s",
                                     BuildCalculator.skillEffectPercentage(i, stats.skills()[i]), SKILL_EFFECTS[i]))
                             .formatted(SKILL_COLORS[i]),
-                    centerX, top + 61, 0xFFFFFFFF, 0.8F);
+                    centerX, top + 61, 0xFFFFFFFF, 1);
         }
     }
 
@@ -3623,7 +3639,7 @@ public final class BuilderScreen extends PlannerScreen {
         int equipmentTop = CONTENT_TOP;
         int equipmentHeight = 280;
         int skillTop = equipmentTop + equipmentHeight + GAP;
-        int skillHeight = 136;
+        int skillHeight = 121;
         int boostTop = skillTop + skillHeight + GAP;
         int boostHeight = Math.max(58, this.height - MARGIN - boostTop);
         return new Layout(
