@@ -372,7 +372,7 @@ public final class BuilderScreen extends PlannerScreen {
 
     private void rebuildWidgets() {
         for (ThemedButton button : dynamicButtons) {
-            this.remove(button);
+            removeButton(button);
         }
         dynamicButtons.clear();
         for (PowderBoostSlider slider : powderBoostSliders) this.remove(slider);
@@ -454,7 +454,7 @@ public final class BuilderScreen extends PlannerScreen {
                     () -> openOffhandPicker(index)));
             addDynamic(new ThemedButton(
                     position.x + ITEM_INFO_WIDTH + 9 + itemButtonWidth, position.y + 3,
-                    removeWidth, 20, Text.literal("X"), () -> removeOffhand(index))
+                    removeWidth, 20, Text.literal("x"), () -> removeOffhand(index))
                     .setHoverText(Text.literal("Remove this offhand from the build.")));
 
             TextInputWidget powderField = textInput(
@@ -620,7 +620,7 @@ public final class BuilderScreen extends PlannerScreen {
             abilityPresetOverlay = AbilityPresetOverlay.NONE;
         }
         if (pickerOpen()) {
-            for (ThemedButton button : dynamicButtons) button.active = false;
+            for (ThemedButton button : dynamicButtons) button.setEnabled(false);
             for (PowderBoostSlider slider : powderBoostSliders) slider.active = false;
             for (TextInputWidget field : dynamicFields) {
                 field.setEnabled(false);
@@ -905,10 +905,8 @@ public final class BuilderScreen extends PlannerScreen {
             addDynamic(button);
             ThemedButton clearButton = new ThemedButton(
                     cellX + selectWidth + gap, rowTop, clearWidth, rowHeight,
-                    Text.literal("x"), () -> clearTomeSlot(slot.key()))
-                    .setTextColor(0xFFFFFFFF).setTextScale(1.5F).setTextShadow(false)
-                    .setTextOffset(0.5F, 1.0F);
-            clearButton.active = selected != null;
+                    Text.literal("x"), () -> clearTomeSlot(slot.key()));
+            clearButton.setEnabled(selected != null);
             addDynamic(clearButton.setHoverText(Text.literal("Clear this tome slot.")));
         }
     }
@@ -935,7 +933,7 @@ public final class BuilderScreen extends PlannerScreen {
                     .setIcon(icon.texture(), icon.u(), icon.v(), icon.textureWidth(), icon.textureHeight())
                     .setTextScale(BOOST_TEXT_SCALE)
                     .setTextColor(selected == null ? UiTheme.MUTED : tierRgb(selected.aspect().rarity()));
-            button.active = abilityClass != null;
+            button.setEnabled(abilityClass != null);
             if (selected != null) button.setHoverLines(aspectTooltip(selected.aspect(), selected.tier()));
             else button.setHoverText(Text.literal(abilityClass == null
                     ? "Equip a weapon to choose aspects." : "Choose an aspect."));
@@ -944,15 +942,13 @@ public final class BuilderScreen extends PlannerScreen {
                     MARGIN + 5 + selectWidth + gap, top + index * (rowHeight + gap), tierWidth, rowHeight,
                     Text.literal(selected == null ? "T-" : "T" + selected.tier()),
                     () -> cycleAspectTierInline(slot)).setTextScale(1.35F);
-            tierButton.active = selected != null;
+            tierButton.setEnabled(selected != null);
             addDynamic(tierButton.setHoverText(Text.literal("Cycle this aspect's tier.")));
             ThemedButton clearButton = new ThemedButton(
                     MARGIN + 5 + selectWidth + gap + tierWidth + gap,
                     top + index * (rowHeight + gap), clearWidth, rowHeight,
-                    Text.literal("x"), () -> clearAspectSlot(slot))
-                    .setTextColor(0xFFFFFFFF).setTextScale(1.5F).setTextShadow(false)
-                    .setTextOffset(0.5F, 1.0F);
-            clearButton.active = selected != null;
+                    Text.literal("x"), () -> clearAspectSlot(slot));
+            clearButton.setEnabled(selected != null);
             addDynamic(clearButton.setHoverText(Text.literal("Clear this aspect slot.")));
         }
     }
@@ -1320,7 +1316,7 @@ public final class BuilderScreen extends PlannerScreen {
         ThemedButton activeLabel = new ThemedButton(
                 MARGIN + 5, contentTop, width, labelHeight,
                 Text.literal(special.name() + " (Active)"), () -> {}).setTextScale(BOOST_TEXT_SCALE);
-        activeLabel.active = false;
+        activeLabel.setEnabled(false);
         addDynamic(activeLabel.setTextColor(elementColors[selectedPowderElement]));
         int levelTop = contentTop + labelHeight + 10;
         int levelGap = 5;
@@ -1339,7 +1335,7 @@ public final class BuilderScreen extends PlannerScreen {
         ThemedButton passiveLabel = new ThemedButton(
                 MARGIN + 5, levelTop + 45, width, 32,
                 Text.literal(special.passive() + " (Passive)"), () -> {}).setTextScale(BOOST_TEXT_SCALE);
-        passiveLabel.active = false;
+        passiveLabel.setEnabled(false);
         addDynamic(passiveLabel.setTextColor(elementColors[selectedPowderElement]));
         int sliderY = levelTop + 88;
         PowderBoostSlider slider = new PowderBoostSlider(
@@ -1348,7 +1344,7 @@ public final class BuilderScreen extends PlannerScreen {
         ThemedButton damageLabel = new ThemedButton(
                 MARGIN + 5, Math.min(bottom - 22, sliderY + 27), width, 20,
                 Text.literal(powderDamageLabel(selectedPowderElement)), () -> {}).setTextScale(BOOST_TEXT_SCALE);
-        damageLabel.active = false;
+        damageLabel.setEnabled(false);
         addDynamic(damageLabel);
         slider.setValueLabel(damageLabel);
     }
@@ -1396,7 +1392,7 @@ public final class BuilderScreen extends PlannerScreen {
             ThemedButton tierLabel = new ThemedButton(
                     MARGIN + 5, tierY, tierLabelWidth, tierHeight,
                     Text.literal("Tier " + (tier + 1)), () -> {}).setTextScale(1.1F);
-            tierLabel.active = false;
+            tierLabel.setEnabled(false);
             addDynamic(tierLabel);
             int buttonGap = 3;
             int columns = 3;
@@ -1517,7 +1513,7 @@ public final class BuilderScreen extends PlannerScreen {
         addDynamicField(treeSearchField);
         abilityTreeWarningDismissButton = new ThemedButton(
                 0, 0, 14, 12, Text.literal("x"), this::dismissAbilityTreeWarnings);
-        abilityTreeWarningDismissButton.visible = false;
+        abilityTreeWarningDismissButton.setVisible(false);
         abilityTreeWarningDismissButton.setHoverText(Text.literal("Ignore warnings"));
         addDynamic(abilityTreeWarningDismissButton);
 
@@ -1624,7 +1620,7 @@ public final class BuilderScreen extends PlannerScreen {
         abilityTreeNotices = List.of();
         abilityTreeNoticeNodeIds = Set.of();
         if (abilityTreeWarningDismissButton != null) {
-            abilityTreeWarningDismissButton.visible = false;
+            abilityTreeWarningDismissButton.setVisible(false);
         }
     }
 
@@ -1641,7 +1637,7 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void buildAbilityPresetOverlay() {
-        for (ThemedButton button : dynamicButtons) button.active = false;
+        for (ThemedButton button : dynamicButtons) button.setEnabled(false);
         for (TextInputWidget field : dynamicFields) field.setEnabled(false);
         abilityTreeWidget.setVisible(false);
         abilityPresetOverlayWidget = new AbilityPresetOverlayWidget();
@@ -1684,7 +1680,7 @@ public final class BuilderScreen extends PlannerScreen {
                     label, () -> equipAbilityPreset(preset)));
             addAbilityPresetButton(new ThemedButton(
                     panel.x() + panel.width() - 42, y, 26, rowHeight - 3,
-                    Text.literal("X").formatted(Formatting.RED),
+                    Text.literal("x").formatted(Formatting.RED),
                     () -> removeAbilityPreset(preset)));
         }
     }
@@ -2246,7 +2242,7 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void addDynamic(ThemedButton button) {
-        dynamicButtons.add(this.addDrawableChild(button));
+        dynamicButtons.add(addButton(button));
     }
 
     private void addPicker(ThemedButton button) {
@@ -2455,23 +2451,12 @@ public final class BuilderScreen extends PlannerScreen {
             redoBuildChange();
             return true;
         }
-        if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER) {
-            for (TextInputWidget skillField : skillFields) {
-                if (!skillField.isFocused()) continue;
-                skillField.setFocused(false);
-                return true;
-            }
-        }
         if (abilityPresetOverlay != AbilityPresetOverlay.NONE
                 && input.key() == GLFW.GLFW_KEY_ESCAPE) {
             closeAbilityPresetOverlay();
             return true;
         }
         if (pickerOpen()) {
-            if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER) {
-                if (pickerList != null) pickerList.chooseFirst();
-                return true;
-            }
             if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
                 closePicker();
                 rebuildWidgets();
@@ -2525,12 +2510,12 @@ public final class BuilderScreen extends PlannerScreen {
     @Override
     protected void drawPlannerForeground(DrawContext context, int mouseX, int mouseY, float delta) {
         if (pickerOpen()) {
-            for (ThemedButton button : pickerButtons) button.render(context, mouseX, mouseY, delta);
+            for (ThemedButton button : pickerButtons) button.draw(context, mouseX, mouseY, delta, ui);
             return;
         }
         if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
             for (ThemedButton button : abilityPresetButtons) {
-                button.render(context, mouseX, mouseY, delta);
+                button.draw(context, mouseX, mouseY, delta, ui);
             }
             return;
         }
@@ -2932,10 +2917,10 @@ public final class BuilderScreen extends PlannerScreen {
         int contentY = listTop - Math.round(abilitySidebarScroll.update(delta));
         if (abilityTreeWarningDismissButton != null) {
             abilityTreeWarningDismissButton.setPosition(x + width - 14, contentY - 2);
-            abilityTreeWarningDismissButton.visible = !abilityTreeNotices.isEmpty()
+            abilityTreeWarningDismissButton.setVisible(!abilityTreeNotices.isEmpty()
                     && abilityPresetOverlay == AbilityPresetOverlay.NONE
                     && !pickerOpen()
-                    && contentY >= listTop && contentY + 12 <= listBottom;
+                    && contentY >= listTop && contentY + 12 <= listBottom);
         }
 
         ui.enableScissor(x - 2, listTop, x + width + 2, listBottom);

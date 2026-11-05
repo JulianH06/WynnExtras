@@ -25,6 +25,8 @@ abstract class PlannerScreen extends WEScreen {
 
     @Override
     protected void init() {
+        if (focusedWidget instanceof ThemedButton) setFocusedWidget(null);
+        rootWidgets.removeIf(ThemedButton.class::isInstance);
         super.init();
         computeScaleAndOffsets();
         width = screenWidth;
@@ -61,7 +63,19 @@ abstract class PlannerScreen extends WEScreen {
         for (var child : children()) {
             if (child instanceof Drawable drawable) drawable.render(context, mouseX, mouseY, delta);
         }
+        for (Widget widget : rootWidgets) {
+            if (widget instanceof ThemedButton button) button.draw(context, mouseX, mouseY, delta, ui);
+        }
         ThemedButton.renderPendingTooltip(context, mouseX, mouseY);
+    }
+
+    protected final ThemedButton addButton(ThemedButton button) {
+        addRootWidget(button);
+        return button;
+    }
+
+    protected final void removeButton(ThemedButton button) {
+        removeRootWidget(button);
     }
 
     protected final void renderPlannerTooltip(DrawContext context, List<Text> lines, int mouseX, int mouseY) {
@@ -79,16 +93,6 @@ abstract class PlannerScreen extends WEScreen {
 
     protected final double logicalCoordinate(double coordinate) {
         return coordinate / matrixScale;
-    }
-
-    @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
-        boolean handled = super.mouseClicked(click, doubled);
-        if (getFocused() instanceof ThemedButton button) {
-            button.setFocused(false);
-            setFocused(null);
-        }
-        return handled;
     }
 
     private final class PlannerCanvas extends Widget {

@@ -4,17 +4,14 @@ import julianh06.wynnextras.features.buildplanner.config.ToolWorkspaceManager;
 import julianh06.wynnextras.features.buildplanner.data.CraftedItemCodec;
 import julianh06.wynnextras.features.buildplanner.data.WynnItem;
 import julianh06.wynnextras.utils.UI.SmoothScroll;
-import julianh06.wynnextras.utils.UI.UIUtils;
 import java.util.function.Consumer;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
@@ -89,12 +86,12 @@ public final class WorkspaceTabs {
         int historyWidth = 45;
         ThemedButton back = new ThemedButton(x, y, 21, 20, Text.literal("<"),
                 () -> WorkspaceNavigation.back(parent));
-        back.active = WorkspaceNavigation.canGoBack();
+        back.setEnabled(WorkspaceNavigation.canGoBack());
         back.setHoverText(Text.literal("Back"));
         add.accept(back);
         ThemedButton forward = new ThemedButton(x + 24, y, 21, 20, Text.literal(">"),
                 () -> WorkspaceNavigation.forward(parent));
-        forward.active = WorkspaceNavigation.canGoForward();
+        forward.setEnabled(WorkspaceNavigation.canGoForward());
         forward.setHoverText(Text.literal("Forward"));
         add.accept(forward);
 
@@ -196,8 +193,7 @@ public final class WorkspaceTabs {
         }
 
         @Override
-        protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
-            UIUtils ui = new UIUtils(context, 1.0, 0, 0);
+        protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
             setHoverText(null);
             float offset = scroll.update(delta);
             ui.enableScissor(getX(), getY(), getX() + getWidth(), getY() + getHeight());
@@ -220,7 +216,7 @@ public final class WorkspaceTabs {
                     ui.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, label,
                             tabX + 7, getY() + 4,
                             active ? UiTheme.accent() : UiTheme.TEXT);
-                    ui.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, "×",
+                    ui.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, "x",
                             tabX + TAB_WIDTH - 10, getY() + 4, active ? 0xFFFFFFFF : UiTheme.MUTED);
                 }
             } finally {
@@ -243,30 +239,38 @@ public final class WorkspaceTabs {
         }
 
         @Override
-        public void onClick(Click click, boolean doubled) {
-            if (click.y() >= getY() + 16 && maxScroll > 0) {
-                moveScrollbar(click.x());
-                return;
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (!isVisible() || !isEnabled() || button != GLFW.GLFW_MOUSE_BUTTON_LEFT
+                    || !contains((int) mouseX, (int) mouseY)) return false;
+            setFocused(true);
+            if (mouseY >= getY() + 16 && maxScroll > 0) {
+                moveScrollbar(mouseX);
+                return true;
             }
-            int index = (int) ((click.x() - getX() + scroll.position()) / (TAB_WIDTH + TAB_GAP));
+            int index = (int) ((mouseX - getX() + scroll.position()) / (TAB_WIDTH + TAB_GAP));
             if (index >= 0 && index < tabs.size()) {
                 int tabX = getX() + Math.round(index * (TAB_WIDTH + TAB_GAP) - scroll.position());
-                if (click.x() < tabX || click.x() >= tabX + TAB_WIDTH) return;
-                if (click.x() >= tabX + TAB_WIDTH - 20 && click.x() < tabX + TAB_WIDTH) {
+                if (mouseX < tabX || mouseX >= tabX + TAB_WIDTH) return false;
+                if (mouseX >= tabX + TAB_WIDTH - 20) {
                     playClickSound();
                     ToolWorkspaceManager.getInstance().close(tabs.get(index).id());
                     MinecraftClient.getInstance().setScreen(open(parent));
-                    return;
+                    return true;
                 }
                 playClickSound();
                 keyboardIndex = index;
                 WorkspaceNavigation.open(parent, tabs.get(index).id());
+                return true;
             }
+            return false;
         }
 
         @Override
-        protected void onDrag(Click click, double deltaX, double deltaY) {
-            if (maxScroll > 0 && click.y() >= getY() + 16) moveScrollbar(click.x());
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+            if (!isVisible() || !isEnabled() || button != GLFW.GLFW_MOUSE_BUTTON_LEFT
+                    || maxScroll <= 0 || mouseY < getY() + 16) return false;
+            moveScrollbar(mouseX);
+            return true;
         }
 
         private void moveScrollbar(double mouseX) {
@@ -274,27 +278,6 @@ public final class WorkspaceTabs {
             scroll.jump(Math.clamp(ratio * maxScroll, 0, maxScroll));
         }
 
-        @Override
-        public boolean keyPressed(KeyInput input) {
-            if (!isFocused()) return super.keyPressed(input);
-            if (input.key() == GLFW.GLFW_KEY_LEFT || input.key() == GLFW.GLFW_KEY_RIGHT) {
-                int direction = input.key() == GLFW.GLFW_KEY_LEFT ? -1 : 1;
-                keyboardIndex = Math.clamp(keyboardIndex + direction, 0, tabs.size() - 1);
-                int tabLeft = keyboardIndex * (TAB_WIDTH + TAB_GAP);
-                if (tabLeft < scroll.position()) scroll.move(tabLeft - scroll.position(), 0, maxScroll);
-                else if (tabLeft + TAB_WIDTH > scroll.position() + getWidth()) {
-                    scroll.move(tabLeft + TAB_WIDTH - getWidth() - scroll.position(), 0, maxScroll);
-                }
-                return true;
-            }
-            if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER
-                    || input.key() == GLFW.GLFW_KEY_SPACE) {
-                playClickSound();
-                WorkspaceNavigation.open(parent, tabs.get(keyboardIndex).id());
-                return true;
-            }
-            return super.keyPressed(input);
-        }
     }
 
     static String toolName(ToolWorkspaceManager.Type type) {

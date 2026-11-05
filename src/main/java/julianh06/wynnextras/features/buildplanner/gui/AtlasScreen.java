@@ -107,8 +107,8 @@ final class AtlasScreen extends PlannerScreen {
                 int x = (i % 6) * cell;
                 int y = 62 + (i / 6) * 29;
                 var button = button(x, y, cell - 4, 25, Text.empty(), () -> toggle(false, type));
-                button.setTooltip(Tooltip.of(Text.literal(display(type)
-                        + (selected(state.category(), type) ? " (selected)" : " (not selected)"))));
+                button.setHoverText(Text.literal(display(type)
+                        + (selected(state.category(), type) ? " (selected)" : " (not selected)")));
                 icons.add(new Icon(type, x, y, cell - 4, selected(state.category(), type)));
             }
         }
@@ -123,7 +123,7 @@ final class AtlasScreen extends PlannerScreen {
             Text text = fitted(name, cell - 3).copy().styled(style -> style.withColor(color)
                     .withUnderline(selected(state.rarity(), rarity)));
             var button = button(i * cell, rarityY + 16, cell - 3, 20, text, () -> toggle(true, rarity));
-            button.setTooltip(Tooltip.of(Text.literal(name + (selected(state.rarity(), rarity) ? " (selected)" : " (not selected)"))));
+            button.setHoverText(Text.literal(name + (selected(state.rarity(), rarity) ? " (selected)" : " (not selected)")));
         }
         button(0, leftHeight - 20, 70, 20, Text.literal("Search!"), () -> {
             refreshResults();
@@ -146,7 +146,7 @@ final class AtlasScreen extends PlannerScreen {
             }
         }));
         use = fixed(new ThemedButton(24 + 2 * buttonWidth, y, buttonWidth, 20, Text.literal("Use"), this::useSelected));
-        use.setTooltip(Tooltip.of(Text.literal("Open in a NEW build or craft. Existing tabs are preserved.")));
+        use.setHoverText(Text.literal("Open in a NEW build or craft. Existing tabs are preserved."));
         refreshResults();
         positionControls();
     }
@@ -172,19 +172,19 @@ final class AtlasScreen extends PlannerScreen {
                 var list = new ArrayList<>(state.filters());
                 list.set(index, new AtlasState.NumericFilter(filter.key(), filter.minimum(), filter.maximum(), !filter.descending()));
                 updateLists(list, state.excluded(), state.strings());
-            }).setTooltip(Tooltip.of(Text.literal("Sort this stat ascending/descending; rows are sort priorities")));
+            }).setHoverText(Text.literal("Sort this stat ascending/descending; rows are sort priorities"));
             button(x + selectorWidth + 27, y, 20, 20, Text.literal("^"), () -> {
                 if (index == 0) return;
                 var list = new ArrayList<>(state.filters());
                 java.util.Collections.swap(list, index, index - 1);
                 updateLists(list, state.excluded(), state.strings());
-            }).setTooltip(Tooltip.of(Text.literal("Move this filter up in the sorting order")));
+            }).setHoverText(Text.literal("Move this filter up in the sorting order"));
             int bx = wide ? x + selectorWidth + 50 : x;
             int by = wide ? y : y + 23;
             field(bx, by, 43, filter.minimum(), "-inf", value -> changeBound(index, value, true));
             label(bx + 47, by + 6, "to");
             field(bx + 64, by, 43, filter.maximum(), "+inf", value -> changeBound(index, value, false));
-            button(x + w - 20, by, 20, 20, Text.literal("X"), () -> {
+            button(x + w - 20, by, 20, 20, Text.literal("x"), () -> {
                 var list = new ArrayList<>(state.filters());
                 list.remove(index);
                 updateLists(list, state.excluded(), state.strings());
@@ -207,7 +207,7 @@ final class AtlasScreen extends PlannerScreen {
                 list.set(index, chosen);
                 updateLists(state.filters(), list, state.strings());
             }));
-            button(x + w - 20, y, 20, 20, Text.literal("X"), () -> {
+            button(x + w - 20, y, 20, 20, Text.literal("x"), () -> {
                 var list = new ArrayList<>(state.excluded());
                 list.remove(index);
                 updateLists(state.filters(), list, state.strings());
@@ -218,7 +218,7 @@ final class AtlasScreen extends PlannerScreen {
             var list = new ArrayList<>(state.excluded());
             if (!list.contains(key)) list.add(key);
             updateLists(state.filters(), list, state.strings());
-        })).setTooltip(Tooltip.of(Text.literal("Exclude results with a nonzero value for this stat")));
+        })).setHoverText(Text.literal("Exclude results with a nonzero value for this stat"));
         if (state.ingredients()) return;
         y += 36;
         label(x, y, "String Filters:");
@@ -232,7 +232,7 @@ final class AtlasScreen extends PlannerScreen {
                         list.set(index, new AtlasState.StringFilter(key, filter.value()));
                         updateLists(state.filters(), state.excluded(), list);
                     }));
-            button(x + w - 20, y, 20, 20, Text.literal("X"), () -> {
+            button(x + w - 20, y, 20, 20, Text.literal("x"), () -> {
                 var list = new ArrayList<>(state.strings());
                 list.remove(index);
                 updateLists(state.filters(), state.excluded(), list);
@@ -279,7 +279,7 @@ final class AtlasScreen extends PlannerScreen {
         button(w - 78, y - 2, 34, 18, Text.literal("All"), () -> setSelection(rarity, ""));
         var none = button(w - 40, y - 2, 40, 18, Text.literal("None"), () -> setSelection(rarity, "~none"));
         if (rarity && !state.ingredients()) {
-            none.setTooltip(Tooltip.of(Text.literal("Clear rarity selection. No selected rarities shows all rarities.")));
+            none.setHoverText(Text.literal("Clear rarity selection. No selected rarities shows all rarities."));
         }
     }
 
@@ -330,12 +330,12 @@ final class AtlasScreen extends PlannerScreen {
 
     private ThemedButton fixed(ThemedButton button) {
         fixed.add(button);
-        return addDrawableChild(button);
+        return addButton(button);
     }
 
     private ThemedButton button(int x, int y, int w, int h, Text title, Runnable action) {
         var button = new ThemedButton(layout.left() + x, BODY_TOP + y, w, h, title, action);
-        controls.add(new Control(addDrawableChild(button), y));
+        controls.add(new Control(addButton(button), y));
         return button;
     }
 
@@ -368,8 +368,8 @@ final class AtlasScreen extends PlannerScreen {
         if (state.page() != 0) state = state.withPage(0, state.selected());
         layoutResultCards();
         scroll.clamp(0, maxScroll);
-        copy.active = selectedEntry() != null;
-        use.active = selectedEntry() != null;
+        copy.setEnabled(selectedEntry() != null);
+        use.setEnabled(selectedEntry() != null);
     }
 
     private void layoutResultCards() {
@@ -436,11 +436,12 @@ final class AtlasScreen extends PlannerScreen {
 
     private void positionControls() {
         for (var control : controls) {
-            var widget = control.widget();
-            widget.setY(BODY_TOP + control.y() - offset);
-            widget.visible = widget.getY() + widget.getHeight() > BODY_TOP && widget.getY() < height - 54;
-            widget.active = widget.visible && widget.getY() >= BODY_TOP && widget.getY() + widget.getHeight() <= height - 54;
-            if (!widget.active) widget.setFocused(false);
+            control.setY(BODY_TOP + control.y - offset);
+            boolean visible = control.getY() + control.getHeight() > BODY_TOP && control.getY() < height - 54;
+            control.setVisible(visible);
+            boolean enabled = visible && control.getY() >= BODY_TOP && control.getY() + control.getHeight() <= height - 54;
+            control.setEnabled(enabled);
+            if (!enabled) control.setFocused(false);
         }
     }
 
@@ -474,7 +475,7 @@ final class AtlasScreen extends PlannerScreen {
                 else ui.fill(x + 1, y + 1, x + icon.width() - 1, y + 24, 0x88000000);
             }
         } finally { ui.disableScissor(); }
-        for (var button : fixed) button.render(context, mouseX, mouseY, delta);
+        for (var button : fixed) button.draw(context, mouseX, mouseY, delta, ui);
         tabNameField.render(context, mouseX, mouseY, delta);
         scrollbar.configure(width - 11, BODY_TOP, viewportHeight(), maxScroll);
         scrollbar.draw(context, mouseX, mouseY, delta, ui);
@@ -496,8 +497,8 @@ final class AtlasScreen extends PlannerScreen {
                 double y = logical.y() - BODY_TOP + offset;
                 if (x >= card.x() && x < card.x() + card.width() && y >= card.y() && y < card.y() + card.height()) {
                     state = state.withPage(state.page(), card.entry().id());
-                    copy.active = true;
-                    use.active = true;
+                    copy.setEnabled(true);
+                    use.setEnabled(true);
                     save();
                     return true;
                 }
@@ -542,7 +543,30 @@ final class AtlasScreen extends PlannerScreen {
 
     private record Card(AtlasSearch.Entry entry, WynnItemTooltip.Card visual,
             int x, int y, int width, int height) {}
-    private record Control(ClickableWidget widget, int y) {}
+    private static final class Control {
+        private final ClickableWidget vanilla;
+        private final ThemedButton themed;
+        private final int y;
+
+        private Control(ClickableWidget widget, int y) {
+            vanilla = widget;
+            themed = null;
+            this.y = y;
+        }
+
+        private Control(ThemedButton widget, int y) {
+            vanilla = null;
+            themed = widget;
+            this.y = y;
+        }
+
+        private void setY(int value) { if (themed != null) themed.setY(value); else vanilla.setY(value); }
+        private int getY() { return themed != null ? themed.getY() : vanilla.getY(); }
+        private int getHeight() { return themed != null ? themed.getHeight() : vanilla.getHeight(); }
+        private void setVisible(boolean value) { if (themed != null) themed.setVisible(value); else vanilla.visible = value; }
+        private void setEnabled(boolean value) { if (themed != null) themed.setEnabled(value); else vanilla.active = value; }
+        private void setFocused(boolean value) { if (themed != null) themed.setFocused(value); else vanilla.setFocused(value); }
+    }
     private record Label(int x, int y, String text) {}
     private record Icon(String type, int x, int y, int width, boolean selected) {}
 }

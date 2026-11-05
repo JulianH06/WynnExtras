@@ -23,6 +23,7 @@ public abstract class Widget {
 
     protected UIUtils ui;
     private double uiScaleFactor = Double.NaN;
+    private boolean skipRender;
 
     public Widget(int x, int y, int width, int height) { setBounds(x, y, width, height); }
     public Widget() { setBounds(0, 0, 0, 0); }
@@ -50,6 +51,14 @@ public abstract class Widget {
 
     public void setUiScaleFactor(double uiScaleFactor) {
         this.uiScaleFactor = uiScaleFactor;
+    }
+
+    public void setSkipRender(boolean skipRender) {
+        this.skipRender = skipRender;
+    }
+
+    boolean shouldSkipRender() {
+        return skipRender;
     }
 
     double uiScaleFactor(double fallback) {

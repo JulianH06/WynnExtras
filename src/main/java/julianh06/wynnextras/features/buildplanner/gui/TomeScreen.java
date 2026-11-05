@@ -93,7 +93,7 @@ public final class TomeScreen extends PlannerScreen {
             int labelWidth = selected == null ? slotWidth : slotWidth - TOME_ICON_GAP;
             String label = slot.label() + ": " + value;
             String clipped = textRenderer.trimToWidth(label, Math.max(20, labelWidth - 12));
-            addDrawableChild(new ThemedButton(
+            addButton(new ThemedButton(
                     labelX, 46 + row * 32,
                     labelWidth, 26,
                     Text.literal(clipped),
@@ -110,7 +110,7 @@ public final class TomeScreen extends PlannerScreen {
                 String name = selection == null
                         ? "No Aspect"
                         : selection.aspect().displayName();
-                addDrawableChild(new ThemedButton(
+                addButton(new ThemedButton(
                         left + 48, y, rowWidth - 182, 28,
                         Text.literal((index + 1) + ". " + textRenderer.trimToWidth(
                                 name, rowWidth - 208)),
@@ -118,10 +118,10 @@ public final class TomeScreen extends PlannerScreen {
                 String tier = selection == null
                         ? "-"
                         : selection.tier() + "/" + selection.aspect().tiers().size();
-                addDrawableChild(new ThemedButton(
+                addButton(new ThemedButton(
                         left + rowWidth - 126, y, 68, 28,
                         Text.literal("Tier " + tier), () -> cycleAspectTier(slot)));
-                addDrawableChild(new ThemedButton(
+                addButton(new ThemedButton(
                         left + rowWidth - 54, y, 42, 28,
                         Text.literal("Clear"), () -> {
                             parent.selectAspect(slot, null);
@@ -130,7 +130,7 @@ public final class TomeScreen extends PlannerScreen {
             }
         }
 
-        addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 left + panelWidth - 90, 22, 78, 20,
                 Text.literal("Done"), () -> client.setScreen(parent)));
     }
@@ -141,7 +141,7 @@ public final class TomeScreen extends PlannerScreen {
                 Text.literal("Search tomes"));
         searchField.setPlaceholder(Text.literal("Search " + selectingTome.label() + "..."));
         configureSearchField();
-        addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 left + panelWidth - 88, 44, 76, 20, Text.literal("Remove"),
                 () -> {
                     parent.selectTome(selectingTome.key(), null);
@@ -174,7 +174,7 @@ public final class TomeScreen extends PlannerScreen {
     }
 
     private void addBackButton(int left) {
-        addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 left + 12, height - 32, 76, 20, Text.literal("Back"),
                 () -> {
                     selectingTome = null;

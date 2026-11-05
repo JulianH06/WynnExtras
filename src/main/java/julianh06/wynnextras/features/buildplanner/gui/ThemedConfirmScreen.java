@@ -3,19 +3,14 @@ package julianh06.wynnextras.features.buildplanner.gui;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.screen.ScreenTexts;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
-import org.lwjgl.glfw.GLFW;
 
 final class ThemedConfirmScreen extends PlannerScreen {
     private final Consumer<Boolean> callback;
     private final Text message;
     private List<OrderedText> lines = List.of();
-    private ThemedButton yesButton;
-    private ThemedButton noButton;
     private int panelWidth;
     private int panelHeight;
     private boolean answered;
@@ -36,12 +31,11 @@ final class ThemedConfirmScreen extends PlannerScreen {
         int top = (height - panelHeight) / 2;
         int buttonWidth = Math.min(104, (panelWidth - 48) / 2);
         int buttonY = top + panelHeight - 30;
-        yesButton = addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 left + 18, buttonY, buttonWidth, 20, ScreenTexts.YES, () -> answer(true)));
-        noButton = addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 left + panelWidth - buttonWidth - 18, buttonY, buttonWidth, 20,
                 ScreenTexts.NO, () -> answer(false)));
-        setInitialFocus(noButton);
     }
 
     @Override
@@ -57,18 +51,6 @@ final class ThemedConfirmScreen extends PlannerScreen {
                     textRenderer, lines.get(i), width / 2, top + 38 + i * 12, 0xFFE8E8E8);
         }
         renderVanillaChildren(context, mouseX, mouseY, delta);
-    }
-
-    @Override
-    public boolean keyPressed(KeyInput input) {
-        if (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER
-                || input.key() == GLFW.GLFW_KEY_SPACE) {
-            if (getFocused() == yesButton || getFocused() == noButton) {
-                answer(getFocused() == yesButton);
-                return true;
-            }
-        }
-        return super.keyPressed(input);
     }
 
     @Override

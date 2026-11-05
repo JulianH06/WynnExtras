@@ -33,22 +33,22 @@ final class SaveBuildScreen extends PlannerScreen {
                 textRenderer, left + 18, top + 42, PANEL_WIDTH - 36, 20, Text.literal("Build name"));
         nameField.setPlaceholder(Text.literal("Build name"));
         nameField.setMaxLength(64);
-        nameField.setChangedListener(value -> saveButton.active = !value.trim().isEmpty());
+        nameField.setChangedListener(value -> saveButton.setEnabled(!value.trim().isEmpty()));
         addDrawableChild(nameField);
 
         classButton = new ThemedButton(
                 left + 18, top + 72, PANEL_WIDTH - 36, 20,
                 classLabel(), this::nextClass);
-        addDrawableChild(classButton);
+        addButton(classButton);
 
-        addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 left + 18, top + PANEL_HEIGHT - 30, 92, 20,
                 Text.literal("Cancel"), this::close));
         saveButton = new ThemedButton(
                 left + PANEL_WIDTH - 110, top + PANEL_HEIGHT - 30, 92, 20,
                 Text.literal("Save"), this::save);
-        saveButton.active = false;
-        addDrawableChild(saveButton);
+        saveButton.setEnabled(false);
+        addButton(saveButton);
         setInitialFocus(nameField);
     }
 

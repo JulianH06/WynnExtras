@@ -43,7 +43,7 @@ final class SavedBuildsScreen extends PlannerScreen {
 
         filterButton = new ThemedButton(
                 left + 16, top + 34, 150, 20, filterLabel(), this::nextFilter);
-        addDrawableChild(filterButton);
+        addButton(filterButton);
         searchField = new TextFieldWidget(
                 textRenderer, left + 174, top + 34, PANEL_WIDTH - 190, 20,
                 Text.literal("Search saved builds"));
@@ -56,7 +56,7 @@ final class SavedBuildsScreen extends PlannerScreen {
             rebuildRows();
         });
         addDrawableChild(searchField);
-        addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 left + PANEL_WIDTH - 96, top + panelHeight - 30, 80, 20,
                 Text.literal("Back"), this::close));
         rebuildRows();
@@ -77,7 +77,7 @@ final class SavedBuildsScreen extends PlannerScreen {
     }
 
     private void rebuildRows() {
-        rowButtons.forEach(this::remove);
+        rowButtons.forEach(this::removeButton);
         rowButtons.clear();
 
         visibleBuilds = SavedBuildManager.getInstance().getAll().stream()
@@ -106,9 +106,9 @@ final class SavedBuildsScreen extends PlannerScreen {
                     label, () -> open(build));
             ThemedButton remove = new ThemedButton(
                     left + PANEL_WIDTH - 42, top + i * ROW_HEIGHT, 26, ROW_HEIGHT - 3,
-                    Text.literal("X").formatted(Formatting.RED), () -> remove(build));
-            rowButtons.add(addDrawableChild(open));
-            rowButtons.add(addDrawableChild(remove));
+                    Text.literal("x").formatted(Formatting.RED), () -> remove(build));
+            rowButtons.add(addButton(open));
+            rowButtons.add(addButton(remove));
         }
     }
 

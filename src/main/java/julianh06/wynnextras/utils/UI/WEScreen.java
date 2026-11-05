@@ -130,6 +130,7 @@ public abstract class WEScreen extends Screen {
         drawContent(context, mx, my, delta);
 
         for (Widget w : rootWidgets) {
+            if (w.shouldSkipRender()) continue;
             ui.updateContext(context, w.uiScaleFactor(scaleFactor), xStart, yStart);
             w.draw(context, mx, my, delta, ui);
         }

@@ -13,11 +13,9 @@ import java.util.function.Consumer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 final class CraftingChoiceScreen extends PlannerScreen {
     private static final int ROW_HEIGHT = 24;
@@ -74,7 +72,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
             rebuild();
         });
         addRootWidget(search);
-        addDrawableChild(new ThemedButton(left + panelWidth - 78, top + panelHeight - 28,
+        addButton(new ThemedButton(left + panelWidth - 78, top + panelHeight - 28,
                 64, 20, Text.literal("Cancel"), this::close));
         rebuild();
         setFocusedWidget(search);
@@ -171,15 +169,6 @@ final class CraftingChoiceScreen extends PlannerScreen {
         double logicalY = logicalCoordinate(mouseY);
         if (list != null && list.containsLogical(logicalX, logicalY)) list.scroll(vertical);
         return true;
-    }
-
-    @Override
-    public boolean keyPressed(KeyInput input) {
-        if ((input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER) && list != null) {
-            list.chooseFirst();
-            return true;
-        }
-        return super.keyPressed(input);
     }
 
     @Override

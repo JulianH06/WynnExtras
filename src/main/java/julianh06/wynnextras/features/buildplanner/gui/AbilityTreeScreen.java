@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -81,27 +80,22 @@ public final class AbilityTreeScreen extends PlannerScreen {
         int presetButtonY = this.height - FOOTER_HEIGHT - 28;
         int presetButtonWidth = (sidebar.width() - 24) / 2;
         if (presetOverlay == PresetOverlay.NONE) {
-            this.addDrawableChild(new ThemedButton(
+            addButton(new ThemedButton(
                     sidebar.x() + 10, presetButtonY, presetButtonWidth, 20,
                     Text.literal("Save"), () -> openPresetOverlay(PresetOverlay.SAVE)));
-            this.addDrawableChild(new ThemedButton(
+            addButton(new ThemedButton(
                     sidebar.x() + 14 + presetButtonWidth, presetButtonY, presetButtonWidth, 20,
                     Text.literal("Saved"), () -> openPresetOverlay(PresetOverlay.SAVED)));
-            this.addDrawableChild(new ThemedButton(
+            addButton(new ThemedButton(
                     10, this.height - 27, 64, 20, Text.literal("Reset"), () -> {
                         state.reset(abilityClass);
                         setStatus("Tree reset");
                     }));
-            this.addDrawableChild(new ThemedButton(
-                    78, this.height - 27, 64, 20, Text.literal("Copy"), this::copyTree))
-                    .setTooltip(Tooltip.of(Text.literal(
-                            "Copy a WynnBuilder tree code. Select at least the root ability.")));
-            this.addDrawableChild(new ThemedButton(
-                    146, this.height - 27, 64, 20, Text.literal("Paste"), this::pasteTree))
-                    .setTooltip(Tooltip.of(Text.literal(
-                            "Paste a WynnBuilder code for " + abilityClass.displayName()
-                                    + " (2.2.5.0). Codes contain no class/version. Old WynnQOL codes also work.")));
-            this.addDrawableChild(new ThemedButton(
+            addButton(new ThemedButton(
+                    78, this.height - 27, 64, 20, Text.literal("Copy"), this::copyTree));
+            addButton(new ThemedButton(
+                    146, this.height - 27, 64, 20, Text.literal("Paste"), this::pasteTree));
+            addButton(new ThemedButton(
                     this.width - 74, this.height - 27, 64, 20,
                     Text.literal("Done"), this::close));
         } else {
@@ -290,11 +284,11 @@ public final class AbilityTreeScreen extends PlannerScreen {
         });
         addDrawableChild(presetField);
 
-        addDrawableChild(new ThemedButton(
+        addButton(new ThemedButton(
                 panel.x() + 16, panel.y() + panel.height() - 32, 80, 20,
                 Text.literal("Back"), this::closePresetOverlay));
         if (presetOverlay == PresetOverlay.SAVE) {
-            addDrawableChild(new ThemedButton(
+            addButton(new ThemedButton(
                     panel.x() + panel.width() - 96,
                     panel.y() + panel.height() - 32,
                     80,
@@ -333,7 +327,7 @@ public final class AbilityTreeScreen extends PlannerScreen {
     }
 
     private void rebuildPresetButtons() {
-        presetButtons.forEach(this::remove);
+        presetButtons.forEach(this::removeButton);
         presetButtons.clear();
         if (presetOverlay != PresetOverlay.SAVED || presetField == null) {
             visiblePresets = List.of();
@@ -367,10 +361,10 @@ public final class AbilityTreeScreen extends PlannerScreen {
                     () -> equipPreset(preset));
             ThemedButton remove = new ThemedButton(
                     panel.x() + panel.width() - 42, y, 26, rowHeight - 3,
-                    Text.literal("X").formatted(Formatting.RED),
+                    Text.literal("x").formatted(Formatting.RED),
                     () -> removePreset(preset));
-            presetButtons.add(addDrawableChild(equip));
-            presetButtons.add(addDrawableChild(remove));
+            presetButtons.add(addButton(equip));
+            presetButtons.add(addButton(remove));
         }
     }
 

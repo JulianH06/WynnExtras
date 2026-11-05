@@ -124,7 +124,7 @@ public final class CrafterScreen extends PlannerScreen {
         left = (width - panelWidth) / 2;
         top = 64;
         WorkspaceTabs.add(parent, toolTabId, 12, 8, width - 24,
-                button -> tabButtons.add(addDrawableChild(button)));
+                button -> tabButtons.add(addButton(button)));
         tabNameField = addDrawableChild(WorkspaceTabs.nameField(
                 toolTabId, left + 12, top + 6, panelWidth - 24, value -> updateCardLayout()));
         viewportTop = top + 32;
@@ -144,7 +144,7 @@ public final class CrafterScreen extends PlannerScreen {
         int speedWidth = (w - typeWidth - 16) / 3;
         for (int i = 0; i < 3; i++) {
             final int speed = i;
-            ClickableWidget button = pageButton(typeWidth + 6 + i * speedWidth, 38, speedWidth - 3, 22,
+            ThemedButton button = pageButton(typeWidth + 6 + i * speedWidth, 38, speedWidth - 3, 22,
                     List.of("Slow", "Normal", "Fast").get(i),
                     () -> change(new Craft(craft.recipeId(), craft.ingredients(), craft.material1(), craft.material2(), speed)),
                     isWeapon());
@@ -161,8 +161,8 @@ public final class CrafterScreen extends PlannerScreen {
             final int index = i;
             var material = recipe().materials().get(i);
             int cellX = 8 + i * (cellWidth + 6);
-            ClickableWidget button = pageButton(cellX, 115, cellWidth, 30, "", () -> cycleMaterial(index), true);
-            button.setTooltip(Tooltip.of(Text.literal("Click to change " + material.name() + " tier")));
+            ThemedButton button = pageButton(cellX, 115, cellWidth, 30, "", () -> cycleMaterial(index), true);
+            button.setHoverText(Text.literal("Click to change " + material.name() + " tier"));
         }
         for (int i = 0; i < 6; i++) {
             final int slot = i;
@@ -199,10 +199,10 @@ public final class CrafterScreen extends PlannerScreen {
             ThemedButton button = new ThemedButton(left + 12 + i * (buttonWidth + 5), top + panelHeight - 30,
                     buttonWidth, 20, Text.literal(label), () -> footerAction(label));
             if (label.equals("Equip")) {
-                button.active = preview != null && CraftedItemCodec.matchesSlot(preview, destination.slotType());
-                button.setTooltip(Tooltip.of(Text.literal("Equip in the original builder slot. Consumables cannot be equipped.")));
+                button.setEnabled(preview != null && CraftedItemCodec.matchesSlot(preview, destination.slotType()));
+                button.setHoverText(Text.literal("Equip in the original builder slot. Consumables cannot be equipped."));
             }
-            footerButtons.add(addDrawableChild(button));
+            footerButtons.add(addButton(button));
         }
     }
 
@@ -227,8 +227,16 @@ public final class CrafterScreen extends PlannerScreen {
                 : textRenderer.trimToWidth(label, Math.max(0, width - 20)) + "...";
         ThemedButton button = new ThemedButton(0, 0, width, height, Text.literal(fitted), action);
         addPageControl(button, x, y, enabled);
-        if (!label.isBlank()) button.setTooltip(Tooltip.of(Text.literal(label)));
+        if (!label.isBlank()) button.setHoverText(Text.literal(label));
         return button;
+    }
+
+    private void addPageControl(ThemedButton widget, int x, int y, boolean enabled) {
+        widget.setX(left + 12 + x);
+        widget.setY(viewportTop + y - scrollOffset);
+        controls.add(new PageControl(addButton(widget), y, enabled));
+        widget.setEnabled(enabled && widget.getY() >= viewportTop
+                && widget.getY() + widget.getHeight() <= viewportBottom);
     }
 
     private void addPageControl(ClickableWidget widget, int x, int y, boolean enabled) {
@@ -382,11 +390,11 @@ public final class CrafterScreen extends PlannerScreen {
         hoveredIngredient = mouseY >= viewportTop && mouseY < viewportBottom
                 ? ingredientSlotAt(mouseX, mouseY) : -1;
         for (PageControl control : controls) {
-            var widget = control.widget();
-            widget.setY(viewportTop + control.y() - scrollOffset);
-            widget.active = control.enabled() && widget.getY() >= viewportTop
-                    && widget.getY() + widget.getHeight() <= viewportBottom;
-            if (!widget.active && widget == hashField) widget.setFocused(false);
+            control.setY(viewportTop + control.y - scrollOffset);
+            boolean enabled = control.enabled && control.getY() >= viewportTop
+                    && control.getY() + control.getHeight() <= viewportBottom;
+            control.setEnabled(enabled);
+            if (!enabled && control.is(hashField)) control.setFocused(false);
         }
         ui.enableScissor(left + 3, viewportTop, left + panelWidth - 8, viewportBottom);
         try {
@@ -422,8 +430,8 @@ public final class CrafterScreen extends PlannerScreen {
         } finally {
             ui.disableScissor();
         }
-        for (ThemedButton button : footerButtons) button.render(context, mouseX, mouseY, delta);
-        for (ThemedButton button : tabButtons) button.render(context, mouseX, mouseY, delta);
+        for (ThemedButton button : footerButtons) button.draw(context, mouseX, mouseY, delta, ui);
+        for (ThemedButton button : tabButtons) button.draw(context, mouseX, mouseY, delta, ui);
         tabNameField.render(context, mouseX, mouseY, delta);
         pageScrollbar.configure(left + panelWidth - 7, viewportTop, viewportHeight(), maxScroll);
         pageScrollbar.draw(context, mouseX, mouseY, delta, ui);
@@ -794,5 +802,31 @@ public final class CrafterScreen extends PlannerScreen {
         return value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1);
     }
 
-    private record PageControl(ClickableWidget widget, int y, boolean enabled) {}
+    private static final class PageControl {
+        private final ClickableWidget vanilla;
+        private final ThemedButton themed;
+        private final int y;
+        private final boolean enabled;
+
+        private PageControl(ClickableWidget widget, int y, boolean enabled) {
+            vanilla = widget;
+            themed = null;
+            this.y = y;
+            this.enabled = enabled;
+        }
+
+        private PageControl(ThemedButton widget, int y, boolean enabled) {
+            vanilla = null;
+            themed = widget;
+            this.y = y;
+            this.enabled = enabled;
+        }
+
+        private void setY(int value) { if (themed != null) themed.setY(value); else vanilla.setY(value); }
+        private int getY() { return themed != null ? themed.getY() : vanilla.getY(); }
+        private int getHeight() { return themed != null ? themed.getHeight() : vanilla.getHeight(); }
+        private void setEnabled(boolean value) { if (themed != null) themed.setEnabled(value); else vanilla.active = value; }
+        private void setFocused(boolean value) { if (themed != null) themed.setFocused(value); else vanilla.setFocused(value); }
+        private boolean is(ClickableWidget widget) { return vanilla == widget; }
+    }
 }

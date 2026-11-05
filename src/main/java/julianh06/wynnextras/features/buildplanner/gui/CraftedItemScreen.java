@@ -45,16 +45,16 @@ final class CraftedItemScreen extends PlannerScreen {
         codeField.setPlaceholder(Text.literal("CR-... or WynnCrafter link"));
         codeField.setText(input);
         addDrawableChild(codeField);
-        addDrawableChild(new ThemedButton(left + panelWidth - 78, top + 43, 64, 20,
+        addButton(new ThemedButton(left + panelWidth - 78, top + 43, 64, 20,
                 Text.literal("Paste"), () -> codeField.setText(client.keyboard.getClipboard())));
         int footer = top + panelHeight - 30;
         int buttonWidth = (panelWidth - 46) / 4;
-        addDrawableChild(new ThemedButton(left + 14, footer, buttonWidth, 20, Text.literal("Cancel"), this::close));
-        addDrawableChild(new ThemedButton(left + 20 + buttonWidth, footer, buttonWidth, 20,
+        addButton(new ThemedButton(left + 14, footer, buttonWidth, 20, Text.literal("Cancel"), this::close));
+        addButton(new ThemedButton(left + 20 + buttonWidth, footer, buttonWidth, 20,
                 Text.literal("Crafter"), () -> WorkspaceTabs.openCrafter(parent, slotId, preview)));
-        copyButton = addDrawableChild(new ThemedButton(left + 26 + buttonWidth * 2, footer, buttonWidth, 20,
+        copyButton = addButton(new ThemedButton(left + 26 + buttonWidth * 2, footer, buttonWidth, 20,
                 Text.literal("Copy Code"), () -> client.keyboard.setClipboard(preview.craftedCode())));
-        equipButton = addDrawableChild(new ThemedButton(left + 32 + buttonWidth * 3, footer, buttonWidth, 20,
+        equipButton = addButton(new ThemedButton(left + 32 + buttonWidth * 3, footer, buttonWidth, 20,
                 Text.literal("Equip"), () -> {
                     equip.accept(preview);
                     close();
@@ -80,8 +80,8 @@ final class CraftedItemScreen extends PlannerScreen {
                 status = "Crafting data could not be loaded. See the log.";
             }
         }
-        equipButton.active = preview != null;
-        copyButton.active = preview != null;
+        equipButton.setEnabled(preview != null);
+        copyButton.setEnabled(preview != null);
     }
 
     @Override

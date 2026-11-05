@@ -34,13 +34,13 @@ final class EmptyWorkspaceScreen extends PlannerScreen {
     }
 
     private void control(ThemedButton button) {
-        controls.add(addDrawableChild(button));
+        controls.add(addButton(button));
     }
 
     @Override
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         ui.fill(0, 0, width, height, UiTheme.BACKGROUND);
-        for (ThemedButton control : controls) control.render(context, mouseX, mouseY, delta);
+        for (ThemedButton control : controls) control.draw(context, mouseX, mouseY, delta, ui);
     }
 
     @Override
