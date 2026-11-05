@@ -17,6 +17,7 @@ public record SavedBuild(
         int[] assignedSkills,
         Map<String, String> tomes,
         Map<String, SavedAspect> aspects,
+        Map<String, String> boosts,
         Map<String, Set<String>> abilityTrees,
         long savedAt
 ) {
@@ -32,6 +33,7 @@ public record SavedBuild(
                 assignedSkills == null ? new int[5] : assignedSkills, 5);
         tomes = Map.copyOf(new LinkedHashMap<>(tomes == null ? Map.of() : tomes));
         aspects = Map.copyOf(new LinkedHashMap<>(aspects == null ? Map.of() : aspects));
+        boosts = Map.copyOf(new LinkedHashMap<>(boosts == null ? Map.of() : boosts));
         Map<String, Set<String>> trees = new LinkedHashMap<>();
         if (abilityTrees != null) {
             abilityTrees.forEach((key, value) ->

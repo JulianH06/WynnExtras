@@ -1443,7 +1443,7 @@ public class WynncraftApiHandler {
 
 
     private static Text parseSpan(String html, Style inheritedStyle) {
-        MutableText result = null;
+        MutableText result = Text.empty();
 
         int index = 0;
         while (index < html.length()) {
@@ -1452,7 +1452,7 @@ public class WynncraftApiHandler {
                 String remaining = stripHtml(html.substring(index));
                 if (!remaining.isEmpty()) {
                     MutableText piece = Text.literal(remaining).setStyle(inheritedStyle);
-                    result = (result == null) ? piece : result.append(piece);
+                    result.append(piece);
                 }
                 break;
             }
@@ -1460,7 +1460,7 @@ public class WynncraftApiHandler {
             String before = stripHtml(html.substring(index, spanStart));
             if (!before.isEmpty()) {
                 MutableText piece = Text.literal(before).setStyle(inheritedStyle);
-                result = (result == null) ? piece : result.append(piece);
+                result.append(piece);
             }
 
             int tagEnd = html.indexOf(">", spanStart);
@@ -1505,12 +1505,12 @@ public class WynncraftApiHandler {
 
             Text parsedInner = parseSpan(inner, newStyle);
             MutableText piece = parsedInner instanceof MutableText ? (MutableText) parsedInner : Text.literal(parsedInner.getString()).setStyle(newStyle);
-            result = (result == null) ? piece : result.append(piece);
+            result.append(piece);
 
             index = spanEnd + "</span>".length();
         }
 
-        return (result == null) ? Text.empty() : result;
+        return result;
     }
 
     public static String stripHtml(String input) {

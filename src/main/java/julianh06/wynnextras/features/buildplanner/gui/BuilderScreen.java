@@ -1,6 +1,7 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
 import julianh06.wynnextras.compat.wynntils.WynntilsCustomModelAdapter;
+import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.buildplanner.PlannerLog;
 import julianh06.wynnextras.features.buildplanner.config.SavedAbilityTree;
 import julianh06.wynnextras.features.buildplanner.config.SavedAbilityTreeManager;
@@ -8,6 +9,7 @@ import julianh06.wynnextras.features.buildplanner.config.SavedBuild;
 import julianh06.wynnextras.features.buildplanner.config.SavedBuildManager;
 import julianh06.wynnextras.features.buildplanner.config.ToolWorkspaceManager;
 import julianh06.wynnextras.features.buildplanner.data.BuildCalculator;
+import julianh06.wynnextras.features.buildplanner.data.BuildBoosts;
 import julianh06.wynnextras.features.buildplanner.data.CraftedItemCodec;
 import julianh06.wynnextras.wynncraft.state.CharacterClass;
 import julianh06.wynnextras.features.buildplanner.data.AbilityTreeDatabase;
@@ -25,10 +27,13 @@ import julianh06.wynnextras.features.buildplanner.data.WynnTome;
 import julianh06.wynnextras.features.buildplanner.data.WynnAspect;
 import julianh06.wynnextras.features.buildplanner.data.WynnBuilderLinkImporter;
 import julianh06.wynnextras.features.buildplanner.data.WynnBuilderItemIndex;
+import julianh06.wynnextras.features.buildplanner.data.WynnBuilderSetBonuses;
+import julianh06.wynnextras.features.buildplanner.data.WynnBuilderTomeSlots;
 import julianh06.wynnextras.features.buildplanner.data.WynnBuilderTreeCodec;
 import julianh06.wynnextras.features.buildplanner.data.TomeDatabase;
 import julianh06.wynnextras.features.profileviewer.data.AbilityMapData;
 import julianh06.wynnextras.features.profileviewer.data.AbilityTreeCache;
+import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.WynncraftApiHandler;
@@ -58,13 +63,16 @@ import java.util.stream.Collectors;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.CustomModelDataComponent;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
@@ -76,6 +84,26 @@ import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public final class BuilderScreen extends PlannerScreen {
+    private static final Identifier ASPECT_ICONS =
+            Identifier.of("wynnextras", "textures/gui/buildplanner/aspects.png");
+    private static final Identifier TOME_ICONS =
+            Identifier.of("wynnextras", "textures/gui/buildplanner/tomes.png");
+    private static final TomeSlot[] TOME_SLOTS = {
+            new TomeSlot("weaponTome1", "Weapon 1", "weaponTome"),
+            new TomeSlot("weaponTome2", "Weapon 2", "weaponTome"),
+            new TomeSlot("armorTome1", "Armor 1", "armorTome"),
+            new TomeSlot("armorTome2", "Armor 2", "armorTome"),
+            new TomeSlot("armorTome3", "Armor 3", "armorTome"),
+            new TomeSlot("armorTome4", "Armor 4", "armorTome"),
+            new TomeSlot("gatherXpTome1", "Marathon 1", "gatherXpTome"),
+            new TomeSlot("gatherXpTome2", "Marathon 2", "gatherXpTome"),
+            new TomeSlot("dungeonXpTome1", "Mysticism 1", "dungeonXpTome"),
+            new TomeSlot("dungeonXpTome2", "Mysticism 2", "dungeonXpTome"),
+            new TomeSlot("mobXpTome1", "Expertise 1", "mobXpTome"),
+            new TomeSlot("mobXpTome2", "Expertise 2", "mobXpTome"),
+            new TomeSlot("guildTome1", "Guild", "guildTome"),
+            new TomeSlot("lootrunTome1", "Lootrun", "lootrunTome")
+    };
     private static boolean abilityTreeVisibleSession;
     private static final SmoothScroll ABILITY_TREE_SCROLL = new SmoothScroll();
     private static final SmoothScroll ABILITY_SIDEBAR_SCROLL = new SmoothScroll();
@@ -102,6 +130,12 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int WATER = 0xFF20FFFF;
     private static final int FIRE = 0xFFFF4040;
     private static final int AIR = 0xFFFFFFFF;
+    private static final float BOOST_TEXT_SCALE = 1.15F;
+    private static final float BOOST_TAB_TEXT_SCALE = 1.25F;
+    private static final int[] POWDER_DAMAGE_CAPS = {300, 200, 120, 120, 120};
+    private static final String[] POWDER_DAMAGE_IDS = {
+            "earthDamage", "thunderDamage", "waterDamage", "fireDamage", "airDamage"
+    };
     private static final int PICKER_ROW_HEIGHT = 24;
     private static final int PICKER_HEADING_HEIGHT = 18;
     private static final String[] SKILL_NAMES = {"Strength", "Dexterity", "Intelligence", "Defense", "Agility"};
@@ -227,6 +261,7 @@ public final class BuilderScreen extends PlannerScreen {
     private final List<ThemedButton> dynamicButtons = new ArrayList<>();
     private final List<ThemedButton> pickerButtons = new ArrayList<>();
     private final List<TextInputWidget> dynamicFields = new ArrayList<>();
+    private final List<PowderBoostSlider> powderBoostSliders = new ArrayList<>();
     private final List<TextInputWidget> skillFields = new ArrayList<>();
     private final List<TextWidget> dynamicLabels = new ArrayList<>();
     private BuildSlot pickerSlot;
@@ -278,8 +313,15 @@ public final class BuilderScreen extends PlannerScreen {
     private String skillPointError = "";
     private String skillPointSuccess = "";
     private int level = 121;
-    private boolean detailed;
-    private String boostSection = "Ability Boosts";
+    private StatsView statsView = StatsView.SUMMARY;
+    private SetSummaryWidget setSummaryWidget;
+    private String boostSection = "Aspects";
+    private final Set<String> selectedAbilityBoosts = new LinkedHashSet<>();
+    private final Map<String, Integer> selectedPowderSpecials = new LinkedHashMap<>();
+    private final int[] powderDamageBoosts = new int[5];
+    private final Set<String> selectedRaidBuffs = new LinkedHashSet<>();
+    private String selectedRaid = "notg";
+    private int selectedPowderElement;
 
     public BuilderScreen(Screen parent) {
         this(parent, WorkspaceTabs.builderId());
@@ -299,7 +341,7 @@ public final class BuilderScreen extends PlannerScreen {
 
     @Override
     protected int getMinLogicalHeight() {
-        return (int) Math.round(720 * scaleFactor);
+        return (int) Math.round(800 * scaleFactor);
     }
 
     @Override
@@ -332,6 +374,8 @@ public final class BuilderScreen extends PlannerScreen {
             this.remove(button);
         }
         dynamicButtons.clear();
+        for (PowderBoostSlider slider : powderBoostSliders) this.remove(slider);
+        powderBoostSliders.clear();
         pickerButtons.clear();
         for (TextInputWidget field : dynamicFields) removeRootWidget(field);
         dynamicFields.clear();
@@ -341,10 +385,12 @@ public final class BuilderScreen extends PlannerScreen {
         removeRootWidget(classSelector);
         removeRootWidget(abilityTreeWidget);
         removeRootWidget(abilityPresetOverlayWidget);
+        removeRootWidget(setSummaryWidget);
         pickerOverlay = null;
         pickerList = null;
         classSelector = null;
         abilityPresetOverlayWidget = null;
+        setSummaryWidget = null;
         abilityTreeWarningDismissButton = null;
         abilityPresetButtons.clear();
         for (TextWidget label : dynamicLabels) {
@@ -504,22 +550,34 @@ public final class BuilderScreen extends PlannerScreen {
                 () -> setAbilityTreeVisible(!abilityTreeVisible)));
 
         if (!abilityTreeVisible) {
+            List<WynnBuilderSetBonuses.ActiveSet> activeSets =
+                    WynnBuilderSetBonuses.activeSets(calculateStats().activeItems());
+            if (activeSets.isEmpty() && statsView == StatsView.SETS) statsView = StatsView.SUMMARY;
             int summaryButtonGap = 4;
-            int summaryButtonWidth = (layout.middleWidth - 8 - summaryButtonGap) / 2;
+            int summaryButtonCount = activeSets.isEmpty() ? 2 : 3;
+            int summaryButtonWidth = (layout.middleWidth - 8
+                    - summaryButtonGap * (summaryButtonCount - 1)) / summaryButtonCount;
             addDynamic(new ThemedButton(
                     layout.middleX + 4, layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
                     summaryButtonWidth, 20,
-                    Text.literal("Summary"), () -> {
-                        detailed = false;
-                        summaryScroll.jump(0.0F);
-                    }));
+                    Text.literal("Summary"), () -> selectStatsView(StatsView.SUMMARY))
+                    .setSelected(statsView == StatsView.SUMMARY).setSelectedBorderHighlight());
             addDynamic(new ThemedButton(
                     layout.middleX + 4 + summaryButtonWidth + summaryButtonGap,
                     layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
-                    summaryButtonWidth, 20, Text.literal("Detailed"), () -> {
-                        detailed = true;
-                        summaryScroll.jump(0.0F);
-                    }));
+                    summaryButtonWidth, 20, Text.literal("Detailed"), () -> selectStatsView(StatsView.DETAILED))
+                    .setSelected(statsView == StatsView.DETAILED).setSelectedBorderHighlight());
+            if (!activeSets.isEmpty()) {
+                addDynamic(new ThemedButton(
+                        layout.middleX + 4 + (summaryButtonWidth + summaryButtonGap) * 2,
+                        layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
+                        summaryButtonWidth, 20, Text.literal("Sets"), () -> selectStatsView(StatsView.SETS))
+                        .setSelected(statsView == StatsView.SETS).setSelectedBorderHighlight());
+                if (statsView == StatsView.SETS) {
+                    setSummaryWidget = new SetSummaryWidget(activeSets);
+                    addRootWidget(setSummaryWidget);
+                }
+            }
         }
         int footerY = this.height - MARGIN - 24;
         int footerGap = 4;
@@ -541,17 +599,20 @@ public final class BuilderScreen extends PlannerScreen {
                 footerX + (footerButtonWidth + footerGap) * 4, footerY, footerButtonWidth, 20,
                 Text.literal("Done"), this::close));
 
-        int boostButtonY = layout.boostTop + 5;
-        int boostButtonGap = 4;
-        int boostButtonWidth = (layout.leftWidth - 10 - boostButtonGap * 3) / 4;
+        int boostButtonY = layout.boostTop + 4;
+        int boostButtonGap = 3;
+        int boostButtonWidth = (layout.leftWidth - 10 - boostButtonGap * 4) / 5;
         addBoostButton(0, boostButtonY, boostButtonWidth, boostButtonGap,
-                "Tomes & Aspects", () -> client.setScreen(new TomeScreen(this)));
+                "Aspects", () -> selectBoostSection("Aspects"));
         addBoostButton(1, boostButtonY, boostButtonWidth, boostButtonGap,
-                "Ability Boosts", () -> boostSection = "Ability Boosts");
+                "Tomes", () -> selectBoostSection("Tomes"));
         addBoostButton(2, boostButtonY, boostButtonWidth, boostButtonGap,
-                "Powder Specials", () -> boostSection = "Powder Specials");
+                "Ability Boosts", () -> selectBoostSection("Ability Boosts"));
         addBoostButton(3, boostButtonY, boostButtonWidth, boostButtonGap,
-                "Raid Buffs", () -> boostSection = "Raid Buffs");
+                "Powder Specials", () -> selectBoostSection("Powder Specials"));
+        addBoostButton(4, boostButtonY, boostButtonWidth, boostButtonGap,
+                "Raid Buffs", () -> selectBoostSection("Raid Buffs"));
+        buildBoostWidgets(layout);
         if (abilityTreeVisible) {
             buildAbilityTreeWidgets(layout);
         } else {
@@ -559,6 +620,7 @@ public final class BuilderScreen extends PlannerScreen {
         }
         if (pickerOpen()) {
             for (ThemedButton button : dynamicButtons) button.active = false;
+            for (PowderBoostSlider slider : powderBoostSliders) slider.active = false;
             for (TextInputWidget field : dynamicFields) {
                 field.setEnabled(false);
                 field.setDisabledTooltip(null);
@@ -785,9 +847,610 @@ public final class BuilderScreen extends PlannerScreen {
             Runnable action
     ) {
         addDynamic(new ThemedButton(
-                MARGIN + 5 + index * (width + gap), y, width, 20,
-                Text.literal(fitText(label, width - 8)), action)
+                MARGIN + 5 + index * (width + gap), y, width, 28,
+                Text.literal(fitText(label, Math.round((width - 8) / BOOST_TAB_TEXT_SCALE))), action)
+                .setSelected(label.equals(boostSection))
+                .setSelectedBorderHighlight()
+                .setTextScale(BOOST_TAB_TEXT_SCALE)
                 .setHoverText(Text.literal(label)));
+    }
+
+    private void selectBoostSection(String section) {
+        if (section.equals(boostSection)) return;
+        boostSection = section;
+        rebuildWidgets();
+    }
+
+    private void buildBoostWidgets(Layout layout) {
+        int top = layout.boostTop + 37;
+        int bottom = layout.boostTop + layout.boostHeight - 5;
+        int width = layout.leftWidth - 10;
+        switch (boostSection) {
+            case "Aspects" -> buildAspectWidgets(top, bottom, width);
+            case "Tomes" -> buildTomeWidgets(top, bottom, width);
+            case "Ability Boosts" -> buildAbilityBoostWidgets(top, bottom, width);
+            case "Powder Specials" -> buildPowderSpecialWidgets(top, bottom, width);
+            case "Raid Buffs" -> buildRaidBuffWidgets(top, bottom, width);
+            default -> {
+            }
+        }
+    }
+
+    private void buildTomeWidgets(int top, int bottom, int width) {
+        int columns = 2;
+        int rows = (TOME_SLOTS.length + columns - 1) / columns;
+        int gap = 4;
+        int cellWidth = (width - gap) / columns;
+        int clearWidth = 26;
+        int availableHeight = bottom - top - gap * (rows - 1);
+        for (int index = 0; index < TOME_SLOTS.length; index++) {
+            TomeSlot slot = TOME_SLOTS[index];
+            WynnTome selected = selectedTomes.get(slot.key());
+            String label = selected == null ? "Empty " + slot.label() : selected.displayName();
+            int row = index / columns;
+            int rowTop = top + row * availableHeight / rows + row * gap;
+            int rowHeight = (row + 1) * availableHeight / rows - row * availableHeight / rows;
+            int cellX = MARGIN + 5 + index % columns * (cellWidth + gap);
+            int selectWidth = cellWidth - clearWidth - gap;
+            ThemedButton button = new ThemedButton(
+                    cellX, rowTop, selectWidth, rowHeight,
+                    Text.literal(fitText(label, Math.round((selectWidth - 38) / BOOST_TEXT_SCALE))),
+                    () -> openTomeChoice(slot))
+                    .setIcon(TOME_ICONS, 64, 0, 80, 16)
+                    .setTextScale(BOOST_TEXT_SCALE)
+                    .setTextColor(selected == null ? UiTheme.MUTED : tierRgb(selected.tier()));
+            if (selected != null) button.setHoverLines(tomeTooltip(selected));
+            addDynamic(button);
+            ThemedButton clearButton = new ThemedButton(
+                    cellX + selectWidth + gap, rowTop, clearWidth, rowHeight,
+                    Text.literal("x"), () -> clearTomeSlot(slot.key()))
+                    .setTextColor(0xFFFFFFFF).setTextScale(1.5F).setTextShadow(false)
+                    .setTextOffset(0.5F, 1.0F);
+            clearButton.active = selected != null;
+            addDynamic(clearButton.setHoverText(Text.literal("Clear this tome slot.")));
+        }
+    }
+
+    private void buildAspectWidgets(int top, int bottom, int width) {
+        int gap = 5;
+        int rowHeight = Math.max(30, (bottom - top - gap * 4) / 5);
+        CharacterClass abilityClass = selectedAbilityClass();
+        CraftingChoiceScreen.ChoiceIcon icon = aspectIcon(abilityClass);
+        for (int index = 0; index < 5; index++) {
+            int aspectIndex = index;
+            String slot = "aspect" + (index + 1);
+            AspectSelection selected = selectedAspects.get(slot);
+            String label = selected == null ? "Empty Aspect" : selected.aspect().displayName();
+            int tierWidth = 44;
+            int clearWidth = 30;
+            int selectWidth = width - tierWidth - clearWidth - gap * 2;
+            ThemedButton button = new ThemedButton(
+                    MARGIN + 5, top + index * (rowHeight + gap),
+                    selectWidth, rowHeight,
+                    Text.literal(fitText(label,
+                            Math.round((selectWidth - 38) / BOOST_TEXT_SCALE))),
+                    () -> openAspectChoice(aspectIndex))
+                    .setIcon(icon.texture(), icon.u(), icon.v(), icon.textureWidth(), icon.textureHeight())
+                    .setTextScale(BOOST_TEXT_SCALE)
+                    .setTextColor(selected == null ? UiTheme.MUTED : tierRgb(selected.aspect().rarity()));
+            button.active = abilityClass != null;
+            if (selected != null) button.setHoverLines(aspectTooltip(selected.aspect(), selected.tier()));
+            else button.setHoverText(Text.literal(abilityClass == null
+                    ? "Equip a weapon to choose aspects." : "Choose an aspect."));
+            addDynamic(button);
+            ThemedButton tierButton = new ThemedButton(
+                    MARGIN + 5 + selectWidth + gap, top + index * (rowHeight + gap), tierWidth, rowHeight,
+                    Text.literal(selected == null ? "T-" : "T" + selected.tier()),
+                    () -> cycleAspectTierInline(slot)).setTextScale(1.35F);
+            tierButton.active = selected != null;
+            addDynamic(tierButton.setHoverText(Text.literal("Cycle this aspect's tier.")));
+            ThemedButton clearButton = new ThemedButton(
+                    MARGIN + 5 + selectWidth + gap + tierWidth + gap,
+                    top + index * (rowHeight + gap), clearWidth, rowHeight,
+                    Text.literal("x"), () -> clearAspectSlot(slot))
+                    .setTextColor(0xFFFFFFFF).setTextScale(1.5F).setTextShadow(false)
+                    .setTextOffset(0.5F, 1.0F);
+            clearButton.active = selected != null;
+            addDynamic(clearButton.setHoverText(Text.literal("Clear this aspect slot.")));
+        }
+    }
+
+    private void clearTomeSlot(String slot) {
+        selectTome(slot, null);
+        invalidateStats();
+        saveWorkspace();
+        rebuildWidgets();
+    }
+
+    private void clearAspectSlot(String slot) {
+        selectAspect(slot, null);
+        invalidateStats();
+        saveWorkspace();
+        rebuildWidgets();
+    }
+
+    private void cycleAspectTierInline(String slot) {
+        AspectSelection selection = selectedAspects.get(slot);
+        if (selection == null) return;
+        int tier = selection.tier() >= selection.aspect().tiers().size() ? 1 : selection.tier() + 1;
+        selectAspect(slot, new AspectSelection(selection.aspect(), tier));
+        saveWorkspace();
+        rebuildWidgets();
+    }
+
+    private void openTomeChoice(TomeSlot slot) {
+        List<WynnTome> tomes = TomeDatabase.getInstance().search(slot.type(), "").stream()
+                .sorted(java.util.Comparator.comparingInt((WynnTome tome) -> rarityRank(tome.tier()))
+                        .thenComparing(WynnTome::displayName, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        List<CraftingChoiceScreen.Choice> choices = new ArrayList<>();
+        choices.add(new CraftingChoiceScreen.Choice(-1, "Clear slot", "Remove the selected tome."));
+        for (int index = 0; index < tomes.size(); index++) {
+            WynnTome tome = tomes.get(index);
+            choices.add(new CraftingChoiceScreen.Choice(
+                    index, tome.displayName(), "Level " + tome.level(), tierRgb(tome.tier()),
+                    new CraftingChoiceScreen.ChoiceIcon(TOME_ICONS, 64, 0, 80, 16), tomeTooltip(tome)));
+        }
+        client.setScreen(new CraftingChoiceScreen(this, "Choose " + slot.label(), choices, choice -> {
+            selectTome(slot.key(), choice.id() < 0 ? null : tomes.get(choice.id()));
+            invalidateStats();
+            saveWorkspace();
+        }));
+    }
+
+    private CraftingChoiceScreen.ChoiceIcon aspectIcon(CharacterClass abilityClass) {
+        int sourceX = switch (abilityClass == null ? CharacterClass.UNKNOWN : abilityClass) {
+            case WARRIOR -> 0;
+            case ASSASSIN -> 16;
+            case MAGE -> 32;
+            case ARCHER -> 48;
+            case SHAMAN -> 64;
+            case UNKNOWN -> 48;
+        };
+        return new CraftingChoiceScreen.ChoiceIcon(ASPECT_ICONS, sourceX, 0, 96, 16);
+    }
+
+    private List<Text> aspectTooltip(WynnAspect aspect, int tier) {
+        var apiAspect = AspectUtils.findApiAspectByName(aspect.displayName());
+        if (apiAspect != null) {
+            ItemStack stack = AspectUtils.toItemStack(apiAspect, false, tier);
+            if (!stack.isEmpty()) {
+                List<Text> tooltip = new ArrayList<>(stack.getTooltip(
+                        Item.TooltipContext.DEFAULT, MinecraftUtils.player(), TooltipType.BASIC));
+                if (!tooltip.isEmpty()) {
+                    tooltip.set(0, tooltip.getFirst().copy().append(
+                            Text.literal(" Tier " + romanNumeral(tier)).formatted(Formatting.GRAY)
+                                    .styled(style -> style.withItalic(false))));
+                    return List.copyOf(tooltip);
+                }
+            }
+        }
+
+        WynnAspect.Tier selectedTier = aspect.tier(tier);
+        List<Text> lines = new ArrayList<>();
+        lines.add(Text.literal(aspect.displayName()).styled(style -> style.withColor(tierRgb(aspect.rarity())))
+                .append(Text.literal(" Tier " + romanNumeral(tier)).formatted(Formatting.GRAY)
+                        .styled(style -> style.withItalic(false))));
+        lines.add(Text.empty());
+        StringBuilder line = new StringBuilder();
+        for (String word : selectedTier.description().split("\\s+")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && textRenderer.getWidth(candidate) > 300) {
+                lines.add(Text.literal(line.toString()).formatted(Formatting.WHITE));
+                line.setLength(0);
+            }
+            if (!line.isEmpty()) line.append(' ');
+            line.append(word);
+        }
+        if (!line.isEmpty()) lines.add(Text.literal(line.toString()).formatted(Formatting.WHITE));
+        return List.copyOf(lines);
+    }
+
+    private List<Text> tomeTooltip(WynnTome tome) {
+        WynnDataService.ItemData apiTome = resolveTomeData(tome);
+        if (apiTome != null) return lootPoolTomeTooltip(tome, apiTome);
+
+        List<Text> lines = new ArrayList<>();
+        lines.add(Text.literal(tome.displayName()).styled(style -> style.withColor(tierRgb(tome.tier()))));
+        lines.add(Text.literal(tome.tier() + " Tome - Level " + tome.level()).formatted(Formatting.GRAY));
+        if (!tome.identifications().isEmpty()) lines.add(Text.empty());
+        tome.identifications().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
+            int value = entry.getValue();
+            Text line = Text.literal(IdentificationUnits.format(entry.getKey(), value) + " ")
+                    .formatted(value >= 0 ? Formatting.GREEN : Formatting.RED)
+                    .append(Text.literal(readableIdentification(entry.getKey())).formatted(Formatting.GRAY));
+            lines.add(line);
+        });
+        return List.copyOf(lines);
+    }
+
+    private static WynnDataService.ItemData resolveTomeData(WynnTome tome) {
+        WynnDataService data = WynnDataService.getInstance();
+        WynnDataService.ItemData resolved = data.resolveItem(
+                new WynnDataService.ItemSelector(tome.displayName(), "tome", null, tome.tier())).orElse(null);
+        if (resolved != null) return resolved;
+
+        List<WynnDataService.ItemData> matches = data.findByDisplayName(tome.displayName()).stream()
+                .filter(item -> "tome".equalsIgnoreCase(item.type()))
+                .filter(item -> tome.tier().equalsIgnoreCase(item.tier()))
+                .toList();
+        return matches.stream()
+                .filter(item -> tome.displayName().equalsIgnoreCase(item.internalName()))
+                .findFirst()
+                .orElse(matches.isEmpty() ? null : matches.getFirst());
+    }
+
+    private List<Text> lootPoolTomeTooltip(WynnTome tome, WynnDataService.ItemData apiTome) {
+        List<Text> lines = new ArrayList<>();
+        lines.add(Text.literal(tome.displayName()).formatted(Formatting.LIGHT_PURPLE));
+        String tier = formatTomeType(apiTome.tier());
+        String subtype = formatTomeType(apiTome.subType());
+        if (!tier.isBlank() || !subtype.isBlank()) {
+            lines.add(Text.literal((tier + " " + subtype).trim()).formatted(Formatting.GRAY));
+        }
+        String apiLevel = apiTome.requirements().get("level");
+        if (apiLevel != null || tome.level() > 0 || apiTome.requirements().containsKey("classRequirement")) {
+            lines.add(Text.empty());
+            String level = apiLevel != null ? apiLevel : Integer.toString(tome.level());
+            lines.add(Text.literal("Combat Lv. Min: ").formatted(Formatting.GRAY).append(Text.literal(level)));
+            addTomeRequirement(lines, apiTome.requirements(), "classRequirement", "Class Req");
+        }
+        if (!apiTome.identifications().isEmpty()) {
+            lines.add(Text.empty());
+            for (Map.Entry<String, WynnDataService.StatValue> entry : apiTome.identifications().entrySet()) {
+                String value = formatTomeStat(entry.getValue(), entry.getKey());
+                lines.add(Text.literal(value + " ").formatted(value.startsWith("-")
+                                ? Formatting.RED : Formatting.GREEN)
+                        .append(Text.literal(lootPoolIdentificationName(entry.getKey())).formatted(Formatting.GRAY)));
+            }
+        }
+        return List.copyOf(lines);
+    }
+
+    private static String formatTomeType(String value) {
+        if (value == null || value.isBlank()) return "";
+        String spaced = value.replaceAll("([a-z])([A-Z])", "$1 $2")
+                .replace('_', ' ')
+                .replace('-', ' ');
+        return Arrays.stream(spaced.split("\\s+"))
+                .filter(part -> !part.isBlank())
+                .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1))
+                .collect(Collectors.joining(" "));
+    }
+
+    private static void addTomeRequirement(
+            List<Text> lines, Map<String, String> requirements, String key, String label
+    ) {
+        String value = requirements.get(key);
+        if (value != null) {
+            lines.add(Text.literal(label + ": ").formatted(Formatting.GRAY).append(Text.literal(value)));
+        }
+    }
+
+    private static String formatTomeStat(WynnDataService.StatValue value, String key) {
+        String suffix = switch (IdentificationUnits.unit(key)) {
+            case PERCENT -> "%";
+            case PER_FIVE_SECONDS -> "/5s";
+            case PER_FOUR_SECONDS -> "/4s";
+            case PER_THREE_SECONDS -> "/3s";
+            case BLOCKS -> " blocks";
+            case RAW -> "";
+        };
+        if (value.isRange()) {
+            return signedNumber(value.minimum()) + suffix + " to " + signedNumber(value.maximum()) + suffix;
+        }
+        if (value.raw() != null) return signedNumber(value.raw()) + suffix;
+        if (value.value() != null) return signedNumber(value.value()) + suffix;
+        return "";
+    }
+
+    private static String signedNumber(double value) {
+        String number = value == Math.rint(value) ? Long.toString((long) value) : Double.toString(value);
+        return value > 0 ? "+" + number : number;
+    }
+
+    private static String lootPoolIdentificationName(String key) {
+        Map<String, String> special = Map.of(
+                "healthRegenRaw", "Health Regen",
+                "healthRegen", "Health Regen",
+                "manaRegen", "Mana Regen",
+                "manaSteal", "Mana Steal",
+                "lifeSteal", "Life Steal",
+                "rawAttackSpeed", "Attack Speed",
+                "raw1stSpellCost", "1st Spell Cost",
+                "raw2ndSpellCost", "2nd Spell Cost",
+                "raw3rdSpellCost", "3rd Spell Cost",
+                "raw4thSpellCost", "4th Spell Cost");
+        if (special.containsKey(key)) return special.get(key);
+        String name = readableIdentification(key);
+        return key.startsWith("raw") ? name.substring(Math.min(4, name.length())).trim() : name;
+    }
+
+    private static String romanNumeral(int number) {
+        return switch (number) {
+            case 1 -> "I";
+            case 2 -> "II";
+            case 3 -> "III";
+            case 4 -> "IV";
+            default -> Integer.toString(number);
+        };
+    }
+
+    private static String readableIdentification(String key) {
+        if (key == null || key.isBlank()) return "";
+        String spaced = key.replaceAll("([a-z])([A-Z])", "$1 $2");
+        return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
+    }
+
+    private String setBonusName(String key) {
+        String skillName = switch (key) {
+            case "str" -> "Strength";
+            case "dex" -> "Dexterity";
+            case "int" -> "Intelligence";
+            case "def" -> "Defense";
+            case "agi" -> "Agility";
+            default -> null;
+        };
+        if (skillName != null) return skillName;
+        String[] spells = spellNames();
+        if (key.endsWith("1stSpellCost")) return spells[1] + " Cost";
+        if (key.endsWith("2ndSpellCost")) return spells[2] + " Cost";
+        if (key.endsWith("3rdSpellCost")) return spells[3] + " Cost";
+        if (key.endsWith("4thSpellCost")) return spells[4] + " Cost";
+        return readableIdentification(key);
+    }
+
+    private static int compareSetBonuses(Map.Entry<String, Integer> left, Map.Entry<String, Integer> right) {
+        int skillComparison = Integer.compare(setSkillOrder(left.getKey()), setSkillOrder(right.getKey()));
+        return skillComparison != 0 ? skillComparison : left.getKey().compareTo(right.getKey());
+    }
+
+    private static int setSkillOrder(String key) {
+        return switch (key) {
+            case "str" -> 0;
+            case "dex" -> 1;
+            case "int" -> 2;
+            case "def" -> 3;
+            case "agi" -> 4;
+            default -> 5;
+        };
+    }
+
+    private static int rarityRank(String rarity) {
+        return switch (rarity.toLowerCase(Locale.ROOT)) {
+            case "mythic" -> 0;
+            case "fabled" -> 1;
+            case "legendary" -> 2;
+            case "rare" -> 3;
+            case "unique" -> 4;
+            case "set" -> 5;
+            default -> 6;
+        };
+    }
+
+    private void openAspectChoice(int index) {
+        CharacterClass abilityClass = selectedAbilityClass();
+        if (abilityClass == null) return;
+        String slot = "aspect" + (index + 1);
+        List<WynnAspect> aspects = AspectDatabase.getInstance().search(abilityClass, "").stream()
+                .filter(aspect -> selectedAspects.entrySet().stream()
+                        .noneMatch(entry -> !entry.getKey().equals(slot)
+                                && entry.getValue().aspect().id() == aspect.id()))
+                .filter(aspect -> !"Mythic".equalsIgnoreCase(aspect.rarity())
+                        || selectedAspects.entrySet().stream().noneMatch(entry -> !entry.getKey().equals(slot)
+                                && "Mythic".equalsIgnoreCase(entry.getValue().aspect().rarity())))
+                .toList();
+        List<CraftingChoiceScreen.Choice> choices = new ArrayList<>();
+        choices.add(new CraftingChoiceScreen.Choice(-1, "Clear slot", "Remove the selected aspect."));
+        for (int choiceIndex = 0; choiceIndex < aspects.size(); choiceIndex++) {
+            WynnAspect aspect = aspects.get(choiceIndex);
+            CraftingChoiceScreen.ChoiceIcon icon = aspectIcon(abilityClass);
+            choices.add(new CraftingChoiceScreen.Choice(
+                    choiceIndex, aspect.displayName(), aspect.rarity() + " - " + aspect.tiers().size() + " tiers",
+                    tierRgb(aspect.rarity()), icon,
+                    aspectTooltip(aspect, aspect.tiers().size())));
+        }
+        client.setScreen(new CraftingChoiceScreen(this, "Choose Aspect " + (index + 1), choices, choice -> {
+            if (choice.id() < 0) {
+                selectAspect(slot, null);
+            } else {
+                WynnAspect aspect = aspects.get(choice.id());
+                selectAspect(slot, new AspectSelection(aspect, aspect.tiers().size()));
+            }
+            invalidateStats();
+            saveWorkspace();
+        }));
+    }
+
+    private void buildAbilityBoostWidgets(int top, int bottom, int width) {
+        int columns = 3;
+        int gap = 4;
+        int buttonWidth = (width - gap * (columns - 1)) / columns;
+        int rows = (BuildBoosts.ABILITIES.size() + columns - 1) / columns;
+        int availableHeight = bottom - top - gap * (rows - 1);
+        for (int index = 0; index < BuildBoosts.ABILITIES.size(); index++) {
+            BuildBoosts.AbilityBoost boost = BuildBoosts.ABILITIES.get(index);
+            boolean selected = selectedAbilityBoosts.contains(boost.id());
+            int row = index / columns;
+            int rowTop = top + row * availableHeight / rows + row * gap;
+            int buttonHeight = (row + 1) * availableHeight / rows - row * availableHeight / rows;
+            addDynamic(new ThemedButton(
+                    MARGIN + 5 + index % columns * (buttonWidth + gap),
+                    rowTop, buttonWidth, buttonHeight,
+                    Text.literal(fitText(boost.label(), Math.round((buttonWidth - 8) / BOOST_TEXT_SCALE))),
+                    () -> toggleAbilityBoost(boost.id()))
+                    .setSelected(selected)
+                    .setSelectedBorderHighlight()
+                    .setTextScale(BOOST_TEXT_SCALE)
+                    .setHoverLines(List.of(
+                            Text.literal(boost.label()),
+                            Text.literal(boost.effect()).formatted(Formatting.GRAY))));
+        }
+    }
+
+    private void toggleAbilityBoost(String id) {
+        if (!selectedAbilityBoosts.remove(id)) selectedAbilityBoosts.add(id);
+        invalidateStats();
+        saveWorkspace();
+        rebuildWidgets();
+    }
+
+    private void buildPowderSpecialWidgets(int top, int bottom, int width) {
+        int[] elementColors = {EARTH, THUNDER, WATER, FIRE, AIR};
+        int tabGap = 3;
+        int tabWidth = (width - tabGap * 4) / 5;
+        for (int index = 0; index < BuildBoosts.POWDER_SPECIALS.size(); index++) {
+            int element = index;
+            BuildBoosts.PowderSpecial special = BuildBoosts.POWDER_SPECIALS.get(index);
+            addDynamic(new ThemedButton(
+                    MARGIN + 5 + index * (tabWidth + tabGap), top, tabWidth, 25,
+                    Text.literal(special.element()), () -> {
+                        selectedPowderElement = element;
+                        rebuildWidgets();
+                    }).setSelected(selectedPowderElement == index)
+                    .setSelectedBorderHighlight()
+                    .setTextScale(BOOST_TEXT_SCALE)
+                    .setSelectedColor(elementColors[index]).setTextColor(elementColors[index]));
+        }
+        BuildBoosts.PowderSpecial special = BuildBoosts.POWDER_SPECIALS.get(selectedPowderElement);
+        int contentTop = top + 38;
+        int labelHeight = 32;
+        ThemedButton activeLabel = new ThemedButton(
+                MARGIN + 5, contentTop, width, labelHeight,
+                Text.literal(special.name() + " (Active)"), () -> {}).setTextScale(BOOST_TEXT_SCALE);
+        activeLabel.active = false;
+        addDynamic(activeLabel.setTextColor(elementColors[selectedPowderElement]));
+        int levelTop = contentTop + labelHeight + 10;
+        int levelGap = 5;
+        int levelWidth = (width - levelGap * 6) / 7;
+        for (int level = 1; level <= 7; level++) {
+            int selectedLevel = level;
+            boolean selected = selectedPowderSpecials.getOrDefault(special.name(), 0) == level;
+            addDynamic(new ThemedButton(
+                    MARGIN + 5 + (level - 1) * (levelWidth + levelGap), levelTop,
+                    levelWidth, 34, Text.literal("Lv." + level),
+                    () -> setPowderSpecial(special.name(), selectedLevel))
+                    .setTextScale(BOOST_TEXT_SCALE)
+                    .setSelectedBorderHighlight()
+                    .setSelected(selected).setSelectedColor(elementColors[selectedPowderElement]));
+        }
+        ThemedButton passiveLabel = new ThemedButton(
+                MARGIN + 5, levelTop + 45, width, 32,
+                Text.literal(special.passive() + " (Passive)"), () -> {}).setTextScale(BOOST_TEXT_SCALE);
+        passiveLabel.active = false;
+        addDynamic(passiveLabel.setTextColor(elementColors[selectedPowderElement]));
+        int sliderY = levelTop + 88;
+        PowderBoostSlider slider = new PowderBoostSlider(
+                MARGIN + 5, sliderY, width, 24, selectedPowderElement);
+        powderBoostSliders.add(this.addDrawableChild(slider));
+        ThemedButton damageLabel = new ThemedButton(
+                MARGIN + 5, Math.min(bottom - 22, sliderY + 27), width, 20,
+                Text.literal(powderDamageLabel(selectedPowderElement)), () -> {}).setTextScale(BOOST_TEXT_SCALE);
+        damageLabel.active = false;
+        addDynamic(damageLabel);
+        slider.setValueLabel(damageLabel);
+    }
+
+    private String powderDamageLabel(int element) {
+        return "% " + BuildBoosts.POWDER_SPECIALS.get(element).element()
+                + " Dmg Boost: " + powderDamageBoosts[element];
+    }
+
+    private void setPowderSpecial(String name, int level) {
+        if (level == 0 || selectedPowderSpecials.getOrDefault(name, 0) == level) {
+            selectedPowderSpecials.remove(name);
+        } else {
+            selectedPowderSpecials.put(name, level);
+        }
+        invalidateStats();
+        saveWorkspace();
+        rebuildWidgets();
+    }
+
+    private void buildRaidBuffWidgets(int top, int bottom, int width) {
+        int raidGap = 3;
+        int raidWidth = (width - raidGap * 4) / 5;
+        for (int index = 0; index < BuildBoosts.RAIDS.size(); index++) {
+            BuildBoosts.Raid raid = BuildBoosts.RAIDS.get(index);
+            addDynamic(new ThemedButton(
+                    MARGIN + 5 + index * (raidWidth + raidGap), top, raidWidth, 20,
+                    Text.literal(raid.label()),
+                    () -> {
+                        selectedRaid = raid.id();
+                        rebuildWidgets();
+                    }).setSelected(raid.id().equals(selectedRaid))
+                    .setSelectedBorderHighlight().setTextScale(BOOST_TEXT_SCALE));
+        }
+        BuildBoosts.Raid raid = BuildBoosts.RAIDS.stream()
+                .filter(candidate -> candidate.id().equals(selectedRaid)).findFirst().orElse(BuildBoosts.RAIDS.getFirst());
+        int tierTop = top + 23;
+        int tierGap = 3;
+        int tierHeight = Math.max(40, (bottom - tierTop - tierGap * 2) / 3);
+        for (int tier = 0; tier < raid.tiers().size(); tier++) {
+            int selectedTier = tier;
+            List<String> buffs = raid.tiers().get(tier);
+            int tierY = tierTop + tier * (tierHeight + tierGap);
+            int tierLabelWidth = 46;
+            ThemedButton tierLabel = new ThemedButton(
+                    MARGIN + 5, tierY, tierLabelWidth, tierHeight,
+                    Text.literal("Tier " + (tier + 1)), () -> {}).setTextScale(1.1F);
+            tierLabel.active = false;
+            addDynamic(tierLabel);
+            int buttonGap = 3;
+            int columns = 3;
+            int buttonWidth = (width - tierLabelWidth - 5 - buttonGap * (columns - 1)) / columns;
+            int buttonHeight = (tierHeight - buttonGap) / 2;
+            for (int index = 0; index < buffs.size(); index++) {
+                String buff = buffs.get(index);
+                boolean selected = selectedRaidBuffs.contains(buff);
+                addDynamic(new ThemedButton(
+                        MARGIN + 5 + tierLabelWidth + 5 + index % columns * (buttonWidth + buttonGap),
+                        tierY + index / columns * (buttonHeight + buttonGap), buttonWidth, buttonHeight,
+                        Text.literal(fitText(buff, Math.round((buttonWidth - 8) / BOOST_TEXT_SCALE))),
+                        () -> toggleRaidBuff(raid, selectedTier, buff))
+                        .setSelected(selected).setSelectedBorderHighlight()
+                        .setTextScale(BOOST_TEXT_SCALE)
+                        .setHoverLines(raidBuffTooltip(buff)));
+            }
+        }
+    }
+
+    private static List<Text> raidBuffTooltip(String buff) {
+        List<Text> lines = new ArrayList<>();
+        lines.add(Text.literal(buff));
+        lines.add(Text.empty());
+        List<BuildBoosts.RaidEffect> effects = BuildBoosts.raidEffects(buff);
+        if (effects.isEmpty()) {
+            lines.add(Text.literal("No numeric effect data available.").formatted(Formatting.GRAY));
+        } else {
+            for (BuildBoosts.RaidEffect effect : effects) {
+                lines.add(Text.literal(effect.value() + " ").formatted(
+                                effect.rawValue() < 0 ? Formatting.RED : Formatting.GREEN)
+                        .append(Text.literal(effect.label()).formatted(Formatting.GRAY)));
+            }
+        }
+        return List.copyOf(lines);
+    }
+
+    private void toggleRaidBuff(BuildBoosts.Raid raid, int tier, String buff) {
+        if (selectedRaidBuffs.remove(buff)) {
+            invalidateStats();
+            saveWorkspace();
+            rebuildWidgets();
+            return;
+        }
+        boolean otherRaidActive = BuildBoosts.RAIDS.stream()
+                .filter(candidate -> !candidate.id().equals(raid.id()))
+                .flatMap(candidate -> candidate.tiers().stream())
+                .flatMap(List::stream)
+                .anyMatch(selectedRaidBuffs::contains);
+        if (otherRaidActive) selectedRaidBuffs.clear();
+        for (String sameTier : raid.tiers().get(tier)) selectedRaidBuffs.remove(sameTier);
+        selectedRaidBuffs.add(buff);
+        selectedRaid = raid.id();
+        invalidateStats();
+        saveWorkspace();
+        rebuildWidgets();
     }
 
     private void setAbilityTreeVisible(boolean visible) {
@@ -798,6 +1461,13 @@ public final class BuilderScreen extends PlannerScreen {
         if (abilityTreeVisible) {
             AbilityTreeDatabase.getInstance().loadAsync(selectedClass);
         }
+        rebuildWidgets();
+    }
+
+    private void selectStatsView(StatsView view) {
+        if (statsView == view) return;
+        statsView = view;
+        summaryScroll.jump(0.0F);
         rebuildWidgets();
     }
 
@@ -1155,11 +1825,7 @@ public final class BuilderScreen extends PlannerScreen {
             }
             powders.put(encodedSlot, parsePowders(powderCodes.getOrDefault(slot, "")));
         }
-        List<String> tomeSlots = List.of("weaponTome1", "weaponTome2", "armorTome1", "armorTome2",
-                "armorTome3", "armorTome4", "gatherXpTome1", "gatherXpTome2", "dungeonXpTome1",
-                "dungeonXpTome2", "mobXpTome1", "mobXpTome2", "guildTome1", "lootrunTome1");
-        List<Integer> tomes = tomeSlots.stream()
-                .map(slot -> selectedTomes.containsKey(slot) ? selectedTomes.get(slot).id() : null).toList();
+        List<Integer> tomes = WynnBuilderTomeSlots.encode(selectedTomes);
         List<WynnBuilderBuild.Aspect> aspects = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             AspectSelection selection = selectedAspects.get("aspect" + (i + 1));
@@ -1182,7 +1848,9 @@ public final class BuilderScreen extends PlannerScreen {
                 warningNodeIds.addAll(skippedAbilityIds(encodedTree));
             }
         }
-        Integer[] skills = Arrays.stream(assignedSkills).boxed().toArray(Integer[]::new);
+        Integer[] skills = Arrays.stream(BuildCalculator.finalSkillsForExport(
+                assignedSkills, equippedItems(), new ArrayList<>(selectedTomes.values())))
+                .boxed().toArray(Integer[]::new);
         WynnBuilderBuild build = new WynnBuilderBuild(
                 WynnBuilderVersions.latestIndex(), equipment, powders, tomes, skills, level, aspects,
                 new WynnBuilderBuild.BitPayload(tree, tree.length() * 6));
@@ -1240,6 +1908,7 @@ public final class BuilderScreen extends PlannerScreen {
                         Map.Entry::getKey,
                         entry -> new SavedBuild.SavedAspect(
                                 entry.getValue().aspect().displayName(), entry.getValue().tier()))),
+                savedBoosts(),
                 abilityTreeState.snapshot(),
                 draft ? 0 : System.currentTimeMillis());
     }
@@ -1283,6 +1952,7 @@ public final class BuilderScreen extends PlannerScreen {
             }
         }
         selectedAspects.clear();
+        restoreBoosts(build.boosts());
         WynnItem loadedWeapon = equipped.get(BuildSlot.WEAPON);
         CharacterClass loadedClass = loadedWeapon == null
                 ? classForName(build.characterClass())
@@ -1324,8 +1994,8 @@ public final class BuilderScreen extends PlannerScreen {
         iconCache.clear();
         offhandStatsCache.clear();
         damageCards.clear();
-        detailed = false;
-        boostSection = "Ability Boosts";
+        statsView = StatsView.SUMMARY;
+        boostSection = "Aspects";
     }
 
     private void restorePendingBuild() {
@@ -1449,6 +2119,7 @@ public final class BuilderScreen extends PlannerScreen {
                 && Arrays.equals(first.assignedSkills(), second.assignedSkills())
                 && first.tomes().equals(second.tomes())
                 && first.aspects().equals(second.aspects())
+                && first.boosts().equals(second.boosts())
                 && first.abilityTrees().equals(second.abilityTrees());
     }
 
@@ -1511,6 +2182,12 @@ public final class BuilderScreen extends PlannerScreen {
         offhands.clear();
         selectedTomes.clear();
         selectedAspects.clear();
+        selectedAbilityBoosts.clear();
+        selectedPowderSpecials.clear();
+        Arrays.fill(powderDamageBoosts, 0);
+        selectedRaidBuffs.clear();
+        selectedRaid = "notg";
+        boostSection = "Aspects";
         resetAbilityTrees();
         for (int i = 0; i < assignedSkills.length; i++) assignedSkills[i] = 0;
         invalidateStats();
@@ -1811,6 +2488,7 @@ public final class BuilderScreen extends PlannerScreen {
     @Override
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         for (TextInputWidget field : dynamicFields) field.setVisible(detailItem == null);
+        if (setSummaryWidget != null) setSummaryWidget.setVisible(detailItem == null);
         ui.fill(0, 0, width, height, UiTheme.BACKGROUND);
         if (pendingBuild != null) {
             UiTheme.drawPanel(ui, MARGIN, MARGIN, this.width - MARGIN * 2, this.height - MARGIN * 2);
@@ -1828,10 +2506,9 @@ public final class BuilderScreen extends PlannerScreen {
         if (abilityTreeVisible) {
             renderAbilityTree(context, layout, mouseX, mouseY, delta);
         } else {
-            renderSummary(context, layout, stats, mouseX, mouseY, delta);
+            if (statsView != StatsView.SETS) renderSummary(context, layout, stats, mouseX, mouseY, delta);
             renderDamage(context, layout, stats, mouseX, mouseY, delta);
         }
-        renderBoostArea(context, layout, stats);
         renderVanillaChildren(context, mouseX, mouseY, delta);
         if (detailItem == null) {
             renderSkillDetails(context, layout, stats);
@@ -2060,6 +2737,12 @@ public final class BuilderScreen extends PlannerScreen {
     private enum NoticeSource {
         IMPORT,
         BROWSER
+    }
+
+    private enum StatsView {
+        SUMMARY,
+        DETAILED,
+        SETS
     }
 
     private void renderPanels(DrawContext context, Layout layout) {
@@ -2832,7 +3515,7 @@ public final class BuilderScreen extends PlannerScreen {
                             elements[i], format(stats.defenses()[i]), colors[i]);
                 }
             }
-            if (detailed) {
+            if (statsView == StatsView.DETAILED) {
                 y = summaryLine(context, x, valueX, y, "Damage Absorbed:",
                         format(BuildCalculator.skillEffectPercentage(3, stats.skills()[3])) + "%",
                         0xFFFFFFFF);
@@ -2841,20 +3524,20 @@ public final class BuilderScreen extends PlannerScreen {
                         0xFFFFFFFF);
             }
 
-            StatDisplay[] firstGroup = detailed ? DETAILED_SUSTAIN_STATS : SUMMARY_STATS;
+            StatDisplay[] firstGroup = statsView == StatsView.DETAILED ? DETAILED_SUSTAIN_STATS : SUMMARY_STATS;
             if (hasAny(ids, firstGroup)) {
                 y = summaryDivider(context, layout, y);
                 y = renderStatGroup(context, x, valueX, y, ids, firstGroup, stats);
             }
-            if (detailed && hasAny(ids, DETAILED_DAMAGE_STATS)) {
+            if (statsView == StatsView.DETAILED && hasAny(ids, DETAILED_DAMAGE_STATS)) {
                 y = summaryDivider(context, layout, y);
                 y = renderStatGroup(context, x, valueX, y, ids, DETAILED_DAMAGE_STATS, stats);
             }
-            if (detailed && hasAny(ids, DETAILED_ELEMENTAL_STATS)) {
+            if (statsView == StatsView.DETAILED && hasAny(ids, DETAILED_ELEMENTAL_STATS)) {
                 y = summaryDivider(context, layout, y);
                 y = renderStatGroup(context, x, valueX, y, ids, DETAILED_ELEMENTAL_STATS, stats);
             }
-            if (detailed && hasAny(ids, DETAILED_UTILITY_STATS)) {
+            if (statsView == StatsView.DETAILED && hasAny(ids, DETAILED_UTILITY_STATS)) {
                 y = summaryDivider(context, layout, y);
                 y = renderStatGroup(context, x, valueX, y, ids, DETAILED_UTILITY_STATS, stats);
             }
@@ -3012,12 +3695,19 @@ public final class BuilderScreen extends PlannerScreen {
         cacheKey = 31 * cacheKey + System.identityHashCode(tree);
         cacheKey = 31 * cacheKey + System.identityHashCode(stats);
         cacheKey = 31 * cacheKey + selectedAbilities.hashCode();
+        cacheKey = 31 * cacheKey + selectedAbilityBoosts.hashCode();
+        cacheKey = 31 * cacheKey + selectedPowderSpecials.hashCode();
         if (cacheKey != damageCacheKey) {
-            damageCache = weapon == null
-                    ? List.of()
-                    : DamageCalculator.calculate(
-                            stats, weapon.subType(), tree, selectedAbilities,
-                            new ArrayList<>(selectedAspects.values()));
+            if (weapon == null) {
+                damageCache = List.of();
+            } else {
+                List<DamageCalculator.SpellResult> calculated = new ArrayList<>(DamageCalculator.calculate(
+                        stats, weapon.subType(), tree, selectedAbilities,
+                        new ArrayList<>(selectedAspects.values()),
+                        BuildBoosts.damageModifiers(selectedAbilityBoosts, selectedPowderSpecials)));
+                calculated.addAll(powderSpecialDamage(stats));
+                damageCache = List.copyOf(calculated);
+            }
             damageCacheKey = cacheKey;
         }
         List<DamageCalculator.SpellResult> spells = damageCache;
@@ -3098,6 +3788,41 @@ public final class BuilderScreen extends PlannerScreen {
         damageScrollbar.configure(layout.rightX + layout.rightWidth - 7,
                 viewportTop + 2, viewportBottom - viewportTop - 4, damageMaxScroll);
         damageScrollbar.draw(context, mouseX, mouseY, delta, ui);
+    }
+
+    private List<DamageCalculator.SpellResult> powderSpecialDamage(BuildCalculator.Result stats) {
+        List<DamageCalculator.SpellResult> result = new ArrayList<>();
+        String[] names = {"Quake", "Chain Lightning", "Courage"};
+        int[] elements = {1, 2, 4};
+        int[] firstDamage = {240, 200, 110};
+        int[] damageStep = {40, 25, 15};
+        double globalMultiplier = BuildBoosts.globalDamageMultiplier(
+                selectedAbilityBoosts, selectedPowderSpecials);
+        for (int index = 0; index < names.length; index++) {
+            int level = selectedPowderSpecials.getOrDefault(names[index], 0);
+            if (level == 0) continue;
+            double[] conversions = new double[6];
+            conversions[elements[index]] = firstDamage[index] + damageStep[index] * (level - 1);
+            BuildCalculator.DamageResult damage = BuildCalculator.calculateDamage(stats,
+                    new BuildCalculator.SpellPart(names[index], conversions, 1, true, true, false));
+            double multiplier = globalMultiplier;
+            if ("Courage".equals(names[index])) {
+                multiplier /= 1 + (10 + 2.5 * (level - 1)) / 100.0;
+            }
+            BuildCalculator.DamageRange normal = damage.normal().scale(multiplier);
+            BuildCalculator.DamageRange critical = damage.critical().scale(multiplier);
+            double[][] normalElements = new double[6][2];
+            double[][] criticalElements = new double[6][2];
+            normalElements[elements[index]] = new double[]{normal.min(), normal.max()};
+            criticalElements[elements[index]] = new double[]{critical.min(), critical.max()};
+            String name = names[index] + " Lv." + level;
+            DamageCalculator.PartResult part = new DamageCalculator.PartResult(
+                    name, false, true, conversions, normalElements, criticalElements,
+                    new double[]{normal.min(), normal.max()},
+                    new double[]{critical.min(), critical.max()}, 0);
+            result.add(new DamageCalculator.SpellResult(10 + elements[index], name, 0, name, List.of(part)));
+        }
+        return List.copyOf(result);
     }
 
     private int damageCardHeight(DamageCalculator.SpellResult spell, boolean expanded) {
@@ -3270,15 +3995,6 @@ public final class BuilderScreen extends PlannerScreen {
         };
     }
 
-    private void renderBoostArea(DrawContext context, Layout layout, BuildCalculator.Result stats) {
-        if (!"Ability Boosts".equals(boostSection)) {
-            ui.drawCenteredTextWithShadow(this.textRenderer,
-                    Text.literal(boostSection + " options will appear here.").formatted(Formatting.DARK_GRAY),
-                    MARGIN + layout.leftWidth / 2, layout.boostTop + 63, 0x777777);
-        }
-
-    }
-
     private void renderPicker(DrawContext context) {
         int pickerWidth = Math.min(520, this.width - 60);
         int pickerHeight = Math.min(326, this.height - 50);
@@ -3407,13 +4123,18 @@ public final class BuilderScreen extends PlannerScreen {
     private void renderItemTooltip(
             DrawContext context, WynnItem item, int mouseX, int mouseY, boolean equipped
     ) {
-        int[] currentSkills = equipped ? currentSkillsForItem(item) : calculateStats().skills();
-        int[] requirementSkills = equipped
-                ? BuildCalculator.skillsAvailableForItemRequirements(item, currentSkills)
-                : currentSkills;
+        BuildCalculator.Result stats = equipped ? currentStatsForItem(item) : calculateStats();
+        boolean active = !equipped || stats.activeItems().contains(item);
+        int[] requirementSkills = Arrays.copyOf(stats.skills(), stats.skills().length);
+        if (active) {
+            String[] requirementKeys = {"strReq", "dexReq", "intReq", "defReq", "agiReq"};
+            for (int i = 0; i < requirementSkills.length; i++) {
+                requirementSkills[i] = Math.max(requirementSkills[i], item.stat(requirementKeys[i]));
+            }
+        }
         WynnItemTooltip.render(this, context, textRenderer, item, mouseX, mouseY,
                 selectedClass, level, requirementSkills,
-                equipped && !meetsCurrentSkillRequirements(item));
+                equipped && !active);
     }
 
     private int tooltipWidth(WynnItem item) {
@@ -3812,7 +4533,11 @@ public final class BuilderScreen extends PlannerScreen {
     private BuildCalculator.Result calculateStats() {
         if (statsCache == null) {
             statsCache = BuildCalculator.calculate(
-                    level, assignedSkills, equippedItems(), new ArrayList<>(selectedTomes.values()));
+                    level, assignedSkills, equippedItems(), new ArrayList<>(selectedTomes.values()),
+                    externalBoostIdentifications(),
+                    BuildBoosts.defenseDamageTakenMultiplier(selectedAbilityBoosts),
+                    BuildBoosts.identificationMultiplier(selectedAbilityBoosts),
+                    BuildBoosts.globalDamageMultiplier(selectedAbilityBoosts, selectedPowderSpecials));
         }
         return statsCache;
     }
@@ -3826,13 +4551,7 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private boolean meetsCurrentSkillRequirements(WynnItem item) {
-        BuildCalculator.Result stats = currentStatsForItem(item);
-        return stats.activeItems().contains(item)
-                && BuildCalculator.meetsCurrentSkillRequirements(item, stats.skills());
-    }
-
-    private int[] currentSkillsForItem(WynnItem item) {
-        return currentStatsForItem(item).skills();
+        return currentStatsForItem(item).activeItems().contains(item);
     }
 
     private BuildCalculator.Result currentStatsForItem(WynnItem item) {
@@ -3853,13 +4572,89 @@ public final class BuilderScreen extends PlannerScreen {
         }
         items.add(new BuildCalculator.EquippedItem(offhand.item(), offhand.powders(), true));
         return BuildCalculator.calculate(
-                level, assignedSkills, items, new ArrayList<>(selectedTomes.values()));
+                level, assignedSkills, items, new ArrayList<>(selectedTomes.values()),
+                externalBoostIdentifications(),
+                BuildBoosts.defenseDamageTakenMultiplier(selectedAbilityBoosts),
+                BuildBoosts.identificationMultiplier(selectedAbilityBoosts),
+                BuildBoosts.globalDamageMultiplier(selectedAbilityBoosts, selectedPowderSpecials));
+    }
+
+    private Map<String, Integer> externalBoostIdentifications() {
+        Map<String, Integer> result = new LinkedHashMap<>(BuildBoosts.externalIdentifications(selectedRaidBuffs));
+        for (int index = 0; index < powderDamageBoosts.length; index++) {
+            if (powderDamageBoosts[index] != 0) {
+                result.merge(POWDER_DAMAGE_IDS[index], powderDamageBoosts[index], Integer::sum);
+            }
+        }
+        return Map.copyOf(result);
     }
 
     private void invalidateStats() {
         statsCache = null;
         offhandStatsCache.clear();
         damageCacheKey = Integer.MIN_VALUE;
+    }
+
+    private Map<String, String> savedBoosts() {
+        Map<String, String> result = new LinkedHashMap<>();
+        for (String ability : selectedAbilityBoosts) result.put("ability." + ability, "true");
+        for (Map.Entry<String, Integer> powder : selectedPowderSpecials.entrySet()) {
+            result.put("powder." + powder.getKey(), Integer.toString(powder.getValue()));
+        }
+        for (int index = 0; index < powderDamageBoosts.length; index++) {
+            result.put("powderDamage." + index, Integer.toString(powderDamageBoosts[index]));
+        }
+        for (String raid : selectedRaidBuffs) result.put("raid." + raid, "true");
+        result.put("raidTab", selectedRaid);
+        return Map.copyOf(result);
+    }
+
+    private void restoreBoosts(Map<String, String> boosts) {
+        selectedAbilityBoosts.clear();
+        selectedPowderSpecials.clear();
+        Arrays.fill(powderDamageBoosts, 0);
+        selectedRaidBuffs.clear();
+        selectedRaid = boosts.getOrDefault("raidTab", "notg");
+        Set<String> knownAbilities = BuildBoosts.ABILITIES.stream()
+                .map(BuildBoosts.AbilityBoost::id).collect(Collectors.toSet());
+        Set<String> knownPowders = BuildBoosts.POWDER_SPECIALS.stream()
+                .map(BuildBoosts.PowderSpecial::name).collect(Collectors.toSet());
+        Set<String> knownRaidBuffs = BuildBoosts.RAIDS.stream()
+                .flatMap(raid -> raid.tiers().stream()).flatMap(List::stream).collect(Collectors.toSet());
+        for (Map.Entry<String, String> entry : boosts.entrySet()) {
+            if (entry.getKey().startsWith("ability.")) {
+                String id = entry.getKey().substring("ability.".length());
+                if (knownAbilities.contains(id) && Boolean.parseBoolean(entry.getValue())) {
+                    selectedAbilityBoosts.add(id);
+                }
+            } else if (entry.getKey().startsWith("powderDamage.")) {
+                try {
+                    int index = Integer.parseInt(entry.getKey().substring("powderDamage.".length()));
+                    int value = Integer.parseInt(entry.getValue());
+                    if (index >= 0 && index < powderDamageBoosts.length) {
+                        powderDamageBoosts[index] = Math.clamp(value, 0, POWDER_DAMAGE_CAPS[index]);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Ignore malformed data from newer or manually edited workspace files.
+                }
+            } else if (entry.getKey().startsWith("powder.")) {
+                String name = entry.getKey().substring("powder.".length());
+                try {
+                    int value = Integer.parseInt(entry.getValue());
+                    if (knownPowders.contains(name) && value >= 1 && value <= 7) {
+                        selectedPowderSpecials.put(name, value);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Ignore malformed data from newer or manually edited workspace files.
+                }
+            } else if (entry.getKey().startsWith("raid.")) {
+                String name = entry.getKey().substring("raid.".length());
+                if (knownRaidBuffs.contains(name) && Boolean.parseBoolean(entry.getValue())) {
+                    selectedRaidBuffs.add(name);
+                }
+            }
+        }
+        if (BuildBoosts.RAIDS.stream().noneMatch(raid -> raid.id().equals(selectedRaid))) selectedRaid = "notg";
     }
 
     WynnTome selectedTome(String slot) {
@@ -4142,6 +4937,96 @@ public final class BuilderScreen extends PlannerScreen {
     private record DamageCardBounds(int spell, int left, int top, int right, int bottom) {
     }
 
+    private final class SetSummaryWidget extends Widget {
+        private final List<WynnBuilderSetBonuses.ActiveSet> sets;
+
+        private SetSummaryWidget(List<WynnBuilderSetBonuses.ActiveSet> sets) {
+            super(0, 0, BuilderScreen.this.width, BuilderScreen.this.height);
+            setUiScaleFactor(1.0);
+            this.sets = List.copyOf(sets);
+        }
+
+        @Override
+        protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
+            Layout layout = layout();
+            int x = layout.middleX + 12;
+            int valueX = layout.middleX + layout.middleWidth - 12;
+            int viewportTop = layout.equipmentTop + 32 + VIEW_SWITCH_OFFSET;
+            int viewportBottom = BuilderScreen.this.height - MARGIN - 28;
+            int visibleScroll = Math.round(summaryScroll.update(delta));
+            int y = layout.equipmentTop + 38 + VIEW_SWITCH_OFFSET - visibleScroll;
+
+            ui.enableScissor(layout.middleX + 4, viewportTop,
+                    layout.middleX + layout.middleWidth - 4, viewportBottom);
+            try {
+                for (int setIndex = 0; setIndex < sets.size(); setIndex++) {
+                    WynnBuilderSetBonuses.ActiveSet activeSet = sets.get(setIndex);
+                    String progress = activeSet.pieces() + "/" + activeSet.info().items().size();
+                    y = summaryLine(context, x, valueX, y,
+                            activeSet.info().name() + " Set", progress, 0xFF55FF55, 0xFF55FF55);
+                    if (activeSet.bonus().isEmpty()) {
+                        int requiredPieces = activeSet.info().nextBonusPieces(activeSet.pieces());
+                        String message = requiredPieces > 0
+                                ? "Requires at least " + requiredPieces + " pieces for a bonus."
+                                : "No set bonus available.";
+                        ui.drawTextWithShadow(textRenderer, message,
+                                x, y, UiTheme.MUTED);
+                        y += 14;
+                    } else {
+                        for (Map.Entry<String, Integer> entry : activeSet.bonus().entrySet().stream()
+                                .sorted(BuilderScreen::compareSetBonuses).toList()) {
+                            int value = entry.getValue();
+                            y = summaryLine(context, x, valueX, y,
+                                    setBonusName(entry.getKey()) + ":",
+                                    IdentificationUnits.format(entry.getKey(), value),
+                                    0xFFFFFFFF, numericColor(value));
+                        }
+                    }
+                    if (setIndex + 1 < sets.size()) y = summaryDivider(context, layout, y + 2);
+                }
+            } finally {
+                ui.disableScissor();
+            }
+
+            int contentBottom = y + visibleScroll;
+            summaryMaxScroll = Math.max(0, contentBottom - viewportBottom + 4);
+            summaryScroll.clamp(0.0F, summaryMaxScroll);
+            summaryScrollbar.configure(layout.middleX + layout.middleWidth - 7,
+                    viewportTop + 2, viewportBottom - viewportTop - 4, summaryMaxScroll);
+            summaryScrollbar.draw(context, mouseX, mouseY, delta, ui);
+        }
+    }
+
+    private final class PowderBoostSlider extends SliderWidget {
+        private final int element;
+        private ThemedButton valueLabel;
+
+        private PowderBoostSlider(int x, int y, int width, int height, int element) {
+            super(x, y, width, height, Text.empty(),
+                    powderDamageBoosts[element] / (double) POWDER_DAMAGE_CAPS[element]);
+            this.element = element;
+        }
+
+        private void setValueLabel(ThemedButton valueLabel) {
+            this.valueLabel = valueLabel;
+        }
+
+        @Override
+        protected void updateMessage() {
+            setMessage(Text.empty());
+        }
+
+        @Override
+        protected void applyValue() {
+            int next = (int) Math.round(value * POWDER_DAMAGE_CAPS[element]);
+            if (next == powderDamageBoosts[element]) return;
+            powderDamageBoosts[element] = next;
+            if (valueLabel != null) valueLabel.setMessage(Text.literal(powderDamageLabel(element)));
+            invalidateStats();
+            saveWorkspace();
+        }
+    }
+
     private final class AbilityPresetOverlayWidget extends Widget {
         private AbilityPresetOverlayWidget() {
             super(0, 0, BuilderScreen.this.width, BuilderScreen.this.height);
@@ -4240,6 +5125,8 @@ public final class BuilderScreen extends PlannerScreen {
             int boostHeight) {}
 
     private record SlotPosition(int x, int y, int width) {}
+
+    private record TomeSlot(String key, String label, String type) {}
 
     private record Offhand(WynnItem item, String powders) {}
 }

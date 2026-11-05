@@ -34,6 +34,19 @@ public final class BuildCalculator {
             List<EquippedItem> equipment,
             List<WynnTome> tomes
     ) {
+        return calculate(level, assignedSkills, equipment, tomes, Map.of(), 1.0, 1.0, 1.0);
+    }
+
+    public static Result calculate(
+            int level,
+            int[] assignedSkills,
+            List<EquippedItem> equipment,
+            List<WynnTome> tomes,
+            Map<String, Integer> externalIdentifications,
+            double defenseDamageTakenMultiplier,
+            double identificationMultiplier,
+            double globalDamageMultiplier
+    ) {
         int safeLevel = Math.max(1, Math.min(121, level));
         int[] assigned = Arrays.copyOf(assignedSkills, 5);
         int[] skills = Arrays.copyOf(assigned, 5);
@@ -91,6 +104,18 @@ public final class BuildCalculator {
                 problem = tome.displayName() + " requires level " + tome.level();
             }
         }
+        WynnBuilderSetBonuses.forItems(activeItems).forEach((key, value) -> ids.merge(key, value, Integer::sum));
+
+        for (Map.Entry<String, Integer> entry : externalIdentifications.entrySet()) {
+            ids.merge(entry.getKey(), entry.getValue(), Integer::sum);
+        }
+        Map<String, Integer> unboostedIds = Map.copyOf(ids);
+        ids.replaceAll((key, value) ->
+                WynnBuilderIdentifications.boostedValue(key, value, identificationMultiplier));
+        for (int i = 0; i < rawDefenses.length; i++) {
+            rawDefenses[i] = WynnBuilderIdentifications.boostedValue(
+                    DEFENSE_KEYS[i], rawDefenses[i], identificationMultiplier);
+        }
 
         for (int i = 0; i < skills.length; i++) {
             skills[i] += ids.getOrDefault(SKILL_KEYS[i], 0)
@@ -119,8 +144,10 @@ public final class BuildCalculator {
         double defense = skillPercentage(skills[3]) * 0.867;
         double agility = skillPercentage(skills[4]) * 0.951;
         double classFactor = 2.0 - classDefense(weapon);
-        double noAgiTaken = (1.0 - defense) * classFactor;
-        double withAgiTaken = (0.1 * agility + (1.0 - agility) * (1.0 - defense)) * classFactor;
+        double safeDefenseMultiplier = Math.max(0.01, defenseDamageTakenMultiplier);
+        double noAgiTaken = (1.0 - defense) * classFactor * safeDefenseMultiplier;
+        double withAgiTaken = (0.1 * agility + (1.0 - agility) * (1.0 - defense))
+                * classFactor * safeDefenseMultiplier;
         double effectiveHpNoAgility = health / Math.max(0.0001, noAgiTaken);
         double effectiveHp = health / Math.max(0.0001, withAgiTaken);
 
@@ -144,16 +171,19 @@ public final class BuildCalculator {
 
         Result base = new Result(
                 health, effectiveHp, effectiveHpNoAgility, healthRegen,
-                skills, defenses, ids, weaponDamage,
+                skills, defenses, ids, unboostedIds, identificationMultiplier, weaponDamage,
                 baseAttackTier, effectiveAttackTier, 0,
                 null, null, activeItems, problem.isEmpty(), problem);
         DamageResult melee = calculateDamage(base, SpellPart.mainAttack());
+        melee = new DamageResult(
+                melee.normal().scale(globalDamageMultiplier),
+                melee.critical().scale(globalDamageMultiplier));
         double critChance = skillPercentage(skills[1]);
         double averageHit = melee.normal().average() * (1.0 - critChance)
                 + melee.critical().average() * critChance;
         return new Result(
                 health, effectiveHp, effectiveHpNoAgility, healthRegen,
-                skills, defenses, ids, weaponDamage,
+                skills, defenses, ids, unboostedIds, identificationMultiplier, weaponDamage,
                 baseAttackTier, effectiveAttackTier,
                 averageHit * ATTACK_SPEED_MULTIPLIERS[effectiveAttackTier],
                 melee.normal(), melee.critical(), activeItems, problem.isEmpty(), problem);
@@ -350,6 +380,25 @@ public final class BuildCalculator {
         return search.result();
     }
 
+    public static int[] finalSkillsForExport(
+            int[] assignedSkills, List<EquippedItem> equipment, List<WynnTome> tomes
+    ) {
+        int[] skills = Arrays.copyOf(assignedSkills, 5);
+        int[] tomeBonuses = tomeSkillBonuses(tomes);
+        for (int skill = 0; skill < skills.length; skill++) skills[skill] += tomeBonuses[skill];
+        List<WynnItem> items = equipment.stream()
+                .map(EquippedItem::item)
+                .filter(item -> item != null)
+                .toList();
+        for (WynnItem item : items) applyItemSkills(skills, item);
+        Map<String, Integer> setBonuses = WynnBuilderSetBonuses.forItems(items);
+        for (int skill = 0; skill < skills.length; skill++) {
+            skills[skill] += setBonuses.getOrDefault(SKILL_KEYS[skill], 0)
+                    + setBonuses.getOrDefault(RAW_SKILL_KEYS[skill], 0);
+        }
+        return skills;
+    }
+
     private static DamageRange[] weaponDamage(WynnItem weapon) {
         DamageRange[] damage = new DamageRange[6];
         for (int i = 0; i < damage.length; i++) {
@@ -375,7 +424,7 @@ public final class BuildCalculator {
         int[][] bonuses = new int[items.size()][5];
         for (int itemIndex = 0; itemIndex < items.size(); itemIndex++) {
             WynnItem item = items.get(itemIndex).item();
-            if (item.isCrafted()) {
+            if (item.isCrafted() || items.get(itemIndex).weapon()) {
                 continue;
             }
             bonuses[itemIndex] = itemSkillBonuses(item);
@@ -458,23 +507,6 @@ public final class BuildCalculator {
             }
         }
         return true;
-    }
-
-    public static boolean meetsCurrentSkillRequirements(WynnItem item, int[] finalSkills) {
-        int[] available = skillsAvailableForItemRequirements(item, finalSkills);
-        for (int skill = 0; skill < REQUIREMENT_KEYS.length; skill++) {
-            if (item.stat(REQUIREMENT_KEYS[skill]) > available[skill]) return false;
-        }
-        return true;
-    }
-
-    public static int[] skillsAvailableForItemRequirements(WynnItem item, int[] finalSkills) {
-        int[] available = Arrays.copyOf(finalSkills, 5);
-        if (!item.isCrafted()) {
-            int[] ownBonuses = itemSkillBonuses(item);
-            for (int skill = 0; skill < available.length; skill++) available[skill] -= ownBonuses[skill];
-        }
-        return available;
     }
 
     private static int[] itemSkillBonuses(WynnItem item) {
@@ -596,6 +628,13 @@ public final class BuildCalculator {
             }
             if (mainWeapon != null) {
                 applyItemSkills(finalSkills, mainWeapon);
+            }
+            List<WynnItem> setItems = new ArrayList<>(items);
+            if (mainWeapon != null) setItems.add(mainWeapon);
+            Map<String, Integer> setBonuses = WynnBuilderSetBonuses.forItems(setItems);
+            for (int skill = 0; skill < finalSkills.length; skill++) {
+                finalSkills[skill] += setBonuses.getOrDefault(SKILL_KEYS[skill], 0)
+                        + setBonuses.getOrDefault(RAW_SKILL_KEYS[skill], 0);
             }
             bestAssigned = candidateAssigned;
             bestFinal = finalSkills;
@@ -769,6 +808,8 @@ public final class BuildCalculator {
             int[] skills,
             double[] defenses,
             Map<String, Integer> ids,
+            Map<String, Integer> unboostedIds,
+            double identificationMultiplier,
             DamageRange[] weaponDamage,
             int baseAttackTier,
             int effectiveAttackTier,
@@ -780,6 +821,8 @@ public final class BuildCalculator {
             String problem
     ) {
         public Result {
+            ids = Map.copyOf(ids);
+            unboostedIds = Map.copyOf(unboostedIds);
             activeItems = List.copyOf(activeItems);
         }
     }

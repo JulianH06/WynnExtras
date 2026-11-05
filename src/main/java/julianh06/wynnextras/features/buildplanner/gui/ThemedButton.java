@@ -9,14 +9,29 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.input.KeyInput;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 class ThemedButton extends ClickableWidget {
     private static List<Text> pendingTooltip;
     private final Runnable onPress;
     private List<Text> hoverText;
+    private boolean selected;
+    private Integer selectedColor;
+    private boolean selectedBorderHighlight;
+    private Integer textColor;
+    private float textScale = 1.0F;
+    private boolean textShadow = true;
+    private float textOffsetX;
+    private float textOffsetY;
+    private Identifier iconTexture;
+    private int iconU;
+    private int iconV;
+    private int iconTextureWidth;
+    private int iconTextureHeight;
     private long lastFrameNanos = System.nanoTime();
     private float hoverProgress;
     private float pressProgress;
@@ -33,6 +48,51 @@ class ThemedButton extends ClickableWidget {
     ThemedButton setHoverLines(List<Text> hoverText) {
         this.hoverText = hoverText == null ? null : List.copyOf(hoverText);
         if (this.isHovered() && this.hoverText != null) pendingTooltip = this.hoverText;
+        return this;
+    }
+
+    ThemedButton setSelected(boolean selected) {
+        this.selected = selected;
+        return this;
+    }
+
+    ThemedButton setSelectedColor(int color) {
+        selectedColor = color;
+        return this;
+    }
+
+    ThemedButton setSelectedBorderHighlight() {
+        selectedBorderHighlight = true;
+        return this;
+    }
+
+    ThemedButton setTextColor(int color) {
+        textColor = color;
+        return this;
+    }
+
+    ThemedButton setTextScale(float textScale) {
+        this.textScale = textScale;
+        return this;
+    }
+
+    ThemedButton setTextShadow(boolean textShadow) {
+        this.textShadow = textShadow;
+        return this;
+    }
+
+    ThemedButton setTextOffset(float x, float y) {
+        textOffsetX = x;
+        textOffsetY = y;
+        return this;
+    }
+
+    ThemedButton setIcon(Identifier texture, int u, int v, int textureWidth, int textureHeight) {
+        iconTexture = texture;
+        iconU = u;
+        iconV = v;
+        iconTextureWidth = textureWidth;
+        iconTextureHeight = textureHeight;
         return this;
     }
 
@@ -83,18 +143,41 @@ class ThemedButton extends ClickableWidget {
         hoverProgress = UiTheme.approach(hoverProgress, hoverTarget, 13.0F, elapsed);
         pressProgress = UiTheme.approach(pressProgress, 0.0F, 18.0F, elapsed);
 
+        boolean borderOnlySelection = selected && selectedBorderHighlight;
+        boolean highlightedSelection = selected && !selectedBorderHighlight;
+        int selection = selectedColor == null ? 0xFF44BB66 : selectedColor;
+        int baseBackground = highlightedSelection
+                ? UiTheme.lerpColor(UiTheme.SURFACE, selection, 0.28F) : UiTheme.SURFACE;
+        int hoverBackground = highlightedSelection ? UiTheme.lerpColor(UiTheme.SURFACE, selection, 0.42F)
+                : UiTheme.hoverBackground();
         int background = this.active
-                ? UiTheme.lerpColor(UiTheme.SURFACE, UiTheme.hoverBackground(), hoverProgress)
+                ? UiTheme.lerpColor(baseBackground, hoverBackground, hoverProgress)
                 : UiTheme.PANEL;
         background = UiTheme.lerpColor(background, UiTheme.BACKGROUND, pressProgress * 0.35F);
-        int border = this.active ? UiTheme.lerpColor(UiTheme.BORDER, UiTheme.accent(), hoverProgress)
+        int baseBorder = borderOnlySelection
+                ? UiTheme.accent() : highlightedSelection ? selection : UiTheme.BORDER;
+        int hoverBorder = borderOnlySelection
+                ? UiTheme.lerpColor(UiTheme.accent(), 0xFFFFFFFF, 0.25F)
+                : highlightedSelection ? UiTheme.lerpColor(selection, 0xFFFFFFFF, 0.25F) : UiTheme.accent();
+        int border = this.active ? UiTheme.lerpColor(baseBorder, hoverBorder, hoverProgress)
                 : UiTheme.lerpColor(UiTheme.PANEL, UiTheme.BORDER, 0.5F);
+        int baseText = highlightedSelection
+                ? UiTheme.lerpColor(selection, 0xFFFFFFFF, 0.58F) : UiTheme.TEXT;
+        if (textColor != null) baseText = textColor;
         int text = this.active
-                ? UiTheme.lerpColor(UiTheme.TEXT, 0xFFFFFFFF, hoverProgress)
-                : UiTheme.DISABLED;
+                ? textColor == null ? UiTheme.lerpColor(baseText, 0xFFFFFFFF, hoverProgress) : baseText
+                : textColor == null ? UiTheme.DISABLED : textColor;
 
         UiTheme.drawRoundedBox(ui, getX(), getY(), getWidth(), getHeight(), background, border);
-        if (getMessage().getString().equals("X")) {
+        if (iconTexture != null) {
+            int iconSize = Math.min(18, getHeight() - 4);
+            int iconX = getX() + 5;
+            int iconY = getY() + (getHeight() - iconSize) / 2;
+            ui.drawTexture(RenderPipelines.GUI_TEXTURED, iconTexture,
+                    iconX, iconY, iconU, iconV, iconSize, iconSize,
+                    16, 16, iconTextureWidth, iconTextureHeight);
+            drawScaledText(ui, iconX + iconSize + 5, getY() + getHeight() / 2, text, false);
+        } else if (getMessage().getString().equals("X")) {
             var color = getMessage().getStyle().getColor();
             drawCloseIcon(ui, this.active && color != null ? 0xFF000000 | color.getRgb() : text);
         } else if (getMessage().getString().equals("i") || getMessage().getString().equals("+")) {
@@ -103,14 +186,28 @@ class ThemedButton extends ClickableWidget {
             int textY = getY() + Math.round((getHeight() - renderer.fontHeight) / 2.0F);
             ui.drawText(renderer, getMessage(), textX, textY, text, false);
         } else {
-            ui.drawCenteredTextWithShadow(
-                    MinecraftClient.getInstance().textRenderer,
-                    getMessage(),
-                    getX() + getWidth() / 2,
-                    getY() + (getHeight() - 8) / 2,
-                    text);
+            drawScaledText(ui, getX() + getWidth() / 2, getY() + getHeight() / 2, text, true);
         }
         if (this.isHovered() && hoverText != null) pendingTooltip = hoverText;
+    }
+
+    private void drawScaledText(UIUtils ui, int x, int centerY, int color, boolean centered) {
+        ui.pushMatrix();
+        ui.translate(x + textOffsetX, centerY + textOffsetY);
+        ui.scale(textScale, textScale);
+        var renderer = MinecraftClient.getInstance().textRenderer;
+        if (centered && textShadow) {
+            ui.drawCenteredTextWithShadow(
+                    renderer, getMessage(), 0, -4, color);
+        } else if (centered) {
+            ui.drawText(renderer, getMessage(), -renderer.getWidth(getMessage()) / 2,
+                    -renderer.fontHeight / 2, color, false);
+        } else if (textShadow) {
+            ui.drawTextWithShadow(renderer, getMessage(), 0, -4, color);
+        } else {
+            ui.drawText(renderer, getMessage(), 0, -renderer.fontHeight / 2, color, false);
+        }
+        ui.popMatrix();
     }
 
     private void drawCloseIcon(UIUtils ui, int color) {

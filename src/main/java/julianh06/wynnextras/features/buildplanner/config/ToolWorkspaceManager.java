@@ -178,7 +178,8 @@ public final class ToolWorkspaceManager {
                         ? new SavedBuild(cleaned, tab.build().characterClass(), tab.build().level(),
                                 tab.build().equipment(), tab.build().powders(), tab.build().offhands(),
                                 tab.build().assignedSkills(),
-                                tab.build().tomes(), tab.build().aspects(), tab.build().abilityTrees(),
+                                tab.build().tomes(), tab.build().aspects(), tab.build().boosts(),
+                                tab.build().abilityTrees(),
                                 tab.build().savedAt())
                         : tab.build(),
                 tab.craftCode(), tab.atlas()));
@@ -237,7 +238,7 @@ public final class ToolWorkspaceManager {
     private static Tab builder(String name, SavedBuild build) { return new Tab(id(), Type.BUILDER, name, build, null, null); }
     private static SavedBuild emptyBuild(String name) {
         return new SavedBuild(name, "archer", 121, Map.of(), Map.of(), List.of(),
-                new int[5], Map.of(), Map.of(), Map.of(), 0);
+                new int[5], Map.of(), Map.of(), Map.of(), Map.of(), 0);
     }
     private void rememberAllActiveTabs() {
         if (activeId != null) {

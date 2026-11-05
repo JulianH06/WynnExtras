@@ -15,11 +15,6 @@ import java.util.Set;
 
 /** Converts the shared link model into the build planner's current persistence model. */
 public final class WynnBuilderLinkImporter {
-    private static final String[] TOME_SLOTS = {
-            "weaponTome1", "weaponTome2", "armorTome1", "armorTome2", "armorTome3", "armorTome4",
-            "gatherXpTome1", "gatherXpTome2", "dungeonXpTome1", "dungeonXpTome2",
-            "mobXpTome1", "mobXpTome2", "guildTome1", "lootrunTome1"
-    };
     private static final char[] POWDERS = {'e', 't', 'w', 'f', 'a'};
 
     private WynnBuilderLinkImporter() {}
@@ -87,12 +82,16 @@ public final class WynnBuilderLinkImporter {
         }
 
         Map<String, String> tomes = new LinkedHashMap<>();
-        for (int i = 0; i < Math.min(TOME_SLOTS.length, decoded.tomeIds().size()); i++) {
+        List<WynnTome> selectedTomes = new ArrayList<>();
+        for (int i = 0; i < Math.min(WynnBuilderTomeSlots.size(), decoded.tomeIds().size()); i++) {
             Integer id = decoded.tomeIds().get(i);
             if (id == null) continue;
             WynnTome tome = TomeDatabase.getInstance().get(id);
             if (tome == null) warnings.add("Skipped unknown tome ID " + id);
-            else tomes.put(TOME_SLOTS[i], tome.displayName());
+            else {
+                tomes.put(WynnBuilderTomeSlots.slot(i), tome.displayName());
+                selectedTomes.add(tome);
+            }
         }
 
         Map<String, SavedBuild.SavedAspect> aspects = new LinkedHashMap<>();
@@ -125,11 +124,23 @@ public final class WynnBuilderLinkImporter {
             }
         }
 
-        int[] skills = new int[5];
+        List<BuildCalculator.EquippedItem> equippedItems = new ArrayList<>();
+        decoded.equipment().keySet().forEach(slot -> {
+            String reference = equipment.get(slot.name());
+            if (reference == null) return;
+            WynnItem item = ItemDatabase.getInstance().getItem(reference);
+            if (item != null) equippedItems.add(new BuildCalculator.EquippedItem(
+                    item, powders.getOrDefault(slot.name(), ""), slot == WynnBuilderBuild.EquipmentSlot.WEAPON));
+        });
+        BuildCalculator.SkillPointPlan automatic = BuildCalculator.optimizeSkillPoints(
+                decoded.level(), equippedItems, selectedTomes);
+        int[] skills = automatic.assigned().clone();
         Integer[] encodedSkills = decoded.assignedSkillPoints();
-        for (int i = 0; i < skills.length; i++) skills[i] = encodedSkills[i] == null ? 0 : encodedSkills[i];
+        for (int i = 0; i < skills.length; i++) {
+            if (encodedSkills[i] != null) skills[i] += encodedSkills[i] - automatic.finalSkills()[i];
+        }
         SavedBuild build = new SavedBuild("Imported Build", abilityClass.apiName(), decoded.level(), equipment,
-                powders, List.of(), skills, tomes, aspects, trees, 0);
+                powders, List.of(), skills, tomes, aspects, Map.of(), trees, 0);
         return new Result(version, build, List.copyOf(warnings));
     }
 

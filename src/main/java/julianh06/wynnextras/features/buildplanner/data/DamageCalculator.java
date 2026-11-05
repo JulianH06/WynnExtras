@@ -42,12 +42,24 @@ public final class DamageCalculator {
             Set<String> selectedIds,
             List<AspectSelection> aspects
     ) {
+        return calculate(build, weaponSubtype, definition, selectedIds, aspects, Map.of());
+    }
+
+    public static List<SpellResult> calculate(
+            BuildCalculator.Result build,
+            String weaponSubtype,
+            AbilityTreeDefinition definition,
+            Set<String> selectedIds,
+            List<AspectSelection> aspects,
+            Map<String, Double> externalModifiers
+    ) {
         CharacterClass abilityClass = CharacterClass.fromWeaponSubtype(weaponSubtype);
         JsonArray source = TREES.get(abilityClass.displayName());
         Map<Integer, Spell> spells = defaultSpells(weaponSubtype);
         Stats stats = new Stats(build);
+        externalModifiers.forEach(stats::add);
         if (source != null && definition != null) {
-            applyAbilityTree(source, definition, selectedIds, aspects, spells, stats);
+            applyAbilityTree(source, definition, selectedIds, aspects, spells, stats, build);
         }
 
         List<SpellResult> results = new ArrayList<>();
@@ -90,7 +102,8 @@ public final class DamageCalculator {
             Set<String> selectedIds,
             List<AspectSelection> aspects,
             Map<Integer, Spell> spells,
-            Stats stats
+            Stats stats,
+            BuildCalculator.Result build
     ) {
         Set<String> selectedNames = selectedNames(definition, selectedIds);
 
@@ -120,6 +133,7 @@ public final class DamageCalculator {
             }
         }
 
+        Stats beforeRawStats = stats.copy();
         for (JsonObject node : active) {
             int id = integer(node, "id", -1);
             int target = integer(node, "base_abil", id);
@@ -194,6 +208,7 @@ public final class DamageCalculator {
                 }
             }
         }
+        stats.applyIdentificationBoost(beforeRawStats, build);
         Stats scalingInputs = stats.copy();
         for (JsonObject node : active) {
             JsonArray effects = array(node, "effects");
@@ -1041,6 +1056,25 @@ public final class DamageCalculator {
                 healingMultipliers.merge(key.substring("healMult.".length()), value, Double::sum);
             } else {
                 values.merge(alias(key), value, Double::sum);
+            }
+        }
+
+        private void applyIdentificationBoost(Stats beforeRawStats, BuildCalculator.Result build) {
+            if (build.identificationMultiplier() == 1.0) return;
+            Map<String, Double> unboosted = new LinkedHashMap<>();
+            for (Map.Entry<String, Integer> entry : build.unboostedIds().entrySet()) {
+                unboosted.merge(alias(entry.getKey()), entry.getValue().doubleValue(), Double::sum);
+            }
+            for (Map.Entry<String, Double> entry : new ArrayList<>(values.entrySet())) {
+                String key = entry.getKey();
+                double added = entry.getValue() - beforeRawStats.get(key);
+                if (added == 0) continue;
+                double base = unboosted.getOrDefault(key, 0.0);
+                double previous = WynnBuilderIdentifications.boostedValue(
+                        key, base, build.identificationMultiplier());
+                double combined = WynnBuilderIdentifications.boostedValue(
+                        key, base + added, build.identificationMultiplier());
+                values.put(key, entry.getValue() + combined - previous - added);
             }
         }
 

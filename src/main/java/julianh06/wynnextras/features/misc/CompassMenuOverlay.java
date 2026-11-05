@@ -300,10 +300,8 @@ public class CompassMenuOverlay extends WEMenuExtension {
                     current[i] += diff;
                 }
             }
-            for (int i = 0; i < 5; i++) {
-                if (entry.bonuses[i] != 0) {
-                    current[i] += entry.bonuses[i];
-                }
+            if (!entry.crafted) {
+                for (int i = 0; i < 5; i++) current[i] += entry.bonuses[i];
             }
         }
 
@@ -321,7 +319,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
         for (SolvableItem entry : order) {
             for (int i = 0; i < 5; i++) {
                 if (entry.reqs[i] <= 0) continue;
-                int effectiveReq = entry.reqs[i] + Math.max(0, entry.bonuses[i]);
+                int effectiveReq = entry.reqs[i] + (entry.crafted ? 0 : entry.bonuses[i]);
                 if (current[i] < effectiveReq) {
                     int diff = effectiveReq - current[i];
                     assigned[i] += diff;
@@ -374,6 +372,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
         String name = "?";
         int[] reqs = new int[5];
         int[] bonuses = new int[5];
+        boolean crafted;
     }
 
     private static SolvableItem toSolvableItem(ItemStack stack) {
@@ -385,6 +384,7 @@ public class CompassMenuOverlay extends WEMenuExtension {
         si.reqs = data.get().requirementsArray();
         si.bonuses = data.get().bonusesArray();
         si.name = data.get().name();
+        si.crafted = data.get().crafted();
 
         return si;
     }

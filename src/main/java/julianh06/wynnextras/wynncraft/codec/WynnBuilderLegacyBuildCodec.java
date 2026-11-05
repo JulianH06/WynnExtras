@@ -6,7 +6,7 @@ import java.util.List;
 public final class WynnBuilderLegacyBuildCodec {
     private static final int VERSION = 10;
     private static final int FIRST_NONE_ITEM_ID = 10000;
-    private static final int[] NONE_TOME_IDS = {61, 61, 62, 62, 62, 62, 162, 162, 163, 163, 164, 164, 63, 93};
+    private static final int[] NONE_TOME_IDS = {61, 61, 62, 62, 62, 62, 63, 93, 162, 162, 163, 163, 164, 164};
 
     private WynnBuilderLegacyBuildCodec() {}
 

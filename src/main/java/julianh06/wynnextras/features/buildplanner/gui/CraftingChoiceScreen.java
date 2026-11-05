@@ -12,9 +12,11 @@ import java.util.Map;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 final class CraftingChoiceScreen extends PlannerScreen {
@@ -59,7 +61,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
         top = (height - panelHeight) / 2;
         search = new TextInputWidget((left + 14) * 2, (top + 34) * 2,
                 (panelWidth - 28) * 2, 40, 8, 10, 2.0F);
-        search.setPlaceholder("Search names or effects...");
+        search.setPlaceholder("Search...");
         search.setMaxLength(100);
         search.setInput(query);
         search.setBackgroundColor(CustomColor.fromInt(UiTheme.SURFACE));
@@ -111,10 +113,18 @@ final class CraftingChoiceScreen extends PlannerScreen {
             drawIngredientIcon(ui, choice.ingredient(), x + 4, y + 3, 18);
             textX = x + 27;
             availableWidth -= 19;
+        } else if (choice.icon() != null) {
+            ChoiceIcon icon = choice.icon();
+            ui.drawTexture(RenderPipelines.GUI_TEXTURED, icon.texture(),
+                    x + 4, y + 3, icon.u(), icon.v(), 18, 18,
+                    16, 16, icon.textureWidth(), icon.textureHeight());
+            textX = x + 27;
+            availableWidth -= 19;
         }
         String label = textRenderer.getWidth(choice.label()) <= availableWidth ? choice.label()
                 : textRenderer.trimToWidth(choice.label(), Math.max(0, availableWidth - 12)) + "...";
-        ui.drawTextWithShadow(textRenderer, label, textX, y + 7, 0xFFFFFFFF);
+        ui.drawTextWithShadow(textRenderer, label, textX, y + 7,
+                choice.color() == null ? 0xFFFFFFFF : choice.color());
     }
 
     private void drawIngredientIcon(julianh06.wynnextras.utils.UI.UIUtils ui, Ingredient ingredient,
@@ -145,6 +155,10 @@ final class CraftingChoiceScreen extends PlannerScreen {
                 PlannerLog.LOGGER.warn("Could not render ingredient picker tooltip for {} ({}).",
                         choice.ingredient().name(), choice.ingredient().id(), exception);
             }
+            return;
+        }
+        if (!choice.tooltip().isEmpty()) {
+            renderPlannerTooltip(context, choice.tooltip(), mouseX, mouseY);
             return;
         }
         renderPlannerTooltip(context,
@@ -184,9 +198,31 @@ final class CraftingChoiceScreen extends PlannerScreen {
         client.setScreen(parent);
     }
 
-    record Choice(int id, String label, String description, Ingredient ingredient) {
+    record Choice(
+            int id,
+            String label,
+            String description,
+            Ingredient ingredient,
+            Integer color,
+            ChoiceIcon icon,
+            List<Text> tooltip
+    ) {
+        Choice {
+            tooltip = List.copyOf(tooltip == null ? List.of() : tooltip);
+        }
+
         Choice(int id, String label, String description) {
-            this(id, label, description, null);
+            this(id, label, description, null, null, null, List.of());
+        }
+
+        Choice(int id, String label, String description, Ingredient ingredient) {
+            this(id, label, description, ingredient, null, null, List.of());
+        }
+
+        Choice(int id, String label, String description, int color, ChoiceIcon icon, List<Text> tooltip) {
+            this(id, label, description, null, color, icon, tooltip);
         }
     }
+
+    record ChoiceIcon(Identifier texture, int u, int v, int textureWidth, int textureHeight) {}
 }
