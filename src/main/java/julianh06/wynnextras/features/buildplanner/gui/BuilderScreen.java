@@ -105,6 +105,7 @@ public final class BuilderScreen extends PlannerScreen {
             new TomeSlot("lootrunTome1", "Lootrun", "lootrunTome")
     };
     private static boolean abilityTreeVisibleSession;
+    private static String boostSectionSession = "Aspects";
     private static final SmoothScroll ABILITY_TREE_SCROLL = new SmoothScroll();
     private static final SmoothScroll ABILITY_SIDEBAR_SCROLL = new SmoothScroll();
     private static final Identifier EQUIPMENT_TEXTURE = Identifier.of("wynnextras", "textures/gui/buildplanner/equipment.png");
@@ -315,7 +316,7 @@ public final class BuilderScreen extends PlannerScreen {
     private int level = 121;
     private StatsView statsView = StatsView.SUMMARY;
     private SetSummaryWidget setSummaryWidget;
-    private String boostSection = "Aspects";
+    private String boostSection = boostSectionSession;
     private final Set<String> selectedAbilityBoosts = new LinkedHashSet<>();
     private final Map<String, Integer> selectedPowderSpecials = new LinkedHashMap<>();
     private final int[] powderDamageBoosts = new int[5];
@@ -532,10 +533,10 @@ public final class BuilderScreen extends PlannerScreen {
                     () -> openOffhandPicker(offhands.size()))
                     .setHoverLines(List.of(
                             Text.literal("§lOffhand info:"),
-                            Text.literal("Offhands are supported only in the WynnExtras builder."),
-                            Text.literal("They are excluded from stat and damage calculations."),
-                            Text.literal("They are not available when opening the build in WynnBuilder"),
-                            Text.literal("using the Browser button in the bottom right."))));
+                            Text.literal("§7Offhands are supported only in the WynnExtras builder."),
+                            Text.literal("§7They are excluded from stat and damage calculations."),
+                            Text.literal("§7They are not available when opening the build in WynnBuilder"),
+                            Text.literal("§7using the Browser button in the bottom right."))));
         }
 
         AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
@@ -858,6 +859,7 @@ public final class BuilderScreen extends PlannerScreen {
     private void selectBoostSection(String section) {
         if (section.equals(boostSection)) return;
         boostSection = section;
+        boostSectionSession = section;
         rebuildWidgets();
     }
 
@@ -1995,7 +1997,7 @@ public final class BuilderScreen extends PlannerScreen {
         offhandStatsCache.clear();
         damageCards.clear();
         statsView = StatsView.SUMMARY;
-        boostSection = "Aspects";
+        boostSection = boostSectionSession;
     }
 
     private void restorePendingBuild() {
@@ -2187,7 +2189,6 @@ public final class BuilderScreen extends PlannerScreen {
         Arrays.fill(powderDamageBoosts, 0);
         selectedRaidBuffs.clear();
         selectedRaid = "notg";
-        boostSection = "Aspects";
         resetAbilityTrees();
         for (int i = 0; i < assignedSkills.length; i++) assignedSkills[i] = 0;
         invalidateStats();
