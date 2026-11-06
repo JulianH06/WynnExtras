@@ -18,6 +18,12 @@ import org.lwjgl.glfw.GLFW;
 public final class WorkspaceTabs {
     private static final int TAB_GAP = 3;
     private static final int TAB_WIDTH = 118;
+    private static final int CONTROL_HEIGHT = 22;
+    private static final int CONTROL_GAP = 4;
+    private static final int TAB_HEIGHT = CONTROL_HEIGHT;
+    private static final int TAB_STRIP_HEIGHT = TAB_HEIGHT + 4;
+    private static final float CONTROL_TEXT_SCALE = 1.25F;
+    private static final float TAB_TEXT_SCALE = 1.2F;
     private static final Map<ToolWorkspaceManager.Type, SmoothScroll> SCROLL =
             new EnumMap<>(ToolWorkspaceManager.Type.class);
 
@@ -84,13 +90,13 @@ public final class WorkspaceTabs {
         var workspace = ToolWorkspaceManager.getInstance();
 
         int historyWidth = 45;
-        ThemedButton back = new ThemedButton(x, y, 21, 20, Text.literal("<"),
-                () -> WorkspaceNavigation.back(parent));
+        ThemedButton back = new ThemedButton(x, y, 21, CONTROL_HEIGHT, Text.literal("<"),
+                () -> WorkspaceNavigation.back(parent)).setTextScale(CONTROL_TEXT_SCALE);
         back.setEnabled(WorkspaceNavigation.canGoBack());
         back.setHoverText(Text.literal("Back"));
         add.accept(back);
-        ThemedButton forward = new ThemedButton(x + 24, y, 21, 20, Text.literal(">"),
-                () -> WorkspaceNavigation.forward(parent));
+        ThemedButton forward = new ThemedButton(x + 24, y, 21, CONTROL_HEIGHT, Text.literal(">"),
+                () -> WorkspaceNavigation.forward(parent)).setTextScale(CONTROL_TEXT_SCALE);
         forward.setEnabled(WorkspaceNavigation.canGoForward());
         forward.setHoverText(Text.literal("Forward"));
         add.accept(forward);
@@ -102,23 +108,23 @@ public final class WorkspaceTabs {
                 / ToolWorkspaceManager.Type.values().length);
         int buttonX = toolX;
         for (var type : ToolWorkspaceManager.Type.values()) {
-            ThemedButton tool = new ThemedButton(buttonX, y, toolWidth - 3, 20,
+            ThemedButton tool = new ThemedButton(buttonX, y, toolWidth - 3, CONTROL_HEIGHT,
                     Text.literal(shortToolName(type)).withColor(type == currentType
                             ? UiTheme.accentRgb() : UiTheme.TEXT & 0xFFFFFF), () -> {
                         var active = workspace.activeTab(type);
                         if (active == null) WorkspaceNavigation.show(parent, type);
                         else WorkspaceNavigation.open(parent, active.id());
-                    });
+                    }).setTextScale(CONTROL_TEXT_SCALE);
             tool.setHoverText(Text.literal(toolName(type)));
             add.accept(tool);
             buttonX += toolWidth;
         }
-        ThemedButton info = new ThemedButton(controls, y, 21, 20, Text.literal("i"), () -> {});
-        //TODO: REPLACE THIS
+        ThemedButton info = new ThemedButton(controls, y, 21, CONTROL_HEIGHT, Text.literal("i"), () -> {})
+                .setTextScale(1.5F).setTextOffset(0.5F, 0.0F);
         info.setHoverLines(List.of(Text.literal("PLACEHOLDER")));
         add.accept(info);
 
-        int tabY = y + 23;
+        int tabY = y + CONTROL_HEIGHT + CONTROL_GAP;
         var tabs = workspace.tabs(currentType);
         int stripWidth = width - controlsWidth - 3;
         SmoothScroll scroll = SCROLL.computeIfAbsent(currentType, ignored -> new SmoothScroll());
@@ -135,8 +141,9 @@ public final class WorkspaceTabs {
             add.accept(new TabStrip(parent, activeId, x, tabY, stripWidth, tabs, scroll, maxScroll, active));
         }
 
-        ThemedButton plus = new ThemedButton(controls, tabY, 21, 20, Text.literal("+"),
-                () -> WorkspaceNavigation.add(parent, currentType));
+        ThemedButton plus = new ThemedButton(controls, tabY, 21, CONTROL_HEIGHT, Text.literal("+"),
+                () -> WorkspaceNavigation.add(parent, currentType))
+                .setTextScale(1.5F).setTextOffset(0.5F, 0.0F);
         plus.setHoverText(Text.literal("New " + toolName(currentType) + " tab"));
         add.accept(plus);
     }
@@ -144,7 +151,9 @@ public final class WorkspaceTabs {
     static boolean scroll(Screen parent, String id, int x, int y, int width,
             double mouseX, double mouseY, double horizontal, double vertical) {
         double amount = vertical != 0 ? vertical : horizontal;
-        if (amount == 0 || mouseX < x || mouseX >= x + width - 25 || mouseY < y + 23 || mouseY >= y + 43) {
+        int tabY = y + CONTROL_HEIGHT + CONTROL_GAP;
+        if (amount == 0 || mouseX < x || mouseX >= x + width - 25
+                || mouseY < tabY || mouseY >= tabY + TAB_STRIP_HEIGHT) {
             return false;
         }
         var workspace = ToolWorkspaceManager.getInstance();
@@ -183,7 +192,7 @@ public final class WorkspaceTabs {
 
         private TabStrip(Screen parent, String activeId, int x, int y, int width,
                 List<ToolWorkspaceManager.Tab> tabs, SmoothScroll scroll, int maxScroll, int active) {
-            super(x, y, width, 20, Text.empty(), () -> {});
+            super(x, y, width, TAB_STRIP_HEIGHT, Text.empty(), () -> {});
             this.parent = parent;
             this.activeId = activeId;
             this.tabs = tabs;
@@ -205,19 +214,23 @@ public final class WorkspaceTabs {
                     boolean focused = isFocused() && i == keyboardIndex;
                     int background = active ? UiTheme.hoverBackground() : UiTheme.SURFACE;
                     int border = focused ? 0xFFFFFFFF : active ? UiTheme.accent() : UiTheme.BORDER;
-                    UiTheme.drawRoundedBox(context, ui, tabX, getY(), TAB_WIDTH, 16, background, border);
+                    UiTheme.drawRoundedBox(context, ui, tabX, getY(), TAB_WIDTH, TAB_HEIGHT,
+                            background, border);
                     var current = ToolWorkspaceManager.getInstance().find(tab.id());
                     String name = current == null ? tab.name() : current.name();
-                    String label = abbreviate(name, TAB_WIDTH - 30);
+                    String label = abbreviate(name, Math.round((TAB_WIDTH - 30) / TAB_TEXT_SCALE));
                     if (mouseX >= tabX && mouseX < tabX + TAB_WIDTH
-                            && mouseY >= getY() && mouseY < getY() + 16 && !label.equals(name)) {
+                            && mouseY >= getY() && mouseY < getY() + TAB_HEIGHT && !label.equals(name)) {
                         setHoverText(Text.literal(name));
                     }
+                    ui.pushMatrix();
+                    ui.translate(tabX + 7, getY() + TAB_HEIGHT / 2.0F);
+                    ui.scale(TAB_TEXT_SCALE, TAB_TEXT_SCALE);
                     ui.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, label,
-                            tabX + 7, getY() + 4,
-                            active ? UiTheme.accent() : UiTheme.TEXT);
+                            0, -4, active ? UiTheme.accent() : UiTheme.TEXT);
+                    ui.popMatrix();
                     ui.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, "x",
-                            tabX + TAB_WIDTH - 10, getY() + 4, active ? 0xFFFFFFFF : UiTheme.MUTED);
+                            tabX + TAB_WIDTH - 10, getY() + 7, active ? 0xFFFFFFFF : UiTheme.MUTED);
                 }
             } finally {
                 ui.disableScissor();
@@ -226,8 +239,8 @@ public final class WorkspaceTabs {
                 int thumbWidth = Math.max(18, getWidth() * getWidth()
                         / (tabs.size() * (TAB_WIDTH + TAB_GAP) - TAB_GAP));
                 int thumbX = getX() + Math.round(offset / maxScroll * (getWidth() - thumbWidth));
-                ui.fill(getX(), getY() + 18, getX() + getWidth(), getY() + 20, UiTheme.BORDER);
-                ui.fill(thumbX, getY() + 17, thumbX + thumbWidth, getY() + 20, UiTheme.accent());
+                ui.fill(getX(), getY() + 24, getX() + getWidth(), getY() + 26, UiTheme.BORDER);
+                ui.fill(thumbX, getY() + 23, thumbX + thumbWidth, getY() + 26, UiTheme.accent());
             }
         }
 
@@ -243,9 +256,12 @@ public final class WorkspaceTabs {
             if (!isVisible() || !isEnabled() || button != GLFW.GLFW_MOUSE_BUTTON_LEFT
                     || !contains((int) mouseX, (int) mouseY)) return false;
             setFocused(true);
-            if (mouseY >= getY() + 16 && maxScroll > 0) {
-                moveScrollbar(mouseX);
-                return true;
+            if (mouseY >= getY() + TAB_HEIGHT) {
+                if (maxScroll > 0) {
+                    moveScrollbar(mouseX);
+                    return true;
+                }
+                return false;
             }
             int index = (int) ((mouseX - getX() + scroll.position()) / (TAB_WIDTH + TAB_GAP));
             if (index >= 0 && index < tabs.size()) {
@@ -268,7 +284,7 @@ public final class WorkspaceTabs {
         @Override
         public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
             if (!isVisible() || !isEnabled() || button != GLFW.GLFW_MOUSE_BUTTON_LEFT
-                    || maxScroll <= 0 || mouseY < getY() + 16) return false;
+                    || maxScroll <= 0 || mouseY < getY() + TAB_HEIGHT) return false;
             moveScrollbar(mouseX);
             return true;
         }

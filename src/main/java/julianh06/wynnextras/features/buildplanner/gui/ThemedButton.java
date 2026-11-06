@@ -23,6 +23,8 @@ class ThemedButton extends Widget {
     private boolean selectedBorderHighlight;
     private Integer textColor;
     private float textScale = 1.0F;
+    private float textOffsetX;
+    private float textOffsetY;
     private Identifier iconTexture;
     private int iconU;
     private int iconV;
@@ -87,6 +89,12 @@ class ThemedButton extends Widget {
 
     ThemedButton setTextScale(float textScale) {
         this.textScale = textScale;
+        return this;
+    }
+
+    ThemedButton setTextOffset(float x, float y) {
+        textOffsetX = x;
+        textOffsetY = y;
         return this;
     }
 
@@ -177,22 +185,19 @@ class ThemedButton extends Widget {
             ui.drawTexture(RenderPipelines.GUI_TEXTURED, iconTexture,
                     iconX, iconY, iconU, iconV, iconSize, iconSize,
                     16, 16, iconTextureWidth, iconTextureHeight);
-            drawScaledText(ui, iconX + iconSize + 5, getY() + getHeight() / 2, text, false);
+            drawScaledText(ui, iconX + iconSize + 5 + textOffsetX,
+                    getY() + getHeight() / 2.0F + textOffsetY, text, false);
         } else if (getMessage().getString().equalsIgnoreCase("x")) {
             var messageColor = getMessage().getStyle().getColor();
             drawRemoveIcon(ui, isEnabled() && messageColor != null ? 0xFF000000 | messageColor.getRgb() : text);
-        } else if (getMessage().getString().equals("i") || getMessage().getString().equals("+")) {
-            var renderer = MinecraftClient.getInstance().textRenderer;
-            int textX = getX() + Math.round((getWidth() - renderer.getWidth(getMessage())) / 2.0F);
-            int textY = getY() + Math.round((getHeight() - renderer.fontHeight) / 2.0F);
-            ui.drawText(renderer, getMessage(), textX, textY, text, false);
         } else {
-            drawScaledText(ui, getX() + getWidth() / 2, getY() + getHeight() / 2, text, true);
+            drawScaledText(ui, getX() + getWidth() / 2.0F + textOffsetX,
+                    getY() + getHeight() / 2.0F + textOffsetY, text, true);
         }
         if (isHovered() && hoverText != null) pendingTooltip = hoverText;
     }
 
-    private void drawScaledText(UIUtils ui, int x, int centerY, int color, boolean centered) {
+    private void drawScaledText(UIUtils ui, float x, float centerY, int color, boolean centered) {
         ui.pushMatrix();
         ui.translate(x, centerY);
         ui.scale(textScale, textScale);

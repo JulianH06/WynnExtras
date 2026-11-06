@@ -115,16 +115,22 @@ public final class BuilderScreen extends PlannerScreen {
             "wynnextras", "textures/gui/buildplanner/archetypes.png");
     private static final int MARGIN = 8;
     private static final int GAP = 8;
-    private static final int CONTENT_TOP = 58;
+    private static final int CONTENT_TOP = 56;
     private static final int PANEL_TOP_INSET = 6;
+    private static final int HEADER_CONTROL_HEIGHT = 24;
     private static final int VIEW_SWITCH_HEIGHT = 24;
     private static final int VIEW_SWITCH_OFFSET = VIEW_SWITCH_HEIGHT + 4;
+    private static final int SECONDARY_BUTTON_HEIGHT = 24;
     private static final int ABILITY_SEARCH_HEIGHT = 24;
-    private static final int ABILITY_TREE_CONTENT_OFFSET = 20 + 4 + ABILITY_SEARCH_HEIGHT + 5;
+    private static final int ABILITY_TREE_CONTENT_OFFSET =
+            SECONDARY_BUTTON_HEIGHT + 4 + ABILITY_SEARCH_HEIGHT + 5;
     private static final int ITEM_ROW_HEIGHT = 48;
-    private static final int ITEM_INFO_WIDTH = 106;
+    private static final int ITEM_INFO_WIDTH = 100;
+    private static final float EQUIPMENT_CONTROL_TEXT_SCALE = 1.15F;
+    private static final float EQUIPMENT_INPUT_TEXT_SCALE = 2.3F;
+    private static final float EQUIPMENT_STAT_TEXT_SCALE = 1.15F;
     private static final int SKILL_CARD_HEIGHT = 82;
-    private static final int AUTO_ASSIGN_WIDTH = 92;
+    private static final int AUTO_ASSIGN_WIDTH = 108;
     private static final int AUTO_ASSIGN_MAIN_WIDTH = 150;
     private static final int AUTO_ASSIGN_ALL_WIDTH = 150;
     private static final int POSITIVE = 0xFF00FF40;
@@ -137,6 +143,7 @@ public final class BuilderScreen extends PlannerScreen {
     private static final float BOOST_TEXT_SCALE = 1.3F;
     private static final float BOOST_TAB_TEXT_SCALE = 1.3F;
     private static final float STATS_TEXT_SCALE = 1.3F;
+    private static final float SECONDARY_BUTTON_TEXT_SCALE = 1.25F;
     private static final int STATS_LINE_HEIGHT = 16;
     private static final float DAMAGE_TEXT_SCALE = 1.3F;
     private static final int DAMAGE_LINE_HEIGHT = 14;
@@ -422,12 +429,14 @@ public final class BuilderScreen extends PlannerScreen {
             WynnItem item = equipped.get(slot);
             int controlWidth = position.width - ITEM_INFO_WIDTH - 9;
             String displayName = item == null ? slot.label + ": Empty" : item.displayName();
-            String fittedName = fitText(displayName, controlWidth - 10);
+            String fittedName = fitText(
+                    displayName, Math.round((controlWidth - 10) / EQUIPMENT_CONTROL_TEXT_SCALE));
             Text name = Text.literal(fittedName).formatted(
                     item == null ? Formatting.GRAY : tierColor(item.tier()));
             addDynamic(new ThemedButton(
                     position.x + ITEM_INFO_WIDTH + 5, position.y + 3,
-                    controlWidth, 20, name, () -> openPicker(slot)));
+                    controlWidth, 21, name, () -> openPicker(slot))
+                    .setTextScale(EQUIPMENT_CONTROL_TEXT_SCALE));
 
             if (!slot.powderable) {
                 powderCodes.remove(slot);
@@ -438,6 +447,7 @@ public final class BuilderScreen extends PlannerScreen {
                     position.width - ITEM_INFO_WIDTH - 9, 18, "Powders");
             int powderSlots = item == null ? 0 : item.stat("powderSlots");
             powderField.setMaxLength(Math.max(1, powderSlots * 2));
+            powderField.setTextScale(EQUIPMENT_INPUT_TEXT_SCALE);
             powderField.setInput(powderCodes.getOrDefault(slot, ""));
             powderField.setPlaceholder(powderSlots + " powder slots");
             powderField.setEnabled(item != null && powderSlots > 0);
@@ -456,11 +466,13 @@ public final class BuilderScreen extends PlannerScreen {
             int controlWidth = position.width - ITEM_INFO_WIDTH - 9;
             int removeWidth = 20;
             int itemButtonWidth = controlWidth - removeWidth - 4;
-            String fittedName = fitText(offhand.item().displayName(), itemButtonWidth - 10);
+            String fittedName = fitText(offhand.item().displayName(),
+                    Math.round((itemButtonWidth - 10) / EQUIPMENT_CONTROL_TEXT_SCALE));
             addDynamic(new ThemedButton(
                     position.x + ITEM_INFO_WIDTH + 5, position.y + 3,
-                    itemButtonWidth, 20, Text.literal(fittedName).formatted(tierColor(offhand.item().tier())),
-                    () -> openOffhandPicker(index)));
+                    itemButtonWidth, 21, Text.literal(fittedName).formatted(tierColor(offhand.item().tier())),
+                    () -> openOffhandPicker(index))
+                    .setTextScale(EQUIPMENT_CONTROL_TEXT_SCALE));
             addDynamic(new ThemedButton(
                     position.x + ITEM_INFO_WIDTH + 9 + itemButtonWidth, position.y + 3,
                     removeWidth, 20, Text.literal("x"), () -> removeOffhand(index))
@@ -471,6 +483,7 @@ public final class BuilderScreen extends PlannerScreen {
                     controlWidth, 18, "Powders");
             int powderSlots = offhand.item().stat("powderSlots");
             powderField.setMaxLength(Math.max(1, powderSlots * 2));
+            powderField.setTextScale(EQUIPMENT_INPUT_TEXT_SCALE);
             powderField.setInput(offhand.powders());
             powderField.setPlaceholder(powderSlots + " powder slots");
             powderField.setEnabled(powderSlots > 0);
@@ -514,19 +527,23 @@ public final class BuilderScreen extends PlannerScreen {
         }
         if (offhands.isEmpty()) {
             addDynamic(new ThemedButton(
-                    MARGIN + 8, layout.skillTop + layout.skillHeight - 25,
-                    AUTO_ASSIGN_WIDTH, 20, Text.literal("Auto Assign"),
-                    () -> autoAssignSkillPoints(false)));
+                    MARGIN + 8, layout.skillTop + layout.skillHeight - 29,
+                    AUTO_ASSIGN_WIDTH, 24, Text.literal("Auto Assign"),
+                    () -> autoAssignSkillPoints(false))
+                    .setTextScale(1.2F));
         } else {
             addDynamic(new ThemedButton(
-                    MARGIN + 8, layout.skillTop + layout.skillHeight - 25,
-                    AUTO_ASSIGN_MAIN_WIDTH, 20, Text.literal("Auto SP: Main Weapon Only"),
+                    MARGIN + 8, layout.skillTop + layout.skillHeight - 29,
+                    AUTO_ASSIGN_MAIN_WIDTH, 24, Text.literal("Auto SP: Main Weapon Only"),
                     () -> autoAssignSkillPoints(false))
+                    .setTextScale(1.1F)
                     .setHoverText(Text.literal("Assign skill points for the main weapon only.")));
             addDynamic(new ThemedButton(
-                    MARGIN + 12 + AUTO_ASSIGN_MAIN_WIDTH, layout.skillTop + layout.skillHeight - 25,
-                    AUTO_ASSIGN_ALL_WIDTH, 20, Text.literal("Auto SP: Main + Offhand" + (offhands.size() > 1 ? "s" : "")),
+                    MARGIN + 12 + AUTO_ASSIGN_MAIN_WIDTH, layout.skillTop + layout.skillHeight - 29,
+                    AUTO_ASSIGN_ALL_WIDTH, 24,
+                    Text.literal("Auto SP: Main + Offhand" + (offhands.size() > 1 ? "s" : "")),
                     () -> autoAssignSkillPoints(true))
+                    .setTextScale(1.1F)
                     .setHoverText(Text.literal(
                             "Assign enough skill points for the main weapon and every offhand.")));
         }
@@ -534,12 +551,14 @@ public final class BuilderScreen extends PlannerScreen {
         BuilderFooterLayout footerLayout = builderFooterLayout(layout);
         if (offhands.size() < 3) {
             SlotPosition position = offhandPosition(layout, offhands.size());
-            int buttonWidth = 140;
+            int buttonWidth = Math.min(160, position.width - 8);
+            int buttonHeight = 24;
             addDynamic(new ThemedButton(
                     position.x + (position.width - buttonWidth) / 2,
-                    position.y + (ITEM_ROW_HEIGHT - 20) / 2,
-                    buttonWidth, 20, Text.literal("Add Offhand"),
+                    position.y + (ITEM_ROW_HEIGHT - buttonHeight) / 2,
+                    buttonWidth, buttonHeight, Text.literal("Add Offhand"),
                     () -> openOffhandPicker(offhands.size()))
+                    .setTextScale(1.25F)
                     .setHoverLines(List.of(
                             Text.literal("§lOffhand info:"),
                             Text.literal("§7Offhands are supported only in the WynnExtras builder."),
@@ -570,36 +589,43 @@ public final class BuilderScreen extends PlannerScreen {
                     - summaryButtonGap * (summaryButtonCount - 1)) / summaryButtonCount;
             addDynamic(new ThemedButton(
                     layout.middleX + 4, layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
-                    summaryButtonWidth, 20,
+                    summaryButtonWidth, SECONDARY_BUTTON_HEIGHT,
                     Text.literal("Summary"), () -> selectStatsView(StatsView.SUMMARY))
-                    .setSelected(statsView == StatsView.SUMMARY).setSelectedBorderHighlight());
+                    .setSelected(statsView == StatsView.SUMMARY).setSelectedBorderHighlight()
+                    .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
             addDynamic(new ThemedButton(
                     layout.middleX + 4 + summaryButtonWidth + summaryButtonGap,
                     layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
-                    summaryButtonWidth, 20, Text.literal("Detailed"), () -> selectStatsView(StatsView.DETAILED))
-                    .setSelected(statsView == StatsView.DETAILED).setSelectedBorderHighlight());
+                    summaryButtonWidth, SECONDARY_BUTTON_HEIGHT,
+                    Text.literal("Detailed"), () -> selectStatsView(StatsView.DETAILED))
+                    .setSelected(statsView == StatsView.DETAILED).setSelectedBorderHighlight()
+                    .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
             if (!activeSets.isEmpty()) {
                 addDynamic(new ThemedButton(
                         layout.middleX + 4 + (summaryButtonWidth + summaryButtonGap) * 2,
                         layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET,
-                        summaryButtonWidth, 20, Text.literal("Sets"), () -> selectStatsView(StatsView.SETS))
-                        .setSelected(statsView == StatsView.SETS).setSelectedBorderHighlight());
+                        summaryButtonWidth, SECONDARY_BUTTON_HEIGHT,
+                        Text.literal("Sets"), () -> selectStatsView(StatsView.SETS))
+                        .setSelected(statsView == StatsView.SETS).setSelectedBorderHighlight()
+                        .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
                 if (statsView == StatsView.SETS) {
                     setSummaryWidget = new SetSummaryWidget(activeSets);
                     addRootWidget(setSummaryWidget);
                 }
             }
         }
-        int footerY = this.height - MARGIN - 24;
+        int footerY = this.height - MARGIN - SECONDARY_BUTTON_HEIGHT;
         int footerGap = 4;
         int footerX = footerLayout.buttonX();
         int footerButtonWidth = footerLayout.buttonWidth();
         addDynamic(new ThemedButton(
-                footerX, footerY, footerButtonWidth, 20,
-                Text.literal("Import"), this::importWynnBuilderLink));
+                footerX, footerY, footerButtonWidth, SECONDARY_BUTTON_HEIGHT,
+                Text.literal("Import"), this::importWynnBuilderLink)
+                .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         addDynamic(new ThemedButton(
-                footerX + footerButtonWidth + footerGap, footerY, footerButtonWidth, 20,
+                footerX + footerButtonWidth + footerGap, footerY, footerButtonWidth, SECONDARY_BUTTON_HEIGHT,
                 Text.literal("Browser"), this::openInWynnBuilder)
+                .setTextScale(SECONDARY_BUTTON_TEXT_SCALE)
                 .setHoverLines(List.of(
                         Text.literal("WynnBuilder link export"),
                         Text.empty(),
@@ -614,15 +640,20 @@ public final class BuilderScreen extends PlannerScreen {
                         Text.literal("\u2716 Powder Specials").formatted(Formatting.RED),
                         Text.literal("\u2716 Raid Buffs").formatted(Formatting.RED))));
         addDynamic(new ThemedButton(
-                footerX + (footerButtonWidth + footerGap) * 2, footerY, footerButtonWidth, 20,
-                Text.literal("Saved"), this::openSavedBuilds));
+                footerX + (footerButtonWidth + footerGap) * 2, footerY,
+                footerButtonWidth, SECONDARY_BUTTON_HEIGHT,
+                Text.literal("Saved"), this::openSavedBuilds)
+                .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         addDynamic(new ThemedButton(
-                footerX + (footerButtonWidth + footerGap) * 3, footerY, footerButtonWidth, 20,
-                Text.literal("Save"), this::openSaveBuild));
+                footerX + (footerButtonWidth + footerGap) * 3, footerY,
+                footerButtonWidth, SECONDARY_BUTTON_HEIGHT,
+                Text.literal("Save"), this::openSaveBuild)
+                .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         int doneX = footerX + (footerButtonWidth + footerGap) * 4;
         addDynamic(new ThemedButton(
-                doneX, footerY, footerLayout.buttonRight() - doneX, 20,
-                Text.literal("Done"), this::close));
+                doneX, footerY, footerLayout.buttonRight() - doneX, SECONDARY_BUTTON_HEIGHT,
+                Text.literal("Done"), this::close)
+                .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
 
         int boostButtonY = layout.boostTop + 4;
         int boostButtonGap = 3;
@@ -1505,7 +1536,7 @@ public final class BuilderScreen extends PlannerScreen {
         int gap = 4;
         int buttonWidth = (toolbarWidth - gap * 2) / 3;
         addDynamic(new ThemedButton(
-                toolbarX, toolbarY, buttonWidth, 20, Text.literal("Reset Tree"), () -> {
+                toolbarX, toolbarY, buttonWidth, SECONDARY_BUTTON_HEIGHT, Text.literal("Reset Tree"), () -> {
                     abilityTreeState.reset(selectedClass);
                     abilityTreeNotices = List.of();
                     abilityTreeNoticeNodeIds = Set.of();
@@ -1513,15 +1544,18 @@ public final class BuilderScreen extends PlannerScreen {
                     invalidateStats();
                     setAbilityTreeStatus("Tree reset");
                     saveWorkspace();
-                }));
+                }).setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         addDynamic(new ThemedButton(
-                toolbarX + buttonWidth + gap, toolbarY, buttonWidth, 20,
-                Text.literal("Copy Tree"), this::copyAbilityTree));
+                toolbarX + buttonWidth + gap, toolbarY, buttonWidth, SECONDARY_BUTTON_HEIGHT,
+                Text.literal("Copy Tree"), this::copyAbilityTree)
+                .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         addDynamic(new ThemedButton(
-                toolbarX + (buttonWidth + gap) * 2, toolbarY, buttonWidth, 20,
-                Text.literal("Paste Tree"), this::pasteAbilityTree));
+                toolbarX + (buttonWidth + gap) * 2, toolbarY, buttonWidth, SECONDARY_BUTTON_HEIGHT,
+                Text.literal("Paste Tree"), this::pasteAbilityTree)
+                .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         TextInputWidget treeSearchField = textInput(
-                toolbarX, toolbarY + 24, toolbarWidth, ABILITY_SEARCH_HEIGHT, "Search abilities...");
+                toolbarX, toolbarY + SECONDARY_BUTTON_HEIGHT + 4,
+                toolbarWidth, ABILITY_SEARCH_HEIGHT, "Search abilities...");
         treeSearchField.setTextScale(STATS_TEXT_SCALE * 2.0F);
         treeSearchField.setTextOffset(8, 13);
         treeSearchField.setMaxLength(80);
@@ -2148,7 +2182,7 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void buildTabWidgets(Layout layout) {
-        WorkspaceTabs.add(parent, toolTabId, 12, 8, width - 24, this::addDynamic);
+        WorkspaceTabs.add(parent, toolTabId, MARGIN, 2, width - MARGIN * 2, this::addDynamic);
         int classWidth = 116;
         int headerY = layout.equipmentTop + PANEL_TOP_INSET;
         int classX = MARGIN + layout.leftWidth - classWidth - 8;
@@ -2160,8 +2194,10 @@ public final class BuilderScreen extends PlannerScreen {
         int levelLabelX = levelFieldX - textRenderer.getWidth(levelLabelText) - 6;
         int nameX = MARGIN + 10;
         TextInputWidget nameField = textInput(
-                nameX, headerY, levelLabelX - nameX - 6, 20, "Tab name");
+                nameX, headerY, levelLabelX - nameX - 6, HEADER_CONTROL_HEIGHT, "Tab name");
         nameField.setMaxLength(64);
+        nameField.setTextScale(2.5F);
+        nameField.setTextOffset(8, 14);
         nameField.setInput(tabName);
         nameField.setOnChange(value -> {
             try {
@@ -2172,10 +2208,13 @@ public final class BuilderScreen extends PlannerScreen {
         addDynamicField(nameField);
 
         TextWidget levelLabel = new TextWidget(levelLabelText, this.textRenderer);
-        levelLabel.setPosition(levelLabelX, headerY + 6);
+        levelLabel.setPosition(levelLabelX, headerY + 8);
         dynamicLabels.add(this.addDrawableChild(levelLabel));
-        TextInputWidget levelField = textInput(levelFieldX, headerY, levelFieldWidth, 20, "Level");
+        TextInputWidget levelField = textInput(
+                levelFieldX, headerY, levelFieldWidth, HEADER_CONTROL_HEIGHT, "Level");
         levelField.setMaxLength(3);
+        levelField.setTextScale(2.5F);
+        levelField.setTextOffset(8, 14);
         levelField.setCharacterFilter(Character::isDigit);
         levelField.setInput(Integer.toString(level));
         levelField.setOnChange(text -> {
@@ -2192,11 +2231,13 @@ public final class BuilderScreen extends PlannerScreen {
         });
         addDynamicField(levelField);
         addDynamic(new ThemedButton(
-                resetX, headerY, resetWidth, 20, Text.literal("Reset Build"), this::resetBuild)
+                resetX, headerY, resetWidth, HEADER_CONTROL_HEIGHT,
+                Text.literal("Reset Build"), this::resetBuild)
+                .setTextScale(1.1F)
                 .setHoverText(Text.of("You can always use ctrl + z to undo, in case you clicked this accidentally")));
 
         classSelector = new ClassSelectorWidget(
-                classX, headerY, classWidth, 20);
+                classX, headerY, classWidth, HEADER_CONTROL_HEIGHT);
         addRootWidget(classSelector);
     }
 
@@ -2314,7 +2355,7 @@ public final class BuilderScreen extends PlannerScreen {
             return true;
         }
         Layout layout = layout();
-        if (WorkspaceTabs.scroll(parent, toolTabId, 12, 8, width - 24,
+        if (WorkspaceTabs.scroll(parent, toolTabId, MARGIN, 2, width - MARGIN * 2,
                 logicalX, logicalY, horizontalAmount, verticalAmount)) return true;
         if (abilityPresetOverlay != AbilityPresetOverlay.NONE) {
             if (abilityPresetOverlay == AbilityPresetOverlay.SAVED) {
@@ -2402,6 +2443,8 @@ public final class BuilderScreen extends PlannerScreen {
                 return true;
             }
         }
+        if (!pickerOpen() && classSelector != null
+                && classSelector.mouseClicked(logical.x(), logical.y(), logical.button())) return true;
         if (!pickerOpen() && logical.button() == 0) {
             if (abilityTreeVisible
                     && (abilityTreeScrollbar.mouseClicked(logical.x(), logical.y(), logical.button())
@@ -3264,9 +3307,8 @@ public final class BuilderScreen extends PlannerScreen {
                     drawPixelHeart(context, primaryX, position.y + 11);
                     primaryX += 11;
                 }
-                ui.drawTextWithShadow(
-                        this.textRenderer, primary, primaryX, position.y + 10, primaryColor);
-                ui.drawTextWithShadow(this.textRenderer, "Lv. " + item.stat("lvl"),
+                drawEquipmentStatText(primary, primaryX, position.y + 10, primaryColor);
+                drawEquipmentStatText("Lv. " + item.stat("lvl"),
                         position.x + 51, position.y + 28, 0xFFFFFFFF);
             }
         }
@@ -3281,12 +3323,19 @@ public final class BuilderScreen extends PlannerScreen {
             int primaryX = position.x + 51;
             drawPixelWeapon(context, primaryX, position.y + 9);
             primaryX += 11;
-            ui.drawTextWithShadow(this.textRenderer,
-                    format(BuildCalculator.weaponBaseDps(item, offhand.powders())),
+            drawEquipmentStatText(format(BuildCalculator.weaponBaseDps(item, offhand.powders())),
                     primaryX, position.y + 10, 0xFFFFAA00);
-            ui.drawTextWithShadow(this.textRenderer, "Lv. " + item.stat("lvl"),
+            drawEquipmentStatText("Lv. " + item.stat("lvl"),
                     position.x + 51, position.y + 28, 0xFFFFFFFF);
         }
+    }
+
+    private void drawEquipmentStatText(String text, int x, int y, int color) {
+        ui.pushMatrix();
+        ui.translate(x, y);
+        ui.scale(EQUIPMENT_STAT_TEXT_SCALE, EQUIPMENT_STAT_TEXT_SCALE);
+        ui.drawTextWithShadow(textRenderer, text, 0, 0, color);
+        ui.popMatrix();
     }
 
     private void renderEquipmentTooltip(DrawContext context, Layout layout, int mouseX, int mouseY) {
@@ -4475,9 +4524,13 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private final class ClassSelectorWidget extends Widget {
+        private static final int OPTION_GAP = 2;
+        private static final int OPTION_HEIGHT = 26;
+        private static final float TEXT_SCALE = 1.25F;
         private final int left;
         private final int top;
         private final int controlWidth;
+        private final int controlHeight;
         private boolean open;
 
         private ClassSelectorWidget(int left, int top, int width, int height) {
@@ -4486,47 +4539,62 @@ public final class BuilderScreen extends PlannerScreen {
             this.left = left;
             this.top = top;
             this.controlWidth = width;
+            this.controlHeight = height;
         }
 
         @Override
         protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
             drawClassOption(context, selectedClass, left, top, mouseX, mouseY);
-            ui.drawTextWithShadow(textRenderer, open ? "▲" : "▼", left + controlWidth - 12, top + 6,
+            ui.drawTextWithShadow(textRenderer, open ? "▲" : "▼",
+                    left + controlWidth - 13, top + (controlHeight - textRenderer.fontHeight) / 2,
                     UiTheme.MUTED);
             if (!open) return;
-            UiTheme.drawPanel(context, ui, left, top + 22, controlWidth, CharacterClass.playableValues().length * 22 + 4);
+            int optionsTop = top + controlHeight + OPTION_GAP;
+            UiTheme.drawPanel(context, ui, left, optionsTop, controlWidth,
+                    CharacterClass.playableValues().length * OPTION_HEIGHT + 4);
             for (int i = 0; i < CharacterClass.playableValues().length; i++) {
-                drawClassOption(context, CharacterClass.playableValues()[i], left + 2, top + 24 + i * 22,
+                drawClassOption(context, CharacterClass.playableValues()[i],
+                        left + 2, optionsTop + 2 + i * OPTION_HEIGHT,
                         mouseX, mouseY);
             }
         }
 
         private void drawClassOption(DrawContext context, CharacterClass abilityClass, int x, int y,
                 int mouseX, int mouseY) {
-            boolean hovered = mouseX >= x && mouseX < x + controlWidth - (x == left ? 0 : 4)
-                    && mouseY >= y && mouseY < y + 20;
-            UiTheme.drawRoundedBox(context, ui, x, y, controlWidth - (x == left ? 0 : 4), 20,
+            int optionWidth = controlWidth - (x == left ? 0 : 4);
+            int optionHeight = x == left ? controlHeight : OPTION_HEIGHT - 2;
+            boolean hovered = mouseX >= x && mouseX < x + optionWidth
+                    && mouseY >= y && mouseY < y + optionHeight;
+            UiTheme.drawRoundedBox(context, ui, x, y, optionWidth, optionHeight,
                     hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
                     abilityClass == selectedClass ? UiTheme.accent() : UiTheme.BORDER);
             Identifier texture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/"
                     + abilityClass.apiName() + ".png");
             ui.drawTexture(RenderPipelines.GUI_TEXTURED, texture, x + 4, y + 2,
-                    0, 0, 14, 16, 283, 324, 283, 324);
-            ui.drawTextWithShadow(textRenderer, abilityClass.displayName(), x + 23, y + 6,
-                    abilityClass.color());
+                    0, 0, 18, 20, 283, 324, 283, 324);
+            ui.pushMatrix();
+            ui.translate(x + 27, y + optionHeight / 2.0F);
+            ui.scale(TEXT_SCALE, TEXT_SCALE);
+            ui.drawTextWithShadow(textRenderer, abilityClass.displayName(), 0, -4, abilityClass.color());
+            ui.popMatrix();
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             if (button != 0) return false;
-            if (mouseX >= left && mouseX < left + controlWidth && mouseY >= top && mouseY < top + 20) {
+            if (mouseX >= left && mouseX < left + controlWidth
+                    && mouseY >= top && mouseY < top + controlHeight) {
                 open = !open;
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 return true;
             }
+            int optionsTop = top + controlHeight + OPTION_GAP;
             if (open && mouseX >= left && mouseX < left + controlWidth
-                    && mouseY >= top + 22 && mouseY < top + 26 + CharacterClass.playableValues().length * 22) {
-                int index = (int) ((mouseY - top - 24) / 22);
+                    && mouseY >= optionsTop && mouseY < optionsTop + 4
+                            + CharacterClass.playableValues().length * OPTION_HEIGHT) {
+                int index = (int) ((mouseY - optionsTop - 2) / OPTION_HEIGHT);
                 if (index >= 0 && index < CharacterClass.playableValues().length) {
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     selectClass(CharacterClass.playableValues()[index]);
                 }
                 return true;
@@ -4869,7 +4937,7 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private SlotPosition slotPosition(Layout layout, BuildSlot slot) {
-        int columnGap = 6;
+        int columnGap = 4;
         int columnWidth = (layout.leftWidth - 12 - columnGap) / 2;
         boolean rightColumn = slot.ordinal() >= 5;
         int row = rightColumn ? slot.ordinal() - 5 : slot.ordinal();

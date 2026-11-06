@@ -26,7 +26,7 @@ final class EmptyWorkspaceScreen extends PlannerScreen {
         clearChildren();
         rootWidgets.clear();
         controls.clear();
-        WorkspaceTabs.addEmpty(parent, type, 12, 8, width - 24, this::control);
+        WorkspaceTabs.addEmpty(parent, type, 8, 2, width - 16, this::control);
         addRootWidget(new EmptyMessage(type, width, height));
         control(new ThemedButton(
                 (width - 130) / 2, height / 2 + 30, 130, 20,

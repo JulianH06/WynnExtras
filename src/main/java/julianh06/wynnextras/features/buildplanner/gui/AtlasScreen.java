@@ -74,7 +74,7 @@ final class AtlasScreen extends PlannerScreen {
         icons.clear();
         fixed.clear();
         reloadCatalog();
-        WorkspaceTabs.add(parent, tabId, 12, 8, width - 24, this::fixed);
+        WorkspaceTabs.add(parent, tabId, 8, 2, width - 16, this::fixed);
         tabNameField = addDrawableChild(WorkspaceTabs.nameField(
                 tabId, 140, 60, Math.max(80, width - 280), value -> {}));
         fixed(new ThemedButton(14, 60, 115, 20,
@@ -523,7 +523,7 @@ final class AtlasScreen extends PlannerScreen {
     }
 
     @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {
-        if (WorkspaceTabs.scroll(parent, tabId, 12, 8, width - 24,
+        if (WorkspaceTabs.scroll(parent, tabId, 8, 2, width - 16,
                 logicalCoordinate(x), logicalCoordinate(y), horizontal, vertical)) return true;
         scroll.move((float) -vertical * 30, 0, maxScroll);
         return true;

@@ -123,7 +123,7 @@ public final class CrafterScreen extends PlannerScreen {
         panelHeight = height - 74;
         left = (width - panelWidth) / 2;
         top = 64;
-        WorkspaceTabs.add(parent, toolTabId, 12, 8, width - 24,
+        WorkspaceTabs.add(parent, toolTabId, 8, 2, width - 16,
                 button -> tabButtons.add(addButton(button)));
         tabNameField = addDrawableChild(WorkspaceTabs.nameField(
                 toolTabId, left + 12, top + 6, panelWidth - 24, value -> updateCardLayout()));
@@ -620,7 +620,7 @@ public final class CrafterScreen extends PlannerScreen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-        if (WorkspaceTabs.scroll(parent, toolTabId, 12, 8, width - 24,
+        if (WorkspaceTabs.scroll(parent, toolTabId, 8, 2, width - 16,
                 logicalCoordinate(mouseX), logicalCoordinate(mouseY), horizontal, vertical)) return true;
         pageScroll.move((float) -vertical * 30, 0, maxScroll);
         return true;
