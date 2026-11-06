@@ -1,6 +1,8 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
 import julianh06.wynnextras.utils.UI.UIUtils;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 
 final class UiTheme {
     static final int BACKGROUND = 0xFF09090B;
@@ -48,9 +50,9 @@ final class UiTheme {
         return Math.max(0, Math.min(255, alpha)) << 24 | color & 0xFFFFFF;
     }
 
-    static void drawPanel(UIUtils ui, int x, int y, int width, int height) {
+    static void drawPanel(DrawContext context, UIUtils ui, int x, int y, int width, int height) {
         fillRounded(ui, x + 2, y + 3, width, height, SHADOW);
-        drawRoundedBox(ui, x, y, width, height, PANEL, BORDER);
+        drawRoundedBox(context, ui, x, y, width, height, PANEL, BORDER);
         if (width > 12 && height > 4) {
             ui.fill(x + 6, y + 1, x + width - 6, y + 2, lerpColor(BORDER, ACCENT, 0.25F));
         }
@@ -65,31 +67,79 @@ final class UiTheme {
         }
     }
 
-    static void drawControl(UIUtils ui, int x, int y, int width, int height) {
-        drawRoundedBox(ui, x, y, width, height, SURFACE, BORDER);
-    }
-
     static void drawRoundedBox(
-            UIUtils ui, int x, int y, int width, int height, int background, int border) {
-        fillRounded(ui, x, y, width, height, border);
-        fillRounded(ui, x + 1, y + 1, width - 2, height - 2, background);
+            DrawContext context, UIUtils ui, int x, int y, int width, int height, int background, int border) {
+        if (width <= 0 || height <= 0) return;
+        var matrices = context.getMatrices();
+        float guiScale = MinecraftClient.getInstance().getWindow().getScaleFactor();
+        float scaleX = matrices.m00() * guiScale;
+        float scaleY = matrices.m11() * guiScale;
+        int left = Math.round((matrices.m00() * ui.sx(x) + matrices.m20()) * guiScale);
+        int top = Math.round((matrices.m11() * ui.sy(y) + matrices.m21()) * guiScale);
+        int right = Math.round((matrices.m00() * ui.sx(x + width) + matrices.m20()) * guiScale);
+        int bottom = Math.round((matrices.m11() * ui.sy(y + height) + matrices.m21()) * guiScale);
+        int strokeX = Math.max(1, Math.round(scaleX / ui.getScaleFactorF()));
+        int strokeY = Math.max(1, Math.round(scaleY / ui.getScaleFactorF()));
+        double uiScale = ui.getScaleFactor();
+        int offsetX = ui.getXStart();
+        int offsetY = ui.getYStart();
+
+        matrices.pushMatrix();
+        try {
+            matrices.translate((left / guiScale - matrices.m20()) / matrices.m00(),
+                    (top / guiScale - matrices.m21()) / matrices.m11());
+            matrices.scale(1.0F / scaleX, 1.0F / scaleY);
+            ui.setScaleFactor(1.0);
+            ui.setOffset(0, 0);
+            int pixelWidth = right - left;
+            int pixelHeight = bottom - top;
+            fillRoundedPixels(ui, 0, 0, pixelWidth, pixelHeight, strokeX, strokeY, border);
+            fillRoundedPixels(ui, strokeX, strokeY, pixelWidth - 2 * strokeX, pixelHeight - 2 * strokeY,
+                    strokeX, strokeY, background);
+        } finally {
+            ui.setScaleFactor(uiScale);
+            ui.setOffset(offsetX, offsetY);
+            matrices.popMatrix();
+        }
     }
 
-    private static void fillRounded(UIUtils ui, int x, int y, int width, int height, int color) {
+    private static void fillRoundedPixels(UIUtils ui, int x, int y, int width, int height,
+            int stepX, int stepY, int color) {
         if (width <= 0 || height <= 0) return;
-        if (width < 6 || height < 6) {
+        if (width < 6 * stepX || height < 6 * stepY) {
             ui.fill(x, y, x + width, y + height, color);
             return;
         }
-        ui.fill(x + 2, y, x + width - 2, y + 1, color);
-        ui.fill(x + 1, y + 1, x + width - 1, y + 2, color);
-        ui.fill(x, y + 2, x + width, y + height - 2, color);
-        ui.fill(x + 1, y + height - 2, x + width - 1, y + height - 1, color);
-        ui.fill(x + 2, y + height - 1, x + width - 2, y + height, color);
+        ui.fill(x + 2 * stepX, y, x + width - 2 * stepX, y + stepY, color);
+        ui.fill(x + stepX, y + stepY, x + width - stepX, y + 2 * stepY, color);
+        ui.fill(x, y + 2 * stepY, x + width, y + height - 2 * stepY, color);
+        ui.fill(x + stepX, y + height - 2 * stepY, x + width - stepX, y + height - stepY, color);
+        ui.fill(x + 2 * stepX, y + height - stepY, x + width - 2 * stepX, y + height, color);
+    }
+
+    static void enableScissor(DrawContext context, UIUtils ui, int left, int top, int right, int bottom) {
+        var matrices = context.getMatrices();
+        int x = Math.round(ui.sx(left));
+        int y = Math.round(ui.sy(top));
+        context.enableScissor(x, y,
+                scissorEnd(x, Math.round(ui.sx(right)), matrices.m00(), matrices.m20()),
+                scissorEnd(y, Math.round(ui.sy(bottom)), matrices.m11(), matrices.m21()));
+    }
+
+    private static int scissorEnd(int start, int end, float scale, float translation) {
+        // ScreenRect.transform floors the origin AND the extent instead of rounding the far edge out.
+        float transformedStart = scale * start + translation;
+        int extent = (int) Math.ceil(scale * end + translation) - (int) Math.floor(transformedStart);
+        int length = (int) Math.ceil(extent / (double) scale);
+        while (Math.floor(scale * (start + length) + translation - transformedStart) < extent) length++;
+        return start + length;
+    }
+
+    private static void fillRounded(UIUtils ui, int x, int y, int width, int height, int color) {
+        fillRoundedPixels(ui, x, y, width, height, 1, 1, color);
     }
 
     private static int lerpChannel(int from, int to, float amount) {
         return Math.round(from + (to - from) * amount);
     }
-
 }

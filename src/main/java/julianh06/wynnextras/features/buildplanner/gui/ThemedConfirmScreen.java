@@ -42,7 +42,7 @@ final class ThemedConfirmScreen extends PlannerScreen {
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         int left = (width - panelWidth) / 2;
         int top = (height - panelHeight) / 2;
-        UiTheme.drawPanel(ui, left, top, panelWidth, panelHeight);
+        UiTheme.drawPanel(context, ui, left, top, panelWidth, panelHeight);
         ui.drawCenteredTextWithShadow(textRenderer,
                 textRenderer.trimToWidth(getTitle().getString(), panelWidth - 36),
                 width / 2, top + 14, UiTheme.accentRgb());

@@ -201,7 +201,7 @@ final class SavedBuildsScreen extends PlannerScreen {
         int left = (width - PANEL_WIDTH) / 2;
         int panelHeight = panelHeight();
         int top = (height - panelHeight) / 2;
-        UiTheme.drawPanel(ui, left, top, PANEL_WIDTH, panelHeight);
+        UiTheme.drawPanel(context, ui, left, top, PANEL_WIDTH, panelHeight);
         ui.drawCenteredTextWithShadow(
                 textRenderer, "Saved Builds", width / 2, top + 14, UiTheme.accentRgb());
         if (visibleBuilds.isEmpty()) {

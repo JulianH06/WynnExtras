@@ -40,7 +40,7 @@ final class ItemInspectionCard {
         int offset = Math.round(scroll.update(delta));
 
         ui.fill(0, 0, screenWidth, screenHeight, 0xA0000000);
-        UiTheme.drawRoundedBox(ui, left, top, width, height, UiTheme.SURFACE, UiTheme.BORDER);
+        UiTheme.drawRoundedBox(context, ui, left, top, width, height, UiTheme.SURFACE, UiTheme.BORDER);
         ui.pushMatrix();
         ui.translate(left + width / 2.0F, top + 13);
         ui.scale(1.25F, 1.25F);
@@ -204,8 +204,8 @@ final class ItemInspectionCard {
 
         void render(DrawContext context, TextRenderer font, int x, int y, IconDrawer drawer) {
             UIUtils ui = new UIUtils(context, 1.0, 0, 0);
-            UiTheme.drawRoundedBox(ui, x + 2, y + 2, width, height, UiTheme.SHADOW, UiTheme.SHADOW);
-            UiTheme.drawRoundedBox(ui, x, y, width, height, UiTheme.SURFACE, UiTheme.BORDER);
+            UiTheme.drawRoundedBox(context, ui, x + 2, y + 2, width, height, UiTheme.SHADOW, UiTheme.SHADOW);
+            UiTheme.drawRoundedBox(context, ui, x, y, width, height, UiTheme.SURFACE, UiTheme.BORDER);
             for (int i = 0; i < titles.size(); i++) {
                 ui.drawText(font, titles.get(i), icon ? x + (width - font.getWidth(titles.get(i))) / 2 : x + 12,
                         y + 12 + i * 13, color, false);

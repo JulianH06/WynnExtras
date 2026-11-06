@@ -114,8 +114,8 @@ public final class AbilityTreeScreen extends PlannerScreen {
         int top = HEADER_HEIGHT;
         int bottom = this.height - FOOTER_HEIGHT;
 
-        UiTheme.drawPanel(ui, left, top, treeWidth, bottom - top);
-        UiTheme.drawPanel(ui, sidebarX, top, sidebarWidth, bottom - top);
+        UiTheme.drawPanel(context, ui, left, top, treeWidth, bottom - top);
+        UiTheme.drawPanel(context, ui, sidebarX, top, sidebarWidth, bottom - top);
         drawTextureRegion(
                 context, TREE_BACKGROUND,
                 left + 2, top + 2, treeWidth - 4, bottom - top - 4,
@@ -393,7 +393,7 @@ public final class AbilityTreeScreen extends PlannerScreen {
     private void renderPresetOverlay(DrawContext context) {
         PresetPanel panel = presetPanel();
         ui.fill(0, 0, width, height, 0x99000000);
-        UiTheme.drawPanel(ui, panel.x(), panel.y(), panel.width(), panel.height());
+        UiTheme.drawPanel(context, ui, panel.x(), panel.y(), panel.width(), panel.height());
         String title = presetOverlay == PresetOverlay.SAVE
                 ? "Save Ability Tree" : "Saved Ability Trees";
         ui.drawCenteredTextWithShadow(

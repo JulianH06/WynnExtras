@@ -205,7 +205,7 @@ public final class WorkspaceTabs {
                     boolean focused = isFocused() && i == keyboardIndex;
                     int background = active ? UiTheme.hoverBackground() : UiTheme.SURFACE;
                     int border = focused ? 0xFFFFFFFF : active ? UiTheme.accent() : UiTheme.BORDER;
-                    UiTheme.drawRoundedBox(ui, tabX, getY(), TAB_WIDTH, 16, background, border);
+                    UiTheme.drawRoundedBox(context, ui, tabX, getY(), TAB_WIDTH, 16, background, border);
                     var current = ToolWorkspaceManager.getInstance().find(tab.id());
                     String name = current == null ? tab.name() : current.name();
                     String label = abbreviate(name, TAB_WIDTH - 30);

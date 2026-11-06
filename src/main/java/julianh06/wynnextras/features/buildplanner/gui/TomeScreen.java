@@ -220,7 +220,7 @@ public final class TomeScreen extends PlannerScreen {
         ui.fill(0, 0, width, height, 0xA0000000);
         int panelWidth = Math.min(PANEL_WIDTH, width - 20);
         int left = (width - panelWidth) / 2;
-        UiTheme.drawPanel(ui, left, 18, panelWidth, height - 28);
+        UiTheme.drawPanel(context, ui, left, 18, panelWidth, height - 28);
 
         Text title;
         int titleColor = 0xFFE5D6A2;

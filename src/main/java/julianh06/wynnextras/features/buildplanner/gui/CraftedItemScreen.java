@@ -88,7 +88,7 @@ final class CraftedItemScreen extends PlannerScreen {
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         int left = (width - panelWidth) / 2;
         int top = (height - panelHeight) / 2;
-        UiTheme.drawPanel(ui, left, top, panelWidth, panelHeight);
+        UiTheme.drawPanel(context, ui, left, top, panelWidth, panelHeight);
         ui.drawCenteredTextWithShadow(textRenderer, "Crafted " + slotType, width / 2, top + 12, UiTheme.accentRgb());
         String instruction = java.util.Set.of("ring", "bracelet", "necklace").contains(slotType)
                 ? "Any ring, bracelet or necklace code works here"

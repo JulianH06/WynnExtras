@@ -385,7 +385,7 @@ public final class CrafterScreen extends PlannerScreen {
     @Override
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         ui.fill(0, 0, width, height, UiTheme.BACKGROUND);
-        UiTheme.drawPanel(ui, left, top, panelWidth, panelHeight);
+        UiTheme.drawPanel(context, ui, left, top, panelWidth, panelHeight);
         scrollOffset = Math.round(pageScroll.update(delta));
         hoveredIngredient = mouseY >= viewportTop && mouseY < viewportBottom
                 ? ingredientSlotAt(mouseX, mouseY) : -1;
@@ -400,7 +400,7 @@ public final class CrafterScreen extends PlannerScreen {
         try {
             int x = left + 12;
             int y = viewportTop - scrollOffset;
-            UiTheme.drawRoundedBox(ui, x, y, page.controls().width(), CONTROL_BOX_HEIGHT,
+            UiTheme.drawRoundedBox(context, ui, x, y, page.controls().width(), CONTROL_BOX_HEIGHT,
                     UiTheme.SURFACE, UiTheme.BORDER);
             renderVanillaChildren(context, mouseX, mouseY, delta);
             renderControls(context, x, y);
@@ -500,7 +500,7 @@ public final class CrafterScreen extends PlannerScreen {
 
     private void renderIngredientTile(Ingredient ingredient, int slot, int x, int y, int width, boolean floating) {
         if (floating) {
-            UiTheme.drawRoundedBox(ui, x, y, width, 28, UiTheme.hoverBackground(), UiTheme.accent());
+            UiTheme.drawRoundedBox(drawContext, ui, x, y, width, 28, UiTheme.hoverBackground(), UiTheme.accent());
         }
         drawIngredientIcon(ingredient, x + 5, y + 4, 20);
         String name = ingredient.name();

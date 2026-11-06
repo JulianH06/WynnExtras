@@ -169,7 +169,7 @@ class ThemedButton extends Widget {
                 ? textColor == null ? UiTheme.lerpColor(baseText, 0xFFFFFFFF, hoverProgress) : baseText
                 : textColor == null ? UiTheme.DISABLED : textColor;
 
-        UiTheme.drawRoundedBox(ui, getX(), getY(), getWidth(), getHeight(), background, border);
+        UiTheme.drawRoundedBox(context, ui, getX(), getY(), getWidth(), getHeight(), background, border);
         if (iconTexture != null) {
             int iconSize = Math.min(18, getHeight() - 4);
             int iconX = getX() + 5;

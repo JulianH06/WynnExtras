@@ -117,7 +117,10 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int GAP = 8;
     private static final int CONTENT_TOP = 58;
     private static final int PANEL_TOP_INSET = 6;
-    private static final int VIEW_SWITCH_OFFSET = 24;
+    private static final int VIEW_SWITCH_HEIGHT = 24;
+    private static final int VIEW_SWITCH_OFFSET = VIEW_SWITCH_HEIGHT + 4;
+    private static final int ABILITY_SEARCH_HEIGHT = 24;
+    private static final int ABILITY_TREE_CONTENT_OFFSET = 20 + 4 + ABILITY_SEARCH_HEIGHT + 5;
     private static final int ITEM_ROW_HEIGHT = 48;
     private static final int ITEM_INFO_WIDTH = 106;
     private static final int SKILL_CARD_HEIGHT = 82;
@@ -131,8 +134,14 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int WATER = 0xFF20FFFF;
     private static final int FIRE = 0xFFFF4040;
     private static final int AIR = 0xFFFFFFFF;
-    private static final float BOOST_TEXT_SCALE = 1.15F;
-    private static final float BOOST_TAB_TEXT_SCALE = 1.25F;
+    private static final float BOOST_TEXT_SCALE = 1.3F;
+    private static final float BOOST_TAB_TEXT_SCALE = 1.3F;
+    private static final float STATS_TEXT_SCALE = 1.3F;
+    private static final int STATS_LINE_HEIGHT = 16;
+    private static final float DAMAGE_TEXT_SCALE = 1.3F;
+    private static final int DAMAGE_LINE_HEIGHT = 14;
+    private static final float ABILITY_SUMMARY_TEXT_SCALE = STATS_TEXT_SCALE;
+    private static final int ABILITY_SUMMARY_LINE_HEIGHT = 13;
     private static final int[] POWDER_DAMAGE_CAPS = {300, 200, 120, 120, 120};
     private static final String[] POWDER_DAMAGE_IDS = {
             "earthDamage", "thunderDamage", "waterDamage", "fireDamage", "airDamage"
@@ -544,11 +553,12 @@ public final class BuilderScreen extends PlannerScreen {
         int viewSwitchWidth = abilityTreeVisible ? treeLayout.treeWidth() - 8 : layout.middleWidth - 8;
         int viewSwitchY = layout.equipmentTop + PANEL_TOP_INSET;
         addDynamic(new ThemedButton(
-                viewSwitchX, viewSwitchY, viewSwitchWidth, 20,
+                viewSwitchX, viewSwitchY, viewSwitchWidth, VIEW_SWITCH_HEIGHT,
                 Text.literal(abilityTreeVisible
                         ? "Switch to Stats & Damage"
                         : "Switch to Ability Tree"),
-                () -> setAbilityTreeVisible(!abilityTreeVisible)));
+                () -> setAbilityTreeVisible(!abilityTreeVisible))
+                .setTextScale(STATS_TEXT_SCALE));
 
         if (!abilityTreeVisible) {
             List<WynnBuilderSetBonuses.ActiveSet> activeSets =
@@ -609,8 +619,9 @@ public final class BuilderScreen extends PlannerScreen {
         addDynamic(new ThemedButton(
                 footerX + (footerButtonWidth + footerGap) * 3, footerY, footerButtonWidth, 20,
                 Text.literal("Save"), this::openSaveBuild));
+        int doneX = footerX + (footerButtonWidth + footerGap) * 4;
         addDynamic(new ThemedButton(
-                footerX + (footerButtonWidth + footerGap) * 4, footerY, footerButtonWidth, 20,
+                doneX, footerY, footerLayout.buttonRight() - doneX, 20,
                 Text.literal("Done"), this::close));
 
         int boostButtonY = layout.boostTop + 4;
@@ -1510,7 +1521,9 @@ public final class BuilderScreen extends PlannerScreen {
                 toolbarX + (buttonWidth + gap) * 2, toolbarY, buttonWidth, 20,
                 Text.literal("Paste Tree"), this::pasteAbilityTree));
         TextInputWidget treeSearchField = textInput(
-                toolbarX, toolbarY + 24, toolbarWidth, 18, "Search abilities...");
+                toolbarX, toolbarY + 24, toolbarWidth, ABILITY_SEARCH_HEIGHT, "Search abilities...");
+        treeSearchField.setTextScale(STATS_TEXT_SCALE * 2.0F);
+        treeSearchField.setTextOffset(8, 13);
         treeSearchField.setMaxLength(80);
         treeSearchField.setInput(abilityTreeSearch);
         treeSearchField.setOnChange(value -> {
@@ -2490,7 +2503,7 @@ public final class BuilderScreen extends PlannerScreen {
         if (setSummaryWidget != null) setSummaryWidget.setVisible(detailItem == null);
         ui.fill(0, 0, width, height, UiTheme.BACKGROUND);
         if (pendingBuild != null) {
-            UiTheme.drawPanel(ui, MARGIN, MARGIN, this.width - MARGIN * 2, this.height - MARGIN * 2);
+            UiTheme.drawPanel(context, ui, MARGIN, MARGIN, this.width - MARGIN * 2, this.height - MARGIN * 2);
             ui.drawCenteredTextWithShadow(textRenderer,
                     fitText(restoreError, this.width - 40), this.width / 2, this.height / 2, 0xFFFFAA55);
             renderVanillaChildren(context, mouseX, mouseY, delta);
@@ -2745,22 +2758,21 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void renderPanels(DrawContext context, Layout layout) {
-        UiTheme.drawPanel(ui, MARGIN, layout.equipmentTop, layout.leftWidth, layout.equipmentHeight);
-        UiTheme.drawPanel(ui, MARGIN, layout.skillTop, layout.leftWidth, layout.skillHeight);
-        UiTheme.drawPanel(ui, MARGIN, layout.boostTop, layout.leftWidth, layout.boostHeight);
+        UiTheme.drawPanel(context, ui, MARGIN, layout.equipmentTop, layout.leftWidth, layout.equipmentHeight);
+        UiTheme.drawPanel(context, ui, MARGIN, layout.skillTop, layout.leftWidth, layout.skillHeight);
+        UiTheme.drawPanel(context, ui, MARGIN, layout.boostTop, layout.leftWidth, layout.boostHeight);
+        int mainPanelHeight = mainPanelBottom() - layout.equipmentTop;
         if (abilityTreeVisible) {
             AbilityTreeLayout treeLayout = abilityTreeLayout(layout);
-            UiTheme.drawPanel(ui, treeLayout.treeLeft(), layout.equipmentTop,
-                    treeLayout.treeWidth(),
-                    this.height - MARGIN - layout.equipmentTop);
-            UiTheme.drawPanel(ui, treeLayout.sidebarX(), layout.equipmentTop,
-                    treeLayout.sidebarWidth(),
-                    this.height - MARGIN - layout.equipmentTop);
+            UiTheme.drawPanel(context, ui, treeLayout.treeLeft(), layout.equipmentTop,
+                    treeLayout.treeWidth(), mainPanelHeight);
+            UiTheme.drawPanel(context, ui, treeLayout.sidebarX(), layout.equipmentTop,
+                    treeLayout.sidebarWidth(), mainPanelHeight);
         } else {
-            UiTheme.drawPanel(ui, layout.middleX, layout.equipmentTop, layout.middleWidth,
-                    this.height - MARGIN - layout.equipmentTop);
-            UiTheme.drawPanel(ui, layout.rightX, layout.equipmentTop, layout.rightWidth,
-                    this.height - MARGIN - layout.equipmentTop);
+            UiTheme.drawPanel(context, ui, layout.middleX, layout.equipmentTop, layout.middleWidth,
+                    mainPanelHeight);
+            UiTheme.drawPanel(context, ui, layout.rightX, layout.equipmentTop, layout.rightWidth,
+                    mainPanelHeight);
         }
     }
 
@@ -2869,8 +2881,8 @@ public final class BuilderScreen extends PlannerScreen {
         int y = layout.equipmentTop + 8;
         hoveredArchetype = null;
         if (definition == null) {
-            ui.drawCenteredTextWithShadow(
-                    textRenderer, "Loading...", x + width / 2, y, 0xFFAAAAAA);
+            drawAbilitySummaryCentered(Text.literal("Loading..."),
+                    x + width / 2, y, 0xFFAAAAAA);
             return;
         }
         Map<String, Integer> counts = abilityTreeState.archetypeCounts(definition);
@@ -2896,34 +2908,39 @@ public final class BuilderScreen extends PlannerScreen {
                     && mouseY >= y && mouseY < y + iconSize) {
                 hoveredArchetype = archetype;
             }
-            ui.drawCenteredTextWithShadow(textRenderer, count + " pts",
+            drawAbilitySummaryCentered(Text.literal(count + " pts"),
                     centerX, y + iconSize + 1, archetype.color());
-            ui.drawCenteredTextWithShadow(textRenderer,
-                    fitText(archetype.name(), columnWidth - 4),
-                    centerX, y + iconSize + 12, archetype.color());
+            drawAbilitySummaryCentered(
+                    Text.literal(fitText(archetype.name(),
+                            Math.round((columnWidth - 4) / ABILITY_SUMMARY_TEXT_SCALE))),
+                    centerX, y + iconSize + 15, archetype.color());
         }
-        y += iconSize + 30;
-        ui.drawTextWithShadow(
-                textRenderer,
+        y += iconSize + 36;
+        drawAbilitySummaryText(
                 Text.literal("Active Abilities").formatted(Formatting.BOLD),
                 x, y, 0xFFFFFFFF);
 
-        int listTop = y + 14;
+        int listTop = y + 17;
         int listBottom = abilityTreeBottom(layout) - 29;
         List<String> warnings = abilityTreeWarnings(definition, counts, capacity);
         List<net.minecraft.text.OrderedText> importWarningLines = new ArrayList<>();
         for (String warning : abilityTreeNotices) {
-            importWarningLines.addAll(textRenderer.wrapLines(Text.literal(warning), width));
+            importWarningLines.addAll(textRenderer.wrapLines(
+                    Text.literal(warning), Math.round(width / ABILITY_SUMMARY_TEXT_SCALE)));
         }
         List<net.minecraft.text.OrderedText> warningLines = new ArrayList<>();
         for (String warning : warnings) {
-            warningLines.addAll(textRenderer.wrapLines(Text.literal(warning), width));
+            warningLines.addAll(textRenderer.wrapLines(
+                    Text.literal(warning), Math.round(width / ABILITY_SUMMARY_TEXT_SCALE)));
         }
-        List<AbilitySidebarEntry> entries = abilitySidebarEntries(definition, width - 10);
+        List<AbilitySidebarEntry> entries = abilitySidebarEntries(
+                definition, Math.round((width - 10) / ABILITY_SUMMARY_TEXT_SCALE));
         int contentHeight = abilityTreeNotices.isEmpty()
-                ? 0 : 15 + importWarningLines.size() * 11 + 5;
-        if (!warnings.isEmpty()) contentHeight += 15 + warningLines.size() * 11 + 5;
-        if (abilityTreeNotices.isEmpty() && warnings.isEmpty() && entries.isEmpty()) contentHeight = 11;
+                ? 0 : 18 + importWarningLines.size() * 14 + 5;
+        if (!warnings.isEmpty()) contentHeight += 18 + warningLines.size() * 14 + 5;
+        if (warnings.isEmpty() && entries.isEmpty()) {
+            contentHeight += ABILITY_SUMMARY_LINE_HEIGHT;
+        }
         for (AbilitySidebarEntry entry : entries) contentHeight += entry.height() + 4;
         abilitySidebarMaxScroll = Math.max(0, contentHeight - (listBottom - listTop));
         abilitySidebarScroll.clamp(0.0F, abilitySidebarMaxScroll);
@@ -2936,43 +2953,44 @@ public final class BuilderScreen extends PlannerScreen {
                     && contentY >= listTop && contentY + 12 <= listBottom);
         }
 
-        ui.enableScissor(x - 2, listTop, x + width + 2, listBottom);
+        UiTheme.enableScissor(context, ui, x - 2, listTop, x + width + 2, listBottom);
         if (!abilityTreeNotices.isEmpty()) {
-            ui.drawTextWithShadow(textRenderer,
+            drawAbilitySummaryText(
                     Text.literal("ATree Warning!").formatted(Formatting.BOLD),
                     x, contentY, 0xFFFFAA00);
-            contentY += 13;
+            contentY += 17;
             for (net.minecraft.text.OrderedText warning : importWarningLines) {
-                ui.drawText(textRenderer, warning, x, contentY, 0xFFFFCC55, true);
-                contentY += 11;
+                drawAbilitySummaryText(warning, x, contentY, 0xFFFFCC55);
+                contentY += 14;
             }
             contentY += 5;
         }
         if (!warnings.isEmpty()) {
-            ui.drawTextWithShadow(textRenderer,
+            drawAbilitySummaryText(
                     Text.literal("ATree Error!").formatted(Formatting.BOLD),
                     x, contentY, 0xFFFF5555);
-            contentY += 13;
+            contentY += 17;
             for (net.minecraft.text.OrderedText warning : warningLines) {
-                ui.drawText(textRenderer, warning, x, contentY, 0xFFFF7777, true);
-                contentY += 11;
+                drawAbilitySummaryText(warning, x, contentY, 0xFFFF7777);
+                contentY += 14;
             }
             contentY += 5;
         } else if (entries.isEmpty()) {
-            ui.drawTextWithShadow(textRenderer, "No abilities selected", x, contentY, 0xFF777777);
+            drawAbilitySummaryText(Text.literal("No abilities selected"),
+                    x, contentY, 0xFF777777);
         }
         for (AbilitySidebarEntry entry : entries) {
             int cardY = contentY;
             if (cardY + entry.height() >= listTop && cardY < listBottom) {
-                UiTheme.drawRoundedBox(ui, x, cardY, width, entry.height(),
+                UiTheme.drawRoundedBox(context, ui, x, cardY, width, entry.height(),
                         UiTheme.SURFACE, entry.node().color());
-                ui.drawTextWithShadow(textRenderer,
+                drawAbilitySummaryText(
                         Text.literal(entry.node().name()).formatted(Formatting.BOLD),
                         x + 5, cardY + 4, entry.node().color());
-                int textY = cardY + 16;
+                int textY = cardY + 19;
                 for (net.minecraft.text.OrderedText line : entry.lines()) {
-                    ui.drawText(textRenderer, line, x + 5, textY, 0xFFAAAAAA, false);
-                    textY += 10;
+                    drawAbilitySummaryText(line, x + 5, textY, 0xFFAAAAAA);
+                    textY += ABILITY_SUMMARY_LINE_HEIGHT;
                 }
             }
             contentY += entry.height() + 4;
@@ -3006,7 +3024,7 @@ public final class BuilderScreen extends PlannerScreen {
                 }
             }
             result.add(new AbilitySidebarEntry(node, List.copyOf(wrapped),
-                    21 + wrapped.size() * 10));
+                    26 + wrapped.size() * ABILITY_SUMMARY_LINE_HEIGHT));
         }
         abilitySidebarEntriesCacheKey = cacheKey;
         abilitySidebarEntriesCache = List.copyOf(result);
@@ -3016,7 +3034,33 @@ public final class BuilderScreen extends PlannerScreen {
     private void drawLargeCenteredText(Text text, int x, int y, int color) {
         ui.pushMatrix();
         ui.translate(x, y);
-        ui.scale(1.25F, 1.25F);
+        ui.scale(1.5F, 1.5F);
+        ui.drawCenteredTextWithShadow(textRenderer, text, 0, 0, color);
+        ui.popMatrix();
+    }
+
+    private void drawAbilitySummaryText(Text text, int x, int y, int color) {
+        ui.pushMatrix();
+        ui.translate(x, y);
+        ui.scale(ABILITY_SUMMARY_TEXT_SCALE, ABILITY_SUMMARY_TEXT_SCALE);
+        ui.drawTextWithShadow(textRenderer, text, 0, 0, color);
+        ui.popMatrix();
+    }
+
+    private void drawAbilitySummaryText(
+            net.minecraft.text.OrderedText text, int x, int y, int color
+    ) {
+        ui.pushMatrix();
+        ui.translate(x, y);
+        ui.scale(ABILITY_SUMMARY_TEXT_SCALE, ABILITY_SUMMARY_TEXT_SCALE);
+        ui.drawText(textRenderer, text, 0, 0, color, true);
+        ui.popMatrix();
+    }
+
+    private void drawAbilitySummaryCentered(Text text, int x, int y, int color) {
+        ui.pushMatrix();
+        ui.translate(x, y);
+        ui.scale(ABILITY_SUMMARY_TEXT_SCALE, ABILITY_SUMMARY_TEXT_SCALE);
         ui.drawCenteredTextWithShadow(textRenderer, text, 0, 0, color);
         ui.popMatrix();
     }
@@ -3149,10 +3193,14 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private int abilityTreeTop(Layout layout) {
-        return layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET + 47;
+        return layout.equipmentTop + PANEL_TOP_INSET + VIEW_SWITCH_OFFSET + ABILITY_TREE_CONTENT_OFFSET;
     }
 
     private int abilityTreeBottom(Layout layout) {
+        return mainPanelBottom() - 4;
+    }
+
+    private int mainPanelBottom() {
         return this.height - MARGIN - 28;
     }
 
@@ -3184,10 +3232,10 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private BuilderFooterLayout builderFooterLayout(Layout layout) {
-        int buttonX = layout.middleX + 4;
-        int buttonRight = layout.rightX + layout.rightWidth - 8;
+        int buttonX = layout.middleX;
+        int buttonRight = layout.rightX + layout.rightWidth;
         int buttonWidth = (buttonRight - buttonX - 16) / 5;
-        return new BuilderFooterLayout(buttonX, buttonWidth);
+        return new BuilderFooterLayout(buttonX, buttonWidth, buttonRight);
     }
 
     private void renderEquipment(DrawContext context, Layout layout) {
@@ -3195,8 +3243,7 @@ public final class BuilderScreen extends PlannerScreen {
             SlotPosition position = slotPosition(layout, slot);
             WynnItem item = equipped.get(slot);
             int border = item == null ? UiTheme.BORDER : tierRgb(item.tier());
-            UiTheme.drawRoundedBox(
-                    ui, position.x + 4, position.y + 3, 42, 41, UiTheme.SURFACE, border);
+            UiTheme.drawRoundedBox(context, ui, position.x + 4, position.y + 3, 42, 41, UiTheme.SURFACE, border);
             if (item == null) {
                 ui.drawCenteredTextWithShadow(this.textRenderer,
                         Text.literal(slot.shortLabel), position.x + 25, position.y + 19, 0xAAAAAA);
@@ -3227,8 +3274,7 @@ public final class BuilderScreen extends PlannerScreen {
             Offhand offhand = offhands.get(i);
             SlotPosition position = offhandPosition(layout, i);
             WynnItem item = offhand.item();
-            UiTheme.drawRoundedBox(
-                    ui, position.x + 4, position.y + 3, 42, 41,
+            UiTheme.drawRoundedBox(context, ui, position.x + 4, position.y + 3, 42, 41,
                     UiTheme.SURFACE, tierRgb(item.tier()));
             drawEquipmentIcon(context, BuildSlot.WEAPON, item, position.x + 11, position.y + 9);
             renderSkillRequirementWarning(position, item);
@@ -3382,8 +3428,7 @@ public final class BuilderScreen extends PlannerScreen {
         int top = layout.skillTop + 26;
         for (int i = 0; i < SKILL_NAMES.length; i++) {
             int x = MARGIN + 4 + i * cardWidth;
-            UiTheme.drawRoundedBox(
-                    ui, x + 2, layout.skillTop + 5, cardWidth - 4, SKILL_CARD_HEIGHT,
+            UiTheme.drawRoundedBox(context, ui, x + 2, layout.skillTop + 5, cardWidth - 4, SKILL_CARD_HEIGHT,
                     UiTheme.SURFACE, UiTheme.BORDER);
         }
         int remaining = availableSkillPoints() - totalAssigned();
@@ -3604,17 +3649,26 @@ public final class BuilderScreen extends PlannerScreen {
             DrawContext context, int x, int valueX, int y,
             String label, String value, int labelColor, int valueColor
     ) {
-        ui.drawTextWithShadow(this.textRenderer, label, x, y, labelColor);
-        ui.drawTextWithShadow(this.textRenderer, value, valueX - this.textRenderer.getWidth(value), y, valueColor);
-        return y + 14;
+        drawStatsText(label, x, y, labelColor, false);
+        drawStatsText(value, valueX, y, valueColor, true);
+        return y + STATS_LINE_HEIGHT;
     }
 
     private int summarySubLine(DrawContext context, int x, int valueX, int y, String label, String value) {
-        int labelX = Math.max(x, valueX - this.textRenderer.getWidth(label + " " + value));
-        ui.drawTextWithShadow(this.textRenderer, label, labelX, y, 0xFFFFFFFF);
-        ui.drawTextWithShadow(this.textRenderer, value,
-                valueX - this.textRenderer.getWidth(value), y, numericColor(value));
-        return y + 14;
+        int totalWidth = Math.round(this.textRenderer.getWidth(label + " " + value) * STATS_TEXT_SCALE);
+        int labelX = Math.max(x, valueX - totalWidth);
+        drawStatsText(label, labelX, y, 0xFFFFFFFF, false);
+        drawStatsText(value, valueX, y, numericColor(value), true);
+        return y + STATS_LINE_HEIGHT;
+    }
+
+    private void drawStatsText(String text, int x, int y, int color, boolean rightAligned) {
+        ui.pushMatrix();
+        ui.translate(x, y);
+        ui.scale(STATS_TEXT_SCALE, STATS_TEXT_SCALE);
+        int textX = rightAligned ? -this.textRenderer.getWidth(text) : 0;
+        ui.drawTextWithShadow(this.textRenderer, text, textX, 0, color);
+        ui.popMatrix();
     }
 
     private int summaryDivider(DrawContext context, Layout layout, int y) {
@@ -3722,8 +3776,7 @@ public final class BuilderScreen extends PlannerScreen {
                 layout.rightX + layout.rightWidth - 3, viewportBottom);
         try {
             if (weapon == null) {
-                ui.drawCenteredTextWithShadow(
-                        this.textRenderer, "Select a weapon",
+                drawDamageText("Select a weapon",
                         layout.rightX + layout.rightWidth / 2, layout.equipmentTop + 42, 0xFFAAAAAA);
                 damageMaxScroll = 0;
                 damageScrollbar.configure(layout.rightX + layout.rightWidth - 7,
@@ -3734,29 +3787,26 @@ public final class BuilderScreen extends PlannerScreen {
             for (DamageCalculator.SpellResult spell : spells) {
                 boolean expanded = expandedSpell == spell.index();
                 int cardHeight = damageCardHeight(spell, expanded);
-                UiTheme.drawRoundedBox(
-                        ui, cardX, y, cardWidth, cardHeight, UiTheme.SURFACE, UiTheme.BORDER);
+                UiTheme.drawRoundedBox(context, ui, cardX, y, cardWidth, cardHeight, UiTheme.SURFACE, UiTheme.BORDER);
                 damageCards.add(new DamageCardBounds(
                         spell.index(), cardX, Math.max(viewportTop, y),
-                        cardX + cardWidth, Math.min(viewportBottom, y + Math.min(cardHeight, 80))));
+                        cardX + cardWidth, Math.min(viewportBottom, y + cardHeight)));
                 int lineY = y + 9;
                 drawSpellTitle(context, spell, cardX + cardWidth / 2, lineY);
-                lineY += 16;
+                lineY += 18;
                 DamageCalculator.PartResult summary = spell.summaryPart();
                 if (summary == null) {
-                    ui.drawCenteredTextWithShadow(
-                            this.textRenderer, "Ability Tree required",
+                    drawDamageText("Ability Tree required",
                             cardX + cardWidth / 2, lineY, 0xFF777777);
                 } else if (spell.index() == 0) {
                     double perAttack = summary.average(criticalChance);
                     drawDamageValue(context, cardX, cardWidth, lineY,
                             "Average DPS: ", perAttack * BuildCalculator.attacksPerSecond(stats.effectiveAttackTier()));
-                    lineY += 12;
-                    ui.drawCenteredTextWithShadow(
-                            this.textRenderer,
+                    lineY += DAMAGE_LINE_HEIGHT;
+                    drawDamageText(
                             "Attack Speed: " + attackSpeedName(stats.effectiveAttackTier()),
                             cardX + cardWidth / 2, lineY, 0xFFFFFFFF);
-                    lineY += 12;
+                    lineY += DAMAGE_LINE_HEIGHT;
                     drawDamageValue(context, cardX, cardWidth, lineY, "Per Attack: ", perAttack);
                 } else {
                     drawDamageValue(context, cardX, cardWidth, lineY,
@@ -3835,7 +3885,7 @@ public final class BuilderScreen extends PlannerScreen {
                 continue;
             }
             if (part.healing()) {
-                height += 38;
+                height += 40;
                 continue;
             }
             int normalElements = 0;
@@ -3844,7 +3894,7 @@ public final class BuilderScreen extends PlannerScreen {
                 if (part.normal()[i][1] != 0) normalElements++;
                 if (part.critical()[i][1] != 0) criticalElements++;
             }
-            height += 71 + (normalElements + criticalElements) * 11;
+            height += 82 + (normalElements + criticalElements) * 13;
         }
         return height;
     }
@@ -3856,8 +3906,12 @@ public final class BuilderScreen extends PlannerScreen {
             int y
     ) {
         Text name = Text.literal(spell.name()).formatted(Formatting.BOLD);
+        ui.pushMatrix();
+        ui.translate(centerX, y);
+        ui.scale(DAMAGE_TEXT_SCALE, DAMAGE_TEXT_SCALE);
         if (spell.index() == 0 || spell.cost() <= 0) {
-            ui.drawCenteredTextWithShadow(textRenderer, name, centerX, y, 0xFFFFFFFF);
+            ui.drawCenteredTextWithShadow(textRenderer, name, 0, 0, 0xFFFFFFFF);
+            ui.popMatrix();
             return;
         }
         String cost = " (" + format(spell.cost());
@@ -3865,14 +3919,15 @@ public final class BuilderScreen extends PlannerScreen {
         int iconWidth = 7;
         int totalWidth = textRenderer.getWidth(name)
                 + textRenderer.getWidth(cost) + iconWidth + textRenderer.getWidth(close);
-        int x = centerX - totalWidth / 2;
-        ui.drawTextWithShadow(textRenderer, name, x, y, 0xFFFFFFFF);
+        int x = -totalWidth / 2;
+        ui.drawTextWithShadow(textRenderer, name, x, 0, 0xFFFFFFFF);
         x += textRenderer.getWidth(name);
-        ui.drawTextWithShadow(textRenderer, cost, x, y, 0xFF55FFFF);
+        ui.drawTextWithShadow(textRenderer, cost, x, 0, 0xFF55FFFF);
         x += textRenderer.getWidth(cost) + 1;
-        drawManaDrop(context, x, y + 1);
+        drawManaDrop(context, x, 1);
         x += iconWidth - 1;
-        ui.drawTextWithShadow(textRenderer, close, x, y, 0xFF55FFFF);
+        ui.drawTextWithShadow(textRenderer, close, x, 0, 0xFF55FFFF);
+        ui.popMatrix();
     }
 
     private void drawManaDrop(DrawContext context, int x, int y) {
@@ -3909,14 +3964,13 @@ public final class BuilderScreen extends PlannerScreen {
             DamageCalculator.PartResult part,
             double criticalChance
     ) {
-        ui.drawCenteredTextWithShadow(
-                this.textRenderer,
+        drawDamageText(
                 Text.literal(part.name()).formatted(Formatting.BOLD),
                 cardX + cardWidth / 2, y, 0xFFFFFFFF);
-        y += 13;
+        y += 15;
         if (part.healing()) {
             drawDamageValue(context, cardX, cardWidth, y, "Healing: ", part.healingAmount());
-            return y + 22;
+            return y + 24;
         }
         var multipliers = Text.literal("");
         Formatting[] colors = {
@@ -3932,18 +3986,17 @@ public final class BuilderScreen extends PlannerScreen {
                         .formatted(colors[i]));
             }
         }
-        ui.drawCenteredTextWithShadow(
-                this.textRenderer, multipliers, cardX + cardWidth / 2, y, 0xFFFFFFFF);
-        y += 12;
+        drawDamageText(multipliers, cardX + cardWidth / 2, y, 0xFFFFFFFF);
+        y += DAMAGE_LINE_HEIGHT;
         drawDamageValue(context, cardX, cardWidth, y, "Average: ", part.average(criticalChance));
-        y += 12;
+        y += DAMAGE_LINE_HEIGHT;
         drawDamageValue(context, cardX, cardWidth, y, "Non-Crit Average: ", part.normalAverage());
-        y += 12;
+        y += DAMAGE_LINE_HEIGHT;
         y = renderElementRanges(context, cardX, cardWidth, y, part.normal());
         drawDamageValue(context, cardX, cardWidth, y, "Crit Average: ", part.criticalAverage());
-        y += 12;
+        y += DAMAGE_LINE_HEIGHT;
         y = renderElementRanges(context, cardX, cardWidth, y, part.critical());
-        return y + 10;
+        return y + 11;
     }
 
     private int renderElementRanges(
@@ -3959,11 +4012,10 @@ public final class BuilderScreen extends PlannerScreen {
             if (ranges[i][1] == 0) {
                 continue;
             }
-            ui.drawCenteredTextWithShadow(
-                    this.textRenderer,
+            drawDamageText(
                     icons[i] + " " + format(ranges[i][0]) + " - " + format(ranges[i][1]),
                     cardX + cardWidth / 2, y, colors[i]);
-            y += 11;
+            y += 13;
         }
         return y;
     }
@@ -3978,8 +4030,19 @@ public final class BuilderScreen extends PlannerScreen {
     ) {
         Text text = Text.literal(label).formatted(Formatting.WHITE)
                 .append(Text.literal(format(value)).formatted(Formatting.GOLD));
-        ui.drawCenteredTextWithShadow(
-                this.textRenderer, text, cardX + cardWidth / 2, y, 0xFFFFFFFF);
+        drawDamageText(text, cardX + cardWidth / 2, y, 0xFFFFFFFF);
+    }
+
+    private void drawDamageText(String text, int centerX, int y, int color) {
+        drawDamageText(Text.literal(text), centerX, y, color);
+    }
+
+    private void drawDamageText(Text text, int centerX, int y, int color) {
+        ui.pushMatrix();
+        ui.translate(centerX, y);
+        ui.scale(DAMAGE_TEXT_SCALE, DAMAGE_TEXT_SCALE);
+        ui.drawCenteredTextWithShadow(this.textRenderer, text, 0, 0, color);
+        ui.popMatrix();
     }
 
     private static String attackSpeedName(int tier) {
@@ -4000,7 +4063,7 @@ public final class BuilderScreen extends PlannerScreen {
         int left = (this.width - pickerWidth) / 2;
         int top = (this.height - pickerHeight) / 2;
         ui.fill(0, 0, this.width, this.height, 0x99000000);
-        UiTheme.drawPanel(ui, left, top, pickerWidth, pickerHeight);
+        UiTheme.drawPanel(context, ui, left, top, pickerWidth, pickerHeight);
         ui.drawTextWithShadow(this.textRenderer,
                 Text.literal("Choose " + pickerLabel()).styled(style -> style.withColor(UiTheme.accentRgb())),
                 left + 14, top + 13, 0xFFFFFF);
@@ -4009,7 +4072,7 @@ public final class BuilderScreen extends PlannerScreen {
     private void renderPickerRow(DrawContext context, julianh06.wynnextras.utils.UI.UIUtils ui,
             net.minecraft.client.font.TextRenderer textRenderer, WynnItem item,
             int x, int y, int width, int height, boolean hovered) {
-        UiTheme.drawRoundedBox(ui, x, y, width, height - 2,
+        UiTheme.drawRoundedBox(context, ui, x, y, width, height - 2,
                 hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
                 hovered ? UiTheme.accent() : UiTheme.BORDER);
         drawEquipmentIcon(context, pickerOffhandIndex >= 0 ? BuildSlot.WEAPON : pickerSlot,
@@ -4431,7 +4494,7 @@ public final class BuilderScreen extends PlannerScreen {
             ui.drawTextWithShadow(textRenderer, open ? "▲" : "▼", left + controlWidth - 12, top + 6,
                     UiTheme.MUTED);
             if (!open) return;
-            UiTheme.drawPanel(ui, left, top + 22, controlWidth, CharacterClass.playableValues().length * 22 + 4);
+            UiTheme.drawPanel(context, ui, left, top + 22, controlWidth, CharacterClass.playableValues().length * 22 + 4);
             for (int i = 0; i < CharacterClass.playableValues().length; i++) {
                 drawClassOption(context, CharacterClass.playableValues()[i], left + 2, top + 24 + i * 22,
                         mouseX, mouseY);
@@ -4442,7 +4505,7 @@ public final class BuilderScreen extends PlannerScreen {
                 int mouseX, int mouseY) {
             boolean hovered = mouseX >= x && mouseX < x + controlWidth - (x == left ? 0 : 4)
                     && mouseY >= y && mouseY < y + 20;
-            UiTheme.drawRoundedBox(ui, x, y, controlWidth - (x == left ? 0 : 4), 20,
+            UiTheme.drawRoundedBox(context, ui, x, y, controlWidth - (x == left ? 0 : 4), 20,
                     hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
                     abilityClass == selectedClass ? UiTheme.accent() : UiTheme.BORDER);
             Identifier texture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/"
@@ -4968,9 +5031,8 @@ public final class BuilderScreen extends PlannerScreen {
                         String message = requiredPieces > 0
                                 ? "Requires at least " + requiredPieces + " pieces for a bonus."
                                 : "No set bonus available.";
-                        ui.drawTextWithShadow(textRenderer, message,
-                                x, y, UiTheme.MUTED);
-                        y += 14;
+                        drawStatsText(message, x, y, UiTheme.MUTED, false);
+                        y += STATS_LINE_HEIGHT;
                     } else {
                         for (Map.Entry<String, Integer> entry : activeSet.bonus().entrySet().stream()
                                 .sorted(BuilderScreen::compareSetBonuses).toList()) {
@@ -5041,7 +5103,7 @@ public final class BuilderScreen extends PlannerScreen {
             int areaBottom = BuilderScreen.this.height - MARGIN;
             ui.fill(areaLeft, areaTop, areaRight, areaBottom, 0xBB000000);
             AbilityPresetPanel panel = abilityPresetPanel();
-            UiTheme.drawPanel(ui, panel.x(), panel.y(), panel.width(), panel.height());
+            UiTheme.drawPanel(context, ui, panel.x(), panel.y(), panel.width(), panel.height());
             String title = abilityPresetOverlay == AbilityPresetOverlay.SAVE
                     ? "Save Ability Tree" : "Saved Ability Trees";
             ui.drawCenteredTextWithShadow(
@@ -5104,7 +5166,7 @@ public final class BuilderScreen extends PlannerScreen {
     private record ArchetypeIcon(int u, int v) {
     }
 
-    private record BuilderFooterLayout(int buttonX, int buttonWidth) {
+    private record BuilderFooterLayout(int buttonX, int buttonWidth, int buttonRight) {
     }
 
     private record EncodedBuild(String hash, List<String> warnings, Set<String> warningNodeIds) {

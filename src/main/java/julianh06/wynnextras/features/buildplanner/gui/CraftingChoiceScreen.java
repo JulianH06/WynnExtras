@@ -102,7 +102,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
     private void renderRow(DrawContext context, julianh06.wynnextras.utils.UI.UIUtils ui,
             net.minecraft.client.font.TextRenderer textRenderer, Choice choice,
             int x, int y, int width, int height, boolean hovered) {
-        UiTheme.drawRoundedBox(ui, x, y, width, height - 2,
+        UiTheme.drawRoundedBox(context, ui, x, y, width, height - 2,
                 hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
                 hovered ? UiTheme.accent() : UiTheme.BORDER);
         int textX = x + 8;
@@ -174,7 +174,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
     @Override
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         ui.fill(0, 0, width, height, 0x99000000);
-        UiTheme.drawPanel(ui, left, top, panelWidth, panelHeight);
+        UiTheme.drawPanel(context, ui, left, top, panelWidth, panelHeight);
         ui.drawTextWithShadow(textRenderer,
                 getTitle().copy().styled(style -> style.withColor(UiTheme.accentRgb())), left + 14, top + 13, 0xFFFFFFFF);
         ui.drawTextWithShadow(textRenderer, count == 0 ? "No matching choices" : count + " choices",

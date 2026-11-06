@@ -448,7 +448,7 @@ final class AtlasScreen extends PlannerScreen {
     @Override
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         ui.fill(0, 0, width, height, UiTheme.BACKGROUND);
-        UiTheme.drawPanel(ui, 6, 6, width - 12, height - 12);
+        UiTheme.drawPanel(context, ui, 6, 6, width - 12, height - 12);
         offset = Math.round(scroll.update(delta));
         positionControls();
         ui.enableScissor(12, BODY_TOP, width - 12, height - 54);
