@@ -2,7 +2,7 @@ package julianh06.wynnextras.features.buildplanner.data;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import julianh06.wynnextras.features.buildplanner.PlannerLog;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -23,6 +23,7 @@ public final class TomeDatabase {
             "aDamPct", "ref", "healPct", "eSteal", "lb", "spPct1", "spPct2",
             "spPct3", "spPct4", "str", "dex", "int", "def", "agi", "sprint",
             "sprintReg", "thorns");
+    private static final Set<String> SKILL_IDS = Set.of("str", "dex", "int", "def", "agi");
     private static final TomeDatabase INSTANCE = new TomeDatabase();
 
     private final List<WynnTome> tomes;
@@ -106,27 +107,41 @@ public final class TomeDatabase {
                     WynnBuilderDataFiles.File.TOMES).getAsJsonObject();
             List<WynnTome> result = new ArrayList<>();
             for (JsonElement element : root.getAsJsonArray("tomes")) {
-                JsonObject source = element.getAsJsonObject();
-                if (source.has("remapID")
-                        || "DEPRECATED".equalsIgnoreCase(string(source, "restrict"))) {
-                    continue;
-                }
-                Map<String, Integer> ids = new LinkedHashMap<>();
-                for (Map.Entry<String, JsonElement> entry : source.entrySet()) {
-                    if (entry.getValue().isJsonPrimitive()
-                            && entry.getValue().getAsJsonPrimitive().isNumber()
-                            && SUPPORTED_IDS.contains(entry.getKey())) {
-                        ids.put(WynnBuilderIdentifications.name(entry.getKey()), entry.getValue().getAsInt());
+                try {
+                    JsonObject source = element.getAsJsonObject();
+                    if (source.has("remapID")
+                            || "DEPRECATED".equalsIgnoreCase(string(source, "restrict"))) {
+                        continue;
                     }
+                    JsonElement fixId = source.get("fixID");
+                    if (fixId != null && (!fixId.isJsonPrimitive()
+                            || !fixId.getAsJsonPrimitive().isBoolean())) {
+                        throw new IllegalArgumentException("Invalid fixID");
+                    }
+                    boolean fixedIdentifications = fixId != null && fixId.getAsBoolean();
+                    Map<String, Integer> ids = new LinkedHashMap<>();
+                    for (Map.Entry<String, JsonElement> entry : source.entrySet()) {
+                        if (entry.getValue().isJsonPrimitive()
+                                && entry.getValue().getAsJsonPrimitive().isNumber()
+                                && SUPPORTED_IDS.contains(entry.getKey())) {
+                            int value = entry.getValue().getAsInt();
+                            if (!fixedIdentifications && !SKILL_IDS.contains(entry.getKey())) {
+                                value = WynnBuilderIdentifications.maximumRoll(entry.getKey(), value);
+                            }
+                            ids.put(WynnBuilderIdentifications.name(entry.getKey()), value);
+                        }
+                    }
+                    result.add(new WynnTome(
+                            source.get("id").getAsInt(),
+                            string(source, "displayName"),
+                            string(source, "alias"),
+                            string(source, "type"),
+                            string(source, "tier"),
+                            source.has("lvl") ? source.get("lvl").getAsInt() : 0,
+                            ids));
+                } catch (RuntimeException exception) {
+                    PlannerLog.LOGGER.debug("Skipping broken WynnBuilder tome entry.", exception);
                 }
-                result.add(new WynnTome(
-                        source.get("id").getAsInt(),
-                        string(source, "displayName"),
-                        string(source, "alias"),
-                        string(source, "type"),
-                        string(source, "tier"),
-                        source.has("lvl") ? source.get("lvl").getAsInt() : 0,
-                        ids));
             }
             return result;
         } catch (RuntimeException exception) {

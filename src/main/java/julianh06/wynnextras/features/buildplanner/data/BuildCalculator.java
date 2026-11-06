@@ -53,6 +53,7 @@ public final class BuildCalculator {
         int[] rawDefenses = new int[5];
         int health = levelToHp(safeLevel);
         Map<String, Integer> ids = new LinkedHashMap<>();
+        int[] scalableSkillBonuses = new int[5];
         WynnItem weapon = null;
         String problem = "";
         List<EquippedItem> activeEquipment = activeEquipment(
@@ -82,6 +83,7 @@ public final class BuildCalculator {
             }
             for (Map.Entry<String, Identification> entry : item.identifications().entrySet()) {
                 ids.merge(entry.getKey(), entry.getValue().max(), Integer::sum);
+                addSkillBonus(scalableSkillBonuses, entry.getKey(), entry.getValue().max());
             }
             if (!equipped.weapon()) {
                 for (PowderSelection selection : parsePowders(equipped.powders())) {
@@ -99,12 +101,16 @@ public final class BuildCalculator {
             }
             for (Map.Entry<String, Integer> entry : tome.identifications().entrySet()) {
                 ids.merge(entry.getKey(), entry.getValue(), Integer::sum);
+                addSkillBonus(scalableSkillBonuses, entry.getKey(), entry.getValue());
             }
             if (tome.level() > safeLevel && problem.isEmpty()) {
                 problem = tome.displayName() + " requires level " + tome.level();
             }
         }
-        WynnBuilderSetBonuses.forItems(activeItems).forEach((key, value) -> ids.merge(key, value, Integer::sum));
+        WynnBuilderSetBonuses.forItems(activeItems).forEach((key, value) -> {
+            ids.merge(key, value, Integer::sum);
+            addSkillBonus(scalableSkillBonuses, key, value);
+        });
 
         for (Map.Entry<String, Integer> entry : externalIdentifications.entrySet()) {
             ids.merge(entry.getKey(), entry.getValue(), Integer::sum);
@@ -112,6 +118,10 @@ public final class BuildCalculator {
         Map<String, Integer> unboostedIds = Map.copyOf(ids);
         ids.replaceAll((key, value) ->
                 WynnBuilderIdentifications.boostedValue(key, value, identificationMultiplier));
+        for (int i = 0; i < scalableSkillBonuses.length; i++) {
+            int extra = identificationSkillBonus(scalableSkillBonuses[i], identificationMultiplier);
+            if (extra != 0) ids.merge(SKILL_KEYS[i], extra, Integer::sum);
+        }
         for (int i = 0; i < rawDefenses.length; i++) {
             rawDefenses[i] = WynnBuilderIdentifications.boostedValue(
                     DEFENSE_KEYS[i], rawDefenses[i], identificationMultiplier);
@@ -138,7 +148,7 @@ public final class BuildCalculator {
         int rainbowDefense = ids.getOrDefault("elementalDefence", 0);
         for (int i = 0; i < defenses.length; i++) {
             double percent = (ids.getOrDefault(DEFENSE_ID_KEYS[i], 0) + rainbowDefense) / 100.0;
-            defenses[i] = rawDefenses[i] * (1.0 + percent);
+            defenses[i] = elementalDefense(rawDefenses[i], percent);
         }
 
         double defense = skillPercentage(skills[3]) * 0.867;
@@ -307,6 +317,15 @@ public final class BuildCalculator {
 
     public static double attacksPerSecond(int attackTier) {
         return ATTACK_SPEED_MULTIPLIERS[clamp(attackTier, 0, ATTACK_SPEED_MULTIPLIERS.length - 1)];
+    }
+
+    static double elementalDefense(int rawDefense, double percent) {
+        return rawDefense + Math.abs(rawDefense) * percent;
+    }
+
+    static int identificationSkillBonus(int itemSkillPoints, double multiplier) {
+        return itemSkillPoints > 0 && multiplier != 1.0
+                ? (int) Math.floor(itemSkillPoints * (multiplier - 1.0) + 1.0E-9) : 0;
     }
 
     public static int armorHealthWithPowders(WynnItem item, String powderCode) {
@@ -518,6 +537,15 @@ public final class BuildCalculator {
                     + (raw == null ? 0 : raw.max());
         }
         return bonuses;
+    }
+
+    private static void addSkillBonus(int[] bonuses, String key, int value) {
+        for (int i = 0; i < bonuses.length; i++) {
+            if (SKILL_KEYS[i].equals(key) || RAW_SKILL_KEYS[i].equals(key)) {
+                bonuses[i] += value;
+                return;
+            }
+        }
     }
 
     private static void assignToFit(int[] assigned, int[] current, WynnItem item) {

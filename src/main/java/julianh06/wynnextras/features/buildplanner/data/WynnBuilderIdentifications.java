@@ -31,7 +31,7 @@ final class WynnBuilderIdentifications {
             "tMdPct", "tMdRaw", "eSdPct", "eSdRaw", "eMdPct", "eMdRaw", "nMdPct", "nMdRaw",
             "nSdPct", "nSdRaw", "nDamPct", "nDamRaw", "damPct", "damRaw", "rMdPct", "rMdRaw",
             "rSdPct", "rDamPct", "rDamRaw", "critDamPct", "healPct", "kb", "weakenEnemy",
-            "slowEnemy", "rDefPct", "str", "dex", "int", "def", "agi");
+            "slowEnemy", "rDefPct");
     private static final Set<String> REVERSED = Set.of(
             "spPct1", "spRaw1", "spPct2", "spRaw2", "spPct3", "spRaw3", "spPct4", "spRaw4");
     private static final Map<Character, String> ELEMENTS = Map.of(
@@ -107,5 +107,13 @@ final class WynnBuilderIdentifications {
         if (multiplier == 1.0 || !BOOSTED.contains(key)) return value;
         if (REVERSED.contains(key) ? value >= 0 : value <= 0) return value;
         return Math.floor(value * multiplier + 1.0E-9);
+    }
+
+    static int maximumRoll(String name, int raw) {
+        if (raw == 0) return 0;
+        String key = key(name);
+        boolean beneficial = REVERSED.contains(key) ? raw < 0 : raw > 0;
+        int rounded = (int) Math.round(raw * (beneficial ? 1.3 : 0.7));
+        return rounded == 0 ? Integer.signum(raw) : rounded;
     }
 }

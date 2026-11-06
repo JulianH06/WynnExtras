@@ -589,7 +589,20 @@ public final class BuilderScreen extends PlannerScreen {
                 Text.literal("Import"), this::importWynnBuilderLink));
         addDynamic(new ThemedButton(
                 footerX + footerButtonWidth + footerGap, footerY, footerButtonWidth, 20,
-                Text.literal("Browser"), this::openInWynnBuilder));
+                Text.literal("Browser"), this::openInWynnBuilder)
+                .setHoverLines(List.of(
+                        Text.literal("WynnBuilder link export"),
+                        Text.empty(),
+                        Text.literal("Included:").formatted(Formatting.GRAY),
+                        Text.literal("\u2714 Equipment and Powders").formatted(Formatting.GREEN),
+                        Text.literal("\u2714 Level and Skill Points").formatted(Formatting.GREEN),
+                        Text.literal("\u2714 Tomes, Aspects and Ability Tree").formatted(Formatting.GREEN),
+                        Text.empty(),
+                        Text.literal("Not included:").formatted(Formatting.GRAY),
+                        Text.literal("\u2716 Offhands").formatted(Formatting.RED),
+                        Text.literal("\u2716 Ability Boosts").formatted(Formatting.RED),
+                        Text.literal("\u2716 Powder Specials").formatted(Formatting.RED),
+                        Text.literal("\u2716 Raid Buffs").formatted(Formatting.RED))));
         addDynamic(new ThemedButton(
                 footerX + (footerButtonWidth + footerGap) * 2, footerY, footerButtonWidth, 20,
                 Text.literal("Saved"), this::openSavedBuilds));
@@ -907,7 +920,7 @@ public final class BuilderScreen extends PlannerScreen {
                     cellX + selectWidth + gap, rowTop, clearWidth, rowHeight,
                     Text.literal("x"), () -> clearTomeSlot(slot.key()));
             clearButton.setEnabled(selected != null);
-            addDynamic(clearButton.setHoverText(Text.literal("Clear this tome slot.")));
+            addDynamic(clearButton.setHoverText(Text.literal("Clear this tome slot")));
         }
     }
 
@@ -936,20 +949,20 @@ public final class BuilderScreen extends PlannerScreen {
             button.setEnabled(abilityClass != null);
             if (selected != null) button.setHoverLines(aspectTooltip(selected.aspect(), selected.tier()));
             else button.setHoverText(Text.literal(abilityClass == null
-                    ? "Equip a weapon to choose aspects." : "Choose an aspect."));
+                    ? "Equip a weapon to choose aspects" : "Choose an aspect"));
             addDynamic(button);
             ThemedButton tierButton = new ThemedButton(
                     MARGIN + 5 + selectWidth + gap, top + index * (rowHeight + gap), tierWidth, rowHeight,
                     Text.literal(selected == null ? "T-" : "T" + selected.tier()),
                     () -> cycleAspectTierInline(slot)).setTextScale(1.35F);
             tierButton.setEnabled(selected != null);
-            addDynamic(tierButton.setHoverText(Text.literal("Cycle this aspect's tier.")));
+            addDynamic(tierButton.setHoverText(Text.literal("Cycle this aspect's tier")));
             ThemedButton clearButton = new ThemedButton(
                     MARGIN + 5 + selectWidth + gap + tierWidth + gap,
                     top + index * (rowHeight + gap), clearWidth, rowHeight,
                     Text.literal("x"), () -> clearAspectSlot(slot));
             clearButton.setEnabled(selected != null);
-            addDynamic(clearButton.setHoverText(Text.literal("Clear this aspect slot.")));
+            addDynamic(clearButton.setHoverText(Text.literal("Clear this aspect slot")));
         }
     }
 

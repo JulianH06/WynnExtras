@@ -696,8 +696,11 @@ public final class DamageCalculator {
         double cost = spell.cost * (1 - intelligenceEffect);
         cost += stats.get("spRaw" + spell.index);
         cost *= 1 + stats.get("spPct" + spell.index) / 100.0;
-        cost *= 1 + stats.get("spPct" + spell.index + "Final") / 100.0;
-        return Math.max(1, cost);
+        return finalSpellCost(cost, stats.get("spPct" + spell.index + "Final"));
+    }
+
+    static double finalSpellCost(double baseCost, double finalPercent) {
+        return Math.max(1, baseCost) * (1 + finalPercent / 100.0);
     }
 
     private static Map<Integer, Spell> defaultSpells(String subtype) {
