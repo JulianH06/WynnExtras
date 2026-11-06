@@ -63,7 +63,7 @@ class ThemedButton extends Widget {
 
     ThemedButton setHoverLines(List<Text> hoverText) {
         this.hoverText = hoverText == null ? null : List.copyOf(hoverText);
-        if (this.isHovered() && this.hoverText != null) pendingTooltip = this.hoverText;
+        if (this.isHovered() && this.isEnabled() && this.hoverText != null) pendingTooltip = this.hoverText;
         return this;
     }
 
@@ -192,7 +192,7 @@ class ThemedButton extends Widget {
             drawScaledText(ui, getX() + getWidth() / 2.0F + textOffsetX,
                     getY() + getHeight() / 2.0F + textOffsetY, text, true);
         }
-        if (isHovered() && hoverText != null) pendingTooltip = hoverText;
+        if (isHovered() && isEnabled() && hoverText != null) pendingTooltip = hoverText;
     }
 
     private void drawScaledText(UIUtils ui, float x, float centerY, int color, boolean centered) {

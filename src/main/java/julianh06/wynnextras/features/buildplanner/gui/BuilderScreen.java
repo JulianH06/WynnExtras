@@ -153,8 +153,20 @@ public final class BuilderScreen extends PlannerScreen {
     private static final String[] POWDER_DAMAGE_IDS = {
             "earthDamage", "thunderDamage", "waterDamage", "fireDamage", "airDamage"
     };
-    private static final int PICKER_ROW_HEIGHT = 24;
-    private static final int PICKER_HEADING_HEIGHT = 18;
+    private static final int PICKER_MAX_WIDTH = 780;
+    private static final int PICKER_MAX_HEIGHT = 490;
+    private static final int PICKER_HORIZONTAL_MARGIN = 80;
+    private static final int PICKER_VERTICAL_MARGIN = 70;
+    private static final int PICKER_PADDING = 20;
+    private static final int PICKER_SEARCH_TOP = 47;
+    private static final int PICKER_SEARCH_HEIGHT = 32;
+    private static final int PICKER_LIST_TOP = 88;
+    private static final int PICKER_LIST_BOTTOM = 60;
+    private static final int PICKER_BUTTON_HEIGHT = 34;
+    private static final int PICKER_ROW_HEIGHT = 38;
+    private static final int PICKER_HEADING_HEIGHT = 27;
+    private static final float PICKER_TEXT_SCALE = 1.5F;
+    private static final float PICKER_SEARCH_TEXT_SCALE = 3.6F;
     private static final String[] SKILL_NAMES = {"Strength", "Dexterity", "Intelligence", "Defense", "Agility"};
     private static final String[] SKILL_EFFECTS = {"damage", "crit", "cost red.", "resist", "dodge"};
     private static final Identifier[] SKILL_ICONS = {
@@ -680,7 +692,9 @@ public final class BuilderScreen extends PlannerScreen {
             for (TextInputWidget field : dynamicFields) {
                 field.setEnabled(false);
                 field.setDisabledTooltip(null);
+                field.setFocusedColor(CustomColor.fromInt(UiTheme.SURFACE));
             }
+            if (classSelector != null) classSelector.setEnabled(false);
             if (abilityTreeWidget != null) abilityTreeWidget.setVisible(false);
             pickerOverlay = new PickerOverlay();
             addRootWidget(pickerOverlay);
@@ -689,15 +703,18 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void buildPickerWidgets() {
-        int pickerWidth = Math.min(520, this.width - 60);
-        int pickerHeight = Math.min(326, this.height - 50);
+        int pickerWidth = pickerWidth();
+        int pickerHeight = pickerHeight();
         int left = (this.width - pickerWidth) / 2;
         int top = (this.height - pickerHeight) / 2;
 
         searchField = textInput(
-                left + 14, top + 34, pickerWidth - 28, 20,
+                left + PICKER_PADDING, top + PICKER_SEARCH_TOP,
+                pickerWidth - PICKER_PADDING * 2, PICKER_SEARCH_HEIGHT,
                 "Search " + pickerLabel().toLowerCase(Locale.ROOT) + "...");
         searchField.setMaxLength(100);
+        searchField.setTextScale(PICKER_SEARCH_TEXT_SCALE);
+        searchField.setTextOffset(12, 16);
         searchField.setOnChange(query -> {
             pickerScroll.jump(0.0F);
             rebuildPickerResults(left, top, pickerWidth);
@@ -706,25 +723,29 @@ public final class BuilderScreen extends PlannerScreen {
         setFocusedWidget(searchField);
 
         addPicker(new ThemedButton(
-                left + pickerWidth - 78, top + pickerHeight - 28, 64, 20, Text.literal("Cancel"), () -> {
+                left + pickerWidth - PICKER_PADDING - 96,
+                top + pickerHeight - PICKER_BUTTON_HEIGHT - 12,
+                96, PICKER_BUTTON_HEIGHT, Text.literal("Cancel"), () -> {
                     closePicker();
                     rebuildWidgets();
-                }));
+                }).setTextScale(PICKER_TEXT_SCALE));
         if (currentPickerItem() != null) {
             addPicker(new ThemedButton(
-                    left + 14, top + pickerHeight - 28, 64, 20, Text.literal("Remove"), () -> {
+                    left + PICKER_PADDING, top + pickerHeight - PICKER_BUTTON_HEIGHT - 12,
+                    96, PICKER_BUTTON_HEIGHT, Text.literal("Remove"), () -> {
                         removePickerItem();
                         rebuildWidgets();
-                    }));
+                    }).setTextScale(PICKER_TEXT_SCALE));
         }
         addPicker(new ThemedButton(
-                left + 88, top + pickerHeight - 28, 78, 20, Text.literal("Crafted"), () -> {
+                left + PICKER_PADDING + 108, top + pickerHeight - PICKER_BUTTON_HEIGHT - 12,
+                116, PICKER_BUTTON_HEIGHT, Text.literal("Crafted"), () -> {
                     BuildSlot slot = pickerSlot;
                     int offhandIndex = pickerOffhandIndex;
                     client.setScreen(new CraftedItemScreen(
                             this, pickerSearchType(), pickerSlotId(), currentPickerItem(),
                             item -> equipPickerItem(slot, offhandIndex, item)));
-                }));
+                }).setTextScale(PICKER_TEXT_SCALE));
         rebuildPickerResults(left, top, pickerWidth);
     }
 
@@ -756,10 +777,11 @@ public final class BuilderScreen extends PlannerScreen {
         } else {
             results.forEach(item -> rows.add(PlannerPickerList.Row.value(item, PICKER_ROW_HEIGHT)));
         }
-        int listHeight = Math.max(24, Math.min(326, this.height - 50) - 100);
+        int listHeight = Math.max(PICKER_ROW_HEIGHT, pickerHeight() - PICKER_LIST_TOP - PICKER_LIST_BOTTOM);
         if (pickerList == null) {
-            pickerList = new PlannerPickerList<>(left + 14, top + 62, pickerWidth - 28, listHeight, rows,
-                    pickerScroll, this::renderPickerRow,
+            pickerList = new PlannerPickerList<>(left + PICKER_PADDING, top + PICKER_LIST_TOP,
+                    pickerWidth - PICKER_PADDING * 2, listHeight, rows,
+                    pickerScroll, PICKER_TEXT_SCALE, this::renderPickerRow,
                     (context, item, mouseX, mouseY) -> renderItemTooltip(
                             context, item, mouseX, mouseY, false),
                     this::equipSelectedPickerItem);
@@ -2432,8 +2454,8 @@ public final class BuilderScreen extends PlannerScreen {
             return super.mouseClicked(click, doubled);
         }
         if (pickerOpen() && logical.button() == 0) {
-            int pickerWidth = Math.min(520, this.width - 60);
-            int pickerHeight = Math.min(326, this.height - 50);
+            int pickerWidth = pickerWidth();
+            int pickerHeight = pickerHeight();
             int left = (this.width - pickerWidth) / 2;
             int top = (this.height - pickerHeight) / 2;
             if (logical.x() < left || logical.x() >= left + pickerWidth
@@ -2480,7 +2502,9 @@ public final class BuilderScreen extends PlannerScreen {
                 }
             }
         }
-        return super.mouseClicked(click, doubled);
+        boolean handled = super.mouseClicked(click, doubled);
+        if (pickerOpen() && searchField != null) setFocusedWidget(searchField);
+        return handled;
     }
 
     @Override
@@ -2529,6 +2553,11 @@ public final class BuilderScreen extends PlannerScreen {
             if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
                 closePicker();
                 rebuildWidgets();
+                return true;
+            }
+            if ((input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER)
+                    && pickerList != null) {
+                pickerList.chooseFirst();
                 return true;
             }
         }
@@ -4107,15 +4136,27 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void renderPicker(DrawContext context) {
-        int pickerWidth = Math.min(520, this.width - 60);
-        int pickerHeight = Math.min(326, this.height - 50);
+        int pickerWidth = pickerWidth();
+        int pickerHeight = pickerHeight();
         int left = (this.width - pickerWidth) / 2;
         int top = (this.height - pickerHeight) / 2;
         ui.fill(0, 0, this.width, this.height, 0x99000000);
         UiTheme.drawPanel(context, ui, left, top, pickerWidth, pickerHeight);
+        ui.pushMatrix();
+        ui.translate(left + PICKER_PADDING, top + 22);
+        ui.scale(1.65F, 1.65F);
         ui.drawTextWithShadow(this.textRenderer,
                 Text.literal("Choose " + pickerLabel()).styled(style -> style.withColor(UiTheme.accentRgb())),
-                left + 14, top + 13, 0xFFFFFF);
+                0, -4, 0xFFFFFF);
+        ui.popMatrix();
+    }
+
+    private int pickerWidth() {
+        return Math.min(PICKER_MAX_WIDTH, this.width - PICKER_HORIZONTAL_MARGIN);
+    }
+
+    private int pickerHeight() {
+        return Math.min(PICKER_MAX_HEIGHT, this.height - PICKER_VERTICAL_MARGIN);
     }
 
     private void renderPickerRow(DrawContext context, julianh06.wynnextras.utils.UI.UIUtils ui,
@@ -4125,12 +4166,20 @@ public final class BuilderScreen extends PlannerScreen {
                 hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
                 hovered ? UiTheme.accent() : UiTheme.BORDER);
         drawEquipmentIcon(context, pickerOffhandIndex >= 0 ? BuildSlot.WEAPON : pickerSlot,
-                item, x + 3, y + 1, 18);
-        Text name = Text.literal(fitText(item.displayName(), width - 94)).formatted(tierColor(item.tier()));
-        ui.drawTextWithShadow(textRenderer, name, x + 25, y + 7, 0xFFFFFFFF);
+                item, x + 4, y + 3, 30);
+        Text name = Text.literal(fitText(item.displayName(),
+                Math.round((width - 160) / PICKER_TEXT_SCALE))).formatted(tierColor(item.tier()));
+        ui.pushMatrix();
+        ui.translate(x + 40, y + height / 2.0F);
+        ui.scale(PICKER_TEXT_SCALE, PICKER_TEXT_SCALE);
+        ui.drawTextWithShadow(textRenderer, name, 0, -4, 0xFFFFFFFF);
+        ui.popMatrix();
         String levelText = "Lv. " + item.stat("lvl");
-        ui.drawTextWithShadow(textRenderer, levelText,
-                x + width - 6 - textRenderer.getWidth(levelText), y + 7, UiTheme.MUTED);
+        ui.pushMatrix();
+        ui.translate(x + width - 8, y + height / 2.0F);
+        ui.scale(PICKER_TEXT_SCALE, PICKER_TEXT_SCALE);
+        ui.drawTextWithShadow(textRenderer, levelText, -textRenderer.getWidth(levelText), -4, UiTheme.MUTED);
+        ui.popMatrix();
     }
 
     private List<Text> itemTooltip(WynnItem item) {
@@ -4563,7 +4612,7 @@ public final class BuilderScreen extends PlannerScreen {
                 int mouseX, int mouseY) {
             int optionWidth = controlWidth - (x == left ? 0 : 4);
             int optionHeight = x == left ? controlHeight : OPTION_HEIGHT - 2;
-            boolean hovered = mouseX >= x && mouseX < x + optionWidth
+            boolean hovered = isEnabled() && mouseX >= x && mouseX < x + optionWidth
                     && mouseY >= y && mouseY < y + optionHeight;
             UiTheme.drawRoundedBox(context, ui, x, y, optionWidth, optionHeight,
                     hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
@@ -4581,7 +4630,7 @@ public final class BuilderScreen extends PlannerScreen {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (button != 0) return false;
+            if (!isEnabled() || button != 0) return false;
             if (mouseX >= left && mouseX < left + controlWidth
                     && mouseY >= top && mouseY < top + controlHeight) {
                 open = !open;

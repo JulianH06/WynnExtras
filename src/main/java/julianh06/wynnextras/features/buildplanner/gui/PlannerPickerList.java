@@ -16,6 +16,7 @@ final class PlannerPickerList<T> extends Widget {
     private final int listHeight;
     private final SmoothScroll scroll;
     private final PlannerScrollbar scrollbar;
+    private final float headingTextScale;
     private final RowRenderer<T> renderer;
     private final HoverRenderer<T> hoverRenderer;
     private final Consumer<T> select;
@@ -24,6 +25,11 @@ final class PlannerPickerList<T> extends Widget {
 
     PlannerPickerList(int left, int top, int width, int height, List<Row<T>> rows, SmoothScroll scroll,
             RowRenderer<T> renderer, HoverRenderer<T> hoverRenderer, Consumer<T> select) {
+        this(left, top, width, height, rows, scroll, 1.0F, renderer, hoverRenderer, select);
+    }
+
+    PlannerPickerList(int left, int top, int width, int height, List<Row<T>> rows, SmoothScroll scroll,
+            float headingTextScale, RowRenderer<T> renderer, HoverRenderer<T> hoverRenderer, Consumer<T> select) {
         super(left * 2, top * 2, width * 2, height * 2);
         setUiScaleFactor(1.0);
         this.left = left;
@@ -33,6 +39,7 @@ final class PlannerPickerList<T> extends Widget {
         this.rows = List.copyOf(rows);
         this.scroll = scroll;
         scrollbar = new PlannerScrollbar(scroll, 12);
+        this.headingTextScale = headingTextScale;
         this.renderer = renderer;
         this.hoverRenderer = hoverRenderer;
         this.select = select;
@@ -56,7 +63,11 @@ final class PlannerPickerList<T> extends Widget {
             for (Row<T> row : rows) {
                 if (rowY + row.height() > top && rowY < top + listHeight) {
                     if (row.value() == null) {
-                        ui.drawTextWithShadow(textRenderer(), row.heading(), left + 4, rowY + 4, UiTheme.accent());
+                        ui.pushMatrix();
+                        ui.translate(left + 5, rowY + row.height() / 2.0F);
+                        ui.scale(headingTextScale, headingTextScale);
+                        ui.drawTextWithShadow(textRenderer(), row.heading(), 0, -4, UiTheme.accent());
+                        ui.popMatrix();
                     } else {
                         boolean hovered = mouseX >= left && mouseX < left + listWidth - 6
                                 && mouseY >= rowY && mouseY < rowY + row.height();
