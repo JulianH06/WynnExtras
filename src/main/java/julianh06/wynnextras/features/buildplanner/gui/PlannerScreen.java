@@ -14,6 +14,7 @@ import java.util.List;
 abstract class PlannerScreen extends WEScreen {
     private final Widget content = new PlannerCanvas(false);
     private final Widget foreground = new PlannerCanvas(true);
+    private PendingTooltip pendingTooltip;
 
     protected PlannerScreen(Text title) {
         super(title);
@@ -52,6 +53,15 @@ abstract class PlannerScreen extends WEScreen {
         try {
             foreground.setBounds(0, 0, width, height);
             foreground.draw(context, mouseX, mouseY, delta, ui);
+            List<Text> buttonTooltip = ThemedButton.takePendingTooltip();
+            if (pendingTooltip == null && buttonTooltip != null) {
+                pendingTooltip = new PendingTooltip(buttonTooltip, null, mouseX, mouseY);
+            }
+            if (pendingTooltip != null) {
+                PlannerTooltip.render(context, textRenderer, pendingTooltip.lines(), pendingTooltip.style(),
+                        pendingTooltip.mouseX(), pendingTooltip.mouseY(), width, height, (float) matrixScale);
+                pendingTooltip = null;
+            }
         } finally {
             ui.updateContext(context, scaleFactor, xStart, yStart);
         }
@@ -66,7 +76,6 @@ abstract class PlannerScreen extends WEScreen {
         for (Widget widget : rootWidgets) {
             if (widget instanceof ThemedButton button) button.draw(context, mouseX, mouseY, delta, ui);
         }
-        ThemedButton.renderPendingTooltip(context, mouseX, mouseY);
     }
 
     protected final ThemedButton addButton(ThemedButton button) {
@@ -79,12 +88,12 @@ abstract class PlannerScreen extends WEScreen {
     }
 
     protected final void renderPlannerTooltip(DrawContext context, List<Text> lines, int mouseX, int mouseY) {
-        ui.drawTooltip(textRenderer, lines, mouseX, mouseY);
+        pendingTooltip = new PendingTooltip(lines, null, mouseX, mouseY);
     }
 
     protected final void renderPlannerTooltip(
             DrawContext context, List<Text> lines, Identifier style, int mouseX, int mouseY) {
-        ui.drawTooltip(textRenderer, lines, style, mouseX, mouseY);
+        pendingTooltip = new PendingTooltip(lines, style, mouseX, mouseY);
     }
 
     protected final Click logicalClick(Click click) {
@@ -108,4 +117,6 @@ abstract class PlannerScreen extends WEScreen {
             else drawPlannerContent(context, mouseX, mouseY, delta);
         }
     }
+
+    private record PendingTooltip(List<Text> lines, Identifier style, int mouseX, int mouseY) {}
 }

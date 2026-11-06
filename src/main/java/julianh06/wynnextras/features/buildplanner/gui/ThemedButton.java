@@ -1,8 +1,8 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
-import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.colors.CustomColor;
 import java.util.List;
 import net.minecraft.client.MinecraftClient;
@@ -107,12 +107,10 @@ class ThemedButton extends Widget {
         return this;
     }
 
-    static void renderPendingTooltip(DrawContext context, int mouseX, int mouseY) {
-        if (pendingTooltip != null) {
-            new UIUtils(context, 1.0, 0, 0).drawTooltip(
-                    MinecraftClient.getInstance().textRenderer, pendingTooltip, mouseX, mouseY);
-            pendingTooltip = null;
-        }
+    static List<Text> takePendingTooltip() {
+        List<Text> tooltip = pendingTooltip;
+        pendingTooltip = null;
+        return tooltip;
     }
 
     protected boolean onClick(int button) {
