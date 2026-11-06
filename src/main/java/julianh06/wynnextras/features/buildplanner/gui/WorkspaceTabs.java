@@ -121,7 +121,12 @@ public final class WorkspaceTabs {
         }
         ThemedButton info = new ThemedButton(controls, y, 21, CONTROL_HEIGHT, Text.literal("i"), () -> {})
                 .setTextScale(1.5F).setTextOffset(0.5F, 0.0F);
-        info.setHoverLines(List.of(Text.literal("PLACEHOLDER")));
+        info.setHoverLines(List.of(
+                Text.literal("Info"),
+                Text.literal("This Menu is heavily inspired by WynnBuilder, WynnCrafter and WynnAtlas and it could not exist without their amazing work"),
+                Text.literal("You can find their website at https://wynnbuilder.github.io or by clicking the \"Browser\" button in the bottom right"),
+                Text.literal("Thanks to hppeng, ferricles, reschan and blankman and all WynnBuilder contributors for making this possible")
+        ));
         add.accept(info);
 
         int tabY = y + CONTROL_HEIGHT + CONTROL_GAP;
