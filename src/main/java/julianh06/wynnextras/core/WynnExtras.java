@@ -31,6 +31,8 @@ import julianh06.wynnextras.features.misc.FpsHud;
 import julianh06.wynnextras.features.misc.ItemComponentsDebugOverlay;
 import julianh06.wynnextras.features.misc.LunarScreenOverlayFallback;
 import julianh06.wynnextras.features.misc.ProvokeTimer;
+import julianh06.wynnextras.features.misc.DurabilityHud;
+import julianh06.wynnextras.features.misc.ConsumableTimers;
 import julianh06.wynnextras.features.misc.PlayerHider;
 import julianh06.wynnextras.features.misc.QuickRepair;
 import julianh06.wynnextras.features.misc.ServerTpsHud;
@@ -205,6 +207,8 @@ public class WynnExtras implements ClientModInitializer {
 		PV.register();
 		GV.register();
 		ProvokeTimer.init();
+		DurabilityHud.register();
+		ConsumableTimers.register();
 		TotemTimer.register();
 		BloodSorrowTimer.register();
 		julianh06.wynnextras.features.misc.CurseTracker.register();
