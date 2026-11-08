@@ -16,6 +16,9 @@ import java.util.*;
 
 public class WynnExtrasConfig {
     public enum Align { LEFT, CENTER, RIGHT }
+    public enum DurabilityFormat { RAW, PERCENT, BOTH }
+    public enum ConsumableSort { DRINK_ORDER, TIME_LEFT }
+    public enum GrowDirection { DOWN, UP }
     public enum TelemetryMode {
         ON("On"),
         ANONYMIZE("Anonymize"),
@@ -679,6 +682,45 @@ public class WynnExtrasConfig {
     public int provokeTimerY = 20;
     public float provokeTimerScale = 1.0f;
     public Align provokeTimerAlignment = Align.CENTER;
+
+    //==================== SCOREBOARD ====================
+    public boolean hideScoreboard = false;
+
+    //==================== DURABILITY HUD ====================
+    public boolean durabilityHudToggle = false;
+    public DurabilityFormat durabilityFormat = DurabilityFormat.RAW;
+    public boolean durabilityWarnToggle = true;
+    public boolean durabilityWarnChat = true;
+    public boolean durabilityWarnPopup = true;
+    public boolean durabilityWarnSound = true;
+    public boolean durabilityBrokenToggle = true;
+    public boolean durabilityBrokenPersistent = false;
+    public int durabilityWarnPercent = 10;
+    public int durabilityHudX = 5;
+    public int durabilityHudY = 100;
+    public float durabilityHudScale = 1.0f;
+
+    //==================== CONSUMABLE TIMERS HUD ====================
+    public boolean consumableTimersToggle = false;
+    public boolean consumableShowPotions = true;
+    public boolean consumableShowFood = true;
+    public boolean consumableShowScrolls = true;
+    public boolean consumableShowEffectName = false;
+    public boolean consumableHideNoTimer = false;
+    public boolean consumableCompact = false;
+    public boolean consumableHideInMenus = false;
+    public ConsumableSort consumableSortMode = ConsumableSort.DRINK_ORDER;
+    public GrowDirection consumableGrowDirection = GrowDirection.DOWN;
+    public boolean consumableColorByTime = true;
+    public int consumableYellowSeconds = 60;
+    public int consumableRedSeconds = 20;
+    public boolean consumableWarnChat = false;
+    public boolean consumableWarnSound = false;
+    public boolean consumableWarnPopup = false;
+    public int consumableWarnSeconds = 30;
+    public int consumableTimersX = 5;
+    public int consumableTimersY = 120;
+    public float consumableTimersScale = 1.0f;
     public int customGUIScale = 3;
     public boolean removeFrontPersonView = false;
     public boolean identifierCaseOpening = false;

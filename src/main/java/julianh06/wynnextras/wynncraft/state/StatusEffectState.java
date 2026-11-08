@@ -13,7 +13,7 @@ public final class StatusEffectState {
     private static final String TITLE = "Status Effects";
     private static final Pattern EFFECT = Pattern.compile(
             "(?<prefix>.+?)\\s?(?<modifier>(?:-|\\+)?[-.\\d]+)?(?<modifierSuffix>(?:/\\d+s|%)?)?\\s?"
-                    + "(?<name>\\+?['a-zA-Z/\\s]+?)\\s\\((?<minutes>\\d{2}|\\*{2}):(?<seconds>\\d{2}|\\*{2})\\)");
+                    + "(?<name>\\+?['a-zA-Z/\\s]+?)\\s\\((?:(?<hours>\\d+):)?(?<minutes>\\d{2,3}|\\*{2}):(?<seconds>\\d{2}|\\*{2})\\)");
     private static final List<Effect> EFFECTS = new ArrayList<>();
 
     public static List<Effect> effects() { return List.copyOf(EFFECTS); }
@@ -46,9 +46,12 @@ public final class StatusEffectState {
             if (!matcher.find()) continue;
 
             String name = matcher.group("name").trim();
+            //long effects can have 100+ minutes or an hours part
+            String hoursText = matcher.group("hours");
+            int hours = hoursText == null ? 0 : parseTimePart(hoursText);
             int minutes = parseTimePart(matcher.group("minutes"));
             int seconds = parseTimePart(matcher.group("seconds"));
-            int duration = minutes < 0 || seconds < 0 ? -1 : minutes * 60 + seconds;
+            int duration = hours < 0 || minutes < 0 || seconds < 0 ? -1 : hours * 3600 + minutes * 60 + seconds;
             parsed.add(new Effect(name, display, duration));
         }
         return List.copyOf(parsed);

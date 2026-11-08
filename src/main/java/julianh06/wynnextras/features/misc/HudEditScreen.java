@@ -99,6 +99,28 @@ public class HudEditScreen extends Screen {
             elements.add(new HudElement("provoke", "Provoke: " + c.provokeTimerDuration + "s",
                     c.provokeTimerX, c.provokeTimerY, c.provokeTimerScale, c.provokeTimerAlignment, provokeColor));
         }
+        if (c.consumableTimersToggle) {
+            String consumableText = c.consumableCompact ? "4:59" : "Potion: 4:59";
+            //leading spaces leave room for the item icon that gets drawn in front of the text
+            HudElement consumableEl = new HudElement("consumables", "     " + consumableText,
+                    c.consumableTimersX, c.consumableTimersY, c.consumableTimersScale, WynnExtrasConfig.Align.LEFT, 0xFF55FF55);
+            consumableEl.topLeft = true;
+            consumableEl.customH = 16;
+            elements.add(consumableEl);
+        }
+        if (c.durabilityHudToggle) {
+            String durabilityText = switch (c.durabilityFormat) {
+                case RAW -> "350/350";
+                case PERCENT -> "100%";
+                case BOTH -> "350/350 (100%)";
+            };
+            //leading spaces leave room for the item icon that gets drawn in front of the text
+            HudElement durabilityEl = new HudElement("durability", "     " + durabilityText,
+                    c.durabilityHudX, c.durabilityHudY, c.durabilityHudScale, WynnExtrasConfig.Align.LEFT);
+            durabilityEl.topLeft = true;
+            durabilityEl.customH = 16;
+            elements.add(durabilityEl);
+        }
         if (c.totemTimerEnabled) {
             Map<String, String> previewEffects = new HashMap<>();
             previewEffects.put(WynnExtrasConfig.TOTEM_TIMER_EFFECT_DURATION, "38s");
@@ -802,6 +824,12 @@ public class HudEditScreen extends Screen {
                 }
                 case "warning" -> {
                     c.totemWarningX = e.x + e.sw() / 2; c.totemWarningY = e.y + e.sh() / 2; c.totemWarningScale = e.scale; c.totemWarningAlignment = e.alignment;
+                }
+                case "consumables" -> {
+                    c.consumableTimersX = e.x; c.consumableTimersY = e.y; c.consumableTimersScale = e.scale;
+                }
+                case "durability" -> {
+                    c.durabilityHudX = e.x; c.durabilityHudY = e.y; c.durabilityHudScale = e.scale;
                 }
                 case "radiant" -> {
                     c.radiantHudX = e.x; c.radiantHudY = e.y; c.radiantHudScale = e.scale;
