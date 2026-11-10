@@ -1,6 +1,5 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
-import julianh06.wynnextras.compat.wynntils.WynntilsCustomModelAdapter;
 import julianh06.wynnextras.features.aspects.AspectUtils;
 import julianh06.wynnextras.features.buildplanner.PlannerLog;
 import julianh06.wynnextras.features.buildplanner.config.SavedAbilityTree;
@@ -67,13 +66,9 @@ import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.CustomModelDataComponent;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
@@ -3459,37 +3454,7 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private static ItemStack createEquipmentIcon(BuildSlot slot, WynnItem item) {
-        ItemStack fallback = new ItemStack(switch (slot) {
-            case HELMET -> Items.IRON_HELMET;
-            case CHESTPLATE -> Items.IRON_CHESTPLATE;
-            case LEGGINGS -> Items.IRON_LEGGINGS;
-            case BOOTS -> Items.IRON_BOOTS;
-            case RING_1, RING_2, BRACELET, NECKLACE -> Items.AIR;
-            case WEAPON -> switch (item.subType().toLowerCase(Locale.ROOT)) {
-                case "bow" -> Items.BOW;
-                case "wand" -> Items.BLAZE_ROD;
-                case "dagger" -> Items.SHEARS;
-                case "relik" -> Items.TOTEM_OF_UNDYING;
-                default -> Items.IRON_SWORD;
-            };
-        });
-        if (item.iconId().isBlank()) {
-            return fallback;
-        }
-        var iconItem = Registries.ITEM.get(Identifier.of(item.iconId()));
-        ItemStack stack = new ItemStack(iconItem);
-        if (stack.isEmpty()) {
-            return fallback;
-        }
-        float modelData = WynntilsCustomModelAdapter.getFloat(item.iconModel())
-                .orElse((float) item.customModelData());
-                // wynntils has the current IDs saved and is more reliable than the API (especially after a resource pack update)
-                // thats why were using it here if its available
-        if (modelData > 0) {
-            stack.set(DataComponentTypes.CUSTOM_MODEL_DATA, new CustomModelDataComponent(
-                    List.of(modelData), List.of(), List.of(), List.of()));
-        }
-        return stack;
+        return PlannerItemIcons.create(slot.name(), item);
     }
 
     private String fitText(String value, int width) {

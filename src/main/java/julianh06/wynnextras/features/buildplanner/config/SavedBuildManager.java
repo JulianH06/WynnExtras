@@ -2,6 +2,7 @@ package julianh06.wynnextras.features.buildplanner.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import julianh06.wynnextras.features.buildplanner.BuildPlannerRuntime;
 import julianh06.wynnextras.features.buildplanner.PlannerLog;
@@ -49,6 +50,11 @@ public final class SavedBuildManager {
         return write();
     }
 
+    public synchronized boolean contains(String name, String characterClass) {
+        return builds.stream().anyMatch(build -> normalize(build.name()).equals(normalize(name))
+                && normalize(build.characterClass()).equals(normalize(characterClass)));
+    }
+
     public synchronized boolean remove(SavedBuild build) {
         if (!builds.remove(build)) {
             return false;
@@ -56,15 +62,40 @@ public final class SavedBuildManager {
         return write();
     }
 
+    public synchronized SavedBuild rename(SavedBuild build, String name) {
+        String cleaned = name == null ? "" : name.trim();
+        int index = builds.indexOf(build);
+        if (index < 0 || cleaned.isEmpty() || cleaned.length() > 64
+                || builds.stream().anyMatch(existing -> existing != build
+                        && normalize(existing.name()).equals(normalize(cleaned))
+                        && normalize(existing.characterClass()).equals(normalize(build.characterClass())))) {
+            return null;
+        }
+        SavedBuild renamed = new SavedBuild(cleaned, build.characterClass(), build.level(),
+                build.equipment(), build.powders(), build.offhands(), build.assignedSkills(), build.tomes(),
+                build.aspects(), build.boosts(), build.abilityTrees(), build.savedAt());
+        builds.set(index, renamed);
+        write();
+        return renamed;
+    }
+
     private void load() {
         if (!Files.exists(file)) {
             return;
         }
         try {
-            List<SavedBuild> loaded = GSON.fromJson(
-                    Files.readString(file, StandardCharsets.UTF_8), BUILD_LIST_TYPE);
-            if (loaded != null) {
-                builds.addAll(loaded);
+            var entries = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8)).getAsJsonArray();
+            for (var entry : entries) {
+                try {
+                    SavedBuild build = GSON.fromJson(entry, SavedBuild.class);
+                    if (build == null || build.name().isBlank() || build.characterClass().isBlank()) {
+                        throw new IllegalArgumentException("Invalid saved build");
+                    }
+                    builds.add(build);
+                } catch (RuntimeException exception) {
+                    unreadable = true;
+                    PlannerLog.LOGGER.warn("Could not read a saved build; preserving the original file.", exception);
+                }
             }
         } catch (IOException | RuntimeException exception) {
             unreadable = true;

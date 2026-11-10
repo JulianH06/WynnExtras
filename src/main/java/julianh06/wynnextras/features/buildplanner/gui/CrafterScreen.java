@@ -190,7 +190,7 @@ public final class CrafterScreen extends PlannerScreen {
                 + "§fCtrl + Z/Y: §7Undo/redo craft changes\n"
                 + "§fRight-click: §7Clear slot")));
         addPageControl(controlTips, 8, 286, true);
-        List<String> labels = new ArrayList<>(List.of("Back", "Paste", "Browser"));
+        List<String> labels = new ArrayList<>(List.of("Back", "Save", "Saved", "Paste", "Browser"));
         var destination = workspace.craftTarget(toolTabId);
         if (destination != null) labels.add("Equip");
         int buttonWidth = (panelWidth - 24 - (labels.size() - 1) * 5) / labels.size();
@@ -198,6 +198,7 @@ public final class CrafterScreen extends PlannerScreen {
             String label = labels.get(i);
             ThemedButton button = new ThemedButton(left + 12 + i * (buttonWidth + 5), top + panelHeight - 30,
                     buttonWidth, 20, Text.literal(label), () -> footerAction(label));
+            if (label.equals("Save")) button.setEnabled(preview != null);
             if (label.equals("Equip")) {
                 button.setEnabled(preview != null && CraftedItemCodec.matchesSlot(preview, destination.slotType()));
                 button.setHoverText(Text.literal("Equip in the original builder slot. Consumables cannot be equipped."));
@@ -333,6 +334,9 @@ public final class CrafterScreen extends PlannerScreen {
     private void footerAction(String action) {
         switch (action) {
             case "Back" -> close();
+            case "Save" -> client.setScreen(new SaveCraftScreen(this, workspace.find(toolTabId).name(),
+                    CraftedItemCodec.encode(craft)));
+            case "Saved" -> client.setScreen(new SavedBuildsScreen(this, parent, true));
             case "Reset" -> client.setScreen(new ThemedConfirmScreen(confirmed -> {
                 if (confirmed) change(CraftedItemCodec.emptyCraft(recipe().type()));
                 client.setScreen(this);

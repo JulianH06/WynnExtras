@@ -31,6 +31,11 @@ final class EmptyWorkspaceScreen extends PlannerScreen {
         control(new ThemedButton(
                 (width - 130) / 2, height / 2 + 30, 130, 20,
                 Text.literal("Create " + singular(type)), () -> WorkspaceNavigation.add(parent, type)));
+        if (type != ToolWorkspaceManager.Type.ATLAS) {
+            control(new ThemedButton((width - 130) / 2, height / 2 + 56, 130, 20,
+                    Text.literal("Saved"), () -> client.setScreen(new SavedBuildsScreen(
+                            this, parent, type == ToolWorkspaceManager.Type.CRAFTER))));
+        }
     }
 
     private void control(ThemedButton button) {

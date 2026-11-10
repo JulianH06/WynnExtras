@@ -1,8 +1,9 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
 import julianh06.wynnextras.wynncraft.state.CharacterClass;
+import julianh06.wynnextras.features.buildplanner.config.SavedBuildManager;
+import julianh06.wynnextras.features.buildplanner.config.ToolWorkspaceManager;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 
@@ -25,7 +26,10 @@ final class SaveBuildScreen extends PlannerScreen {
 
     @Override
     protected void init() {
+        String name = nameField == null ? ToolWorkspaceManager.getInstance().find(parent.toolTabId()).name()
+                : nameField.getText();
         super.init();
+        clearChildren();
         int left = (width - PANEL_WIDTH) / 2;
         int top = (height - PANEL_HEIGHT) / 2;
 
@@ -33,7 +37,7 @@ final class SaveBuildScreen extends PlannerScreen {
                 textRenderer, left + 18, top + 42, PANEL_WIDTH - 36, 20, Text.literal("Build name"));
         nameField.setPlaceholder(Text.literal("Build name"));
         nameField.setMaxLength(64);
-        nameField.setChangedListener(value -> saveButton.setEnabled(!value.trim().isEmpty()));
+        nameField.setText(name);
         addDrawableChild(nameField);
 
         classButton = new ThemedButton(
@@ -47,8 +51,9 @@ final class SaveBuildScreen extends PlannerScreen {
         saveButton = new ThemedButton(
                 left + PANEL_WIDTH - 110, top + PANEL_HEIGHT - 30, 92, 20,
                 Text.literal("Save"), this::save);
-        saveButton.setEnabled(false);
+        saveButton.setEnabled(!name.isBlank());
         addButton(saveButton);
+        nameField.setChangedListener(value -> saveButton.setEnabled(!value.trim().isEmpty()));
         setInitialFocus(nameField);
     }
 
@@ -58,7 +63,7 @@ final class SaveBuildScreen extends PlannerScreen {
 
     private void nextClass() {
         CharacterClass[] classes = CharacterClass.playableValues();
-        selectedClass = classes[(selectedClass.ordinal() + 1) % classes.length];
+        selectedClass = classes[(java.util.Arrays.asList(classes).indexOf(selectedClass) + 1) % classes.length];
         classButton.setMessage(classLabel());
     }
 
@@ -68,6 +73,16 @@ final class SaveBuildScreen extends PlannerScreen {
             status = "Enter a build name.";
             return;
         }
+        if (SavedBuildManager.getInstance().contains(name, selectedClass.apiName())) {
+            client.setScreen(new ThemedConfirmScreen(confirmed -> {
+                client.setScreen(this);
+                if (confirmed) write(name);
+            }, Text.literal("Overwrite saved build?"),
+                    Text.literal("Overwrite \"" + name + "\" [" + selectedClass.displayName() + "]?")));
+        } else write(name);
+    }
+
+    private void write(String name) {
         if (parent.saveBuild(name, selectedClass)) {
             close();
         } else {
