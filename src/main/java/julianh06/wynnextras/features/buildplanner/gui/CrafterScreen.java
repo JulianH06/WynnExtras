@@ -17,6 +17,9 @@ import julianh06.wynnextras.features.crafting.data.WynnDataService;
 import julianh06.wynnextras.utils.LinkUtils;
 import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.SmoothScroll;
+import julianh06.wynnextras.utils.UI.TextInputWidget;
+import julianh06.wynnextras.utils.UI.Widget;
+import julianh06.wynnextras.utils.colors.CustomColor;
 import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.nio.charset.StandardCharsets;
@@ -32,10 +35,6 @@ import java.util.stream.Collectors;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.CustomModelDataComponent;
@@ -69,8 +68,8 @@ public final class CrafterScreen extends PlannerScreen {
     private CraftingPageLayout.Page page;
     private WynnItemTooltip.Card resultCard;
     private float resultCardScale = CARD_SCALE;
-    private TextFieldWidget hashField;
-    private TextFieldWidget tabNameField;
+    private TextInputWidget hashField;
+    private TextInputWidget tabNameField;
     private String hashInput;
     private int scrollOffset;
     private int maxScroll;
@@ -91,9 +90,11 @@ public final class CrafterScreen extends PlannerScreen {
     private int panelHeight;
     private int viewportTop;
     private int viewportBottom;
-    private static final int CONTROL_BOX_HEIGHT = 280;
-    private static final int CONTROLS_HEIGHT = 330;
-    private static final float CARD_SCALE = 1.15F;
+    private static final int CONTROL_BOX_HEIGHT = 383;
+    private static final int CONTROLS_HEIGHT = 383;
+    private static final float CARD_SCALE = 1.25F;
+    private static final float CONTROL_TEXT_SCALE = 1.25F;
+    private static final float BUTTON_TEXT_SCALE = 1.2F;
 
     public CrafterScreen(Screen parent) {
         this(parent, ToolWorkspaceManager.getInstance().add(ToolWorkspaceManager.Type.CRAFTER));
@@ -114,6 +115,8 @@ public final class CrafterScreen extends PlannerScreen {
     @Override
     protected void init() {
         super.init();
+        if (hashField != null) removeRootWidget(hashField);
+        if (tabNameField != null) removeRootWidget(tabNameField);
         clearChildren();
         tabButtons.clear();
         footerButtons.clear();
@@ -125,9 +128,7 @@ public final class CrafterScreen extends PlannerScreen {
         top = 64;
         WorkspaceTabs.add(parent, toolTabId, 8, 2, width - 16,
                 button -> tabButtons.add(addButton(button)));
-        tabNameField = addDrawableChild(WorkspaceTabs.nameField(
-                toolTabId, left + 12, top + 6, panelWidth - 24, value -> updateCardLayout()));
-        viewportTop = top + 32;
+        viewportTop = top + 6;
         viewportBottom = top + panelHeight - 58;
         updatePreview();
         for (int i = 0; i < 6; i++) {
@@ -138,58 +139,81 @@ public final class CrafterScreen extends PlannerScreen {
         var columns = CraftingPageLayout.columns(Math.max(280, panelWidth - 28));
         int w = columns.form();
         int typeWidth = (w - 16) * 45 / 100;
-        pageButton(40, 6, typeWidth - 36, 22, title(recipe().type()), this::chooseType, true);
-        pageButton(40, 38, typeWidth - 36, 22,
+        tabNameField = builderTextInput(0, 0, w - 16, 28, "Tab name");
+        tabNameField.setMaxLength(64);
+        tabNameField.setTextScale(2.5F);
+        tabNameField.setTextOffset(8, 17);
+        tabNameField.setInputAndMoveCursorToEnd(workspace.find(toolTabId).name());
+        tabNameField.setOnChange(value -> {
+            try {
+                if (workspace.rename(toolTabId, value)) updateCardLayout();
+            } catch (IllegalArgumentException ignored) {
+            }
+        });
+        addPageControl(tabNameField, 8, 7, true, 2);
+        pageButton(46, 41, typeWidth - 42, 26, title(recipe().type()), this::chooseType, true);
+        pageButton(46, 79, typeWidth - 42, 26,
                 recipe().name().substring(recipe().name().indexOf('-') + 1), this::chooseLevel, true);
         int speedWidth = (w - typeWidth - 16) / 3;
-        for (int i = 0; i < 3; i++) {
-            final int speed = i;
-            ThemedButton button = pageButton(typeWidth + 6 + i * speedWidth, 38, speedWidth - 3, 22,
-                    List.of("Slow", "Normal", "Fast").get(i),
-                    () -> change(new Craft(craft.recipeId(), craft.ingredients(), craft.material1(), craft.material2(), speed)),
-                    isWeapon());
-            if (craft.speed() == i) button.setMessage(button.getMessage().copy().formatted(Formatting.GREEN, Formatting.BOLD));
+        if (isWeapon()) {
+            for (int i = 0; i < 3; i++) {
+                final int speed = i;
+                ThemedButton button = pageButton(typeWidth + 6 + i * speedWidth, 79, speedWidth - 3, 26,
+                        List.of("Slow", "Normal", "Fast").get(i), () -> change(new Craft(craft.recipeId(),
+                                craft.ingredients(), craft.material1(), craft.material2(), speed)), true);
+                if (craft.speed() == i) {
+                    button.setMessage(button.getMessage().copy().formatted(Formatting.GREEN, Formatting.BOLD));
+                }
+            }
         }
-        hashField = new TextFieldWidget(textRenderer, 0, 0, w - 94, 22, Text.literal("Crafted recipe hash or link"));
+        hashField = builderTextInput(0, 0, w - 100, 28, "Crafted recipe hash or link");
         hashField.setMaxLength(2048);
-        hashField.setText(hashInput == null ? CraftedItemCodec.encode(craft) : hashInput);
-        hashField.setChangedListener(value -> hashInput = value);
-        addPageControl(hashField, 40, 70, true);
-        pageButton(w - 48, 70, 40, 22, "Load", () -> importCode(hashField.getText()), true);
+        hashField.setTextScale(2.5F);
+        hashField.setTextOffset(8, 17);
+        hashField.setInputAndMoveCursorToEnd(hashInput == null ? CraftedItemCodec.encode(craft) : hashInput);
+        hashField.setOnChange(value -> hashInput = value);
+        addPageControl(hashField, 46, 117, true, 2);
+        pageButton(w - 50, 117, 42, 28, "Load", () -> importCode(hashField.getInput()), true);
         int cellWidth = (w - 22) / 2;
         for (int i = 0; i < 2; i++) {
             final int index = i;
             var material = recipe().materials().get(i);
             int cellX = 8 + i * (cellWidth + 6);
-            ThemedButton button = pageButton(cellX, 115, cellWidth, 30, "", () -> cycleMaterial(index), true);
+            ThemedButton button = pageButton(cellX, 173, cellWidth, 38, "", () -> cycleMaterial(index), true);
             button.setHoverText(Text.literal("Click to change " + material.name() + " tier"));
         }
         for (int i = 0; i < 6; i++) {
             final int slot = i;
             int cellX = 8 + (i % 2) * (cellWidth + 6);
-            int cellY = 153 + (i / 2) * 32;
-            pageButton(cellX, cellY, cellWidth, 28, "", () -> selectSlot(slot), true);
+            int cellY = 221 + (i / 2) * 40;
+            pageButton(cellX, cellY, cellWidth, 36, "", () -> selectSlot(slot), true);
         }
         List<String> copies = List.of("Reset", "Copy Hash", "Copy Short", "Copy Long");
-        int copyWidth = (w - 28) / 4;
+        int copyWidth = (w - 60) / 4;
         for (int i = 0; i < copies.size(); i++) {
             String action = copies.get(i);
-            pageButton(8 + i * (copyWidth + 4), 252, copyWidth, 20, action,
+            pageButton(8 + i * (copyWidth + 4), 347, copyWidth, 28, action,
                     () -> footerAction(action), i == 0 || preview != null);
         }
-        TextWidget controlTips = new TextWidget(
-                Text.literal("Controls").formatted(Formatting.UNDERLINE), textRenderer);
-        controlTips.setTooltip(Tooltip.of(Text.literal(
-                "§nControls\n"
-                + "§fClick: §7Choose ingredient\n"
-                + "§fDrag: §7Swap ingredients\n"
-                + "§fCtrl + Drag: §7Copy ingredient\n"
-                + "§fShift + 1-6: §7Swap hovered ingredient with slot\n"
-                + "§fCtrl + 1-6: §7Copy hovered ingredient to slot\n"
-                + "§fCtrl + C/V: §7Copy/paste hovered ingredient\n"
-                + "§fCtrl + Z/Y: §7Undo/redo craft changes\n"
-                + "§fRight-click: §7Clear slot")));
-        addPageControl(controlTips, 8, 286, true);
+        pageButton(24 + copyWidth * 4, 347, 28, 28, "i", () -> {}, true)
+                .setTextScale(1.5F).setTextOffset(0.5F, 0.0F).setHoverLines(List.of(
+                Text.literal("Controls").formatted(Formatting.UNDERLINE),
+                Text.literal("Click: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Choose ingredient").formatted(Formatting.GRAY)),
+                Text.literal("Drag: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Swap ingredients").formatted(Formatting.GRAY)),
+                Text.literal("Ctrl + Drag: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Copy ingredient").formatted(Formatting.GRAY)),
+                Text.literal("Shift + 1-6: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Swap hovered ingredient with slot").formatted(Formatting.GRAY)),
+                Text.literal("Ctrl + 1-6: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Copy hovered ingredient to slot").formatted(Formatting.GRAY)),
+                Text.literal("Ctrl + C/V: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Copy/paste hovered ingredient").formatted(Formatting.GRAY)),
+                Text.literal("Ctrl + Z/Y: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Undo/redo craft changes").formatted(Formatting.GRAY)),
+                Text.literal("Right-click: ").formatted(Formatting.WHITE)
+                        .append(Text.literal("Clear slot").formatted(Formatting.GRAY))));
         List<String> labels = new ArrayList<>(List.of("Back", "Save", "Saved", "Paste", "Browser"));
         var destination = workspace.craftTarget(toolTabId);
         if (destination != null) labels.add("Equip");
@@ -197,7 +221,8 @@ public final class CrafterScreen extends PlannerScreen {
         for (int i = 0; i < labels.size(); i++) {
             String label = labels.get(i);
             ThemedButton button = new ThemedButton(left + 12 + i * (buttonWidth + 5), top + panelHeight - 30,
-                    buttonWidth, 20, Text.literal(label), () -> footerAction(label));
+                    buttonWidth, 22, Text.literal(label), () -> footerAction(label))
+                    .setTextScale(BUTTON_TEXT_SCALE);
             if (label.equals("Save")) button.setEnabled(preview != null);
             if (label.equals("Equip")) {
                 button.setEnabled(preview != null && CraftedItemCodec.matchesSlot(preview, destination.slotType()));
@@ -224,27 +249,40 @@ public final class CrafterScreen extends PlannerScreen {
     }
 
     private ThemedButton pageButton(int x, int y, int width, int height, String label, Runnable action, boolean enabled) {
-        String fitted = textRenderer.getWidth(label) <= width - 8 ? label
-                : textRenderer.trimToWidth(label, Math.max(0, width - 20)) + "...";
-        ThemedButton button = new ThemedButton(0, 0, width, height, Text.literal(fitted), action);
+        int textWidth = Math.round((width - 8) / BUTTON_TEXT_SCALE);
+        String fitted = textRenderer.getWidth(label) <= textWidth ? label
+                : textRenderer.trimToWidth(label, Math.max(0, textWidth - textRenderer.getWidth("..."))) + "...";
+        ThemedButton button = new ThemedButton(0, 0, width, height, Text.literal(fitted), action)
+                .setTextScale(BUTTON_TEXT_SCALE);
         addPageControl(button, x, y, enabled);
         if (!label.isBlank()) button.setHoverText(Text.literal(label));
         return button;
     }
 
-    private void addPageControl(ThemedButton widget, int x, int y, boolean enabled) {
-        widget.setX(left + 12 + x);
-        widget.setY(viewportTop + y - scrollOffset);
-        controls.add(new PageControl(addButton(widget), y, enabled));
-        widget.setEnabled(enabled && widget.getY() >= viewportTop
-                && widget.getY() + widget.getHeight() <= viewportBottom);
+    private TextInputWidget builderTextInput(int x, int y, int width, int height, String placeholder) {
+        TextInputWidget field = new TextInputWidget(
+                x * 2, y * 2, width * 2, height * 2, 8, 10, 2.0F);
+        field.setPlaceholder(placeholder);
+        field.setBackgroundColor(CustomColor.fromInt(UiTheme.SURFACE));
+        field.setFocusedColor(CustomColor.fromInt(UiTheme.hoverBackground()));
+        field.setTextColor(CustomColor.fromInt(UiTheme.TEXT));
+        field.setPlaceholderColor(CustomColor.fromInt(UiTheme.MUTED));
+        field.setCursorColor(CustomColor.fromInt(UiTheme.accent()));
+        return field;
     }
 
-    private void addPageControl(ClickableWidget widget, int x, int y, boolean enabled) {
-        widget.setX(left + 12 + x);
-        widget.setY(viewportTop + y - scrollOffset);
-        controls.add(new PageControl(addDrawableChild(widget), y, enabled));
-        widget.active = enabled && widget.getY() >= viewportTop && widget.getY() + widget.getHeight() <= viewportBottom;
+    private void addPageControl(Widget widget, int x, int y, boolean enabled) {
+        addPageControl(widget, x, y, enabled, 1);
+    }
+
+    private void addPageControl(Widget widget, int x, int y, boolean enabled, int coordinateScale) {
+        widget.setPosition((left + 12 + x) * coordinateScale,
+                (viewportTop + y - scrollOffset) * coordinateScale);
+        controls.add(new PageControl(widget, y, enabled, coordinateScale));
+        if (widget instanceof ThemedButton button) addButton(button);
+        else addRootWidget(widget);
+        widget.setEnabled(enabled && widget.getY() / coordinateScale >= viewportTop
+                && (widget.getY() + widget.getHeight()) / coordinateScale <= viewportBottom);
     }
 
     private void change(Craft changed) {
@@ -428,14 +466,16 @@ public final class CrafterScreen extends PlannerScreen {
             boolean enabled = control.enabled && control.getY() >= viewportTop
                     && control.getY() + control.getHeight() <= viewportBottom;
             control.setEnabled(enabled);
-            if (!enabled && control.is(hashField)) control.setFocused(false);
+            if (control.is(hashField) || control.is(tabNameField)) {
+                control.setVisible(enabled);
+                if (!enabled) control.setFocused(false);
+            }
         }
         ui.enableScissor(left + 3, viewportTop, left + panelWidth - 8, viewportBottom);
         try {
             int x = left + 12;
             int y = viewportTop - scrollOffset;
-            UiTheme.drawRoundedBox(context, ui, x, y, page.controls().width(), CONTROL_BOX_HEIGHT,
-                    UiTheme.SURFACE, UiTheme.BORDER);
+            UiTheme.drawPanel(context, ui, x, y, page.controls().width(), CONTROL_BOX_HEIGHT);
             renderVanillaChildren(context, mouseX, mouseY, delta);
             renderControls(context, x, y);
             resultCard.render(context, textRenderer,
@@ -466,7 +506,6 @@ public final class CrafterScreen extends PlannerScreen {
         }
         for (ThemedButton button : footerButtons) button.draw(context, mouseX, mouseY, delta, ui);
         for (ThemedButton button : tabButtons) button.draw(context, mouseX, mouseY, delta, ui);
-        tabNameField.render(context, mouseX, mouseY, delta);
         pageScrollbar.configure(left + panelWidth - 7, viewportTop, viewportHeight(), maxScroll);
         pageScrollbar.draw(context, mouseX, mouseY, delta, ui);
         if (ingredientMoved && draggedIngredient >= 0) {
@@ -505,28 +544,30 @@ public final class CrafterScreen extends PlannerScreen {
     private void renderControls(DrawContext context, int x, int y) {
         int w = page.controls().width();
         int typeWidth = (w - 16) * 45 / 100;
-        ui.drawTextWithShadow(textRenderer, "Type:", x + 8, y + 13, 0xFFFFFFFF);
-        ui.drawTextWithShadow(textRenderer, "Lv:", x + 8, y + 45, 0xFFFFFFFF);
-        ui.drawTextWithShadow(textRenderer, "Hash:", x + 8, y + 77, 0xFFFFFFFF);
-        ui.drawCenteredTextWithShadow(textRenderer, "Attack Speed",
-                x + typeWidth + (w - typeWidth) / 2, y + 13, 0xFFFFFFFF);
-        ui.drawCenteredTextWithShadow(textRenderer, "Crafting Materials", x + w / 2, y + 102, 0xFFFFFFFF);
+        drawScaledText("Type:", x + 8, y + 54, 0xFFFFFFFF);
+        drawScaledText("Lv:", x + 8, y + 92, 0xFFFFFFFF);
+        drawScaledText("Hash:", x + 8, y + 131, 0xFFFFFFFF);
+        if (isWeapon()) {
+            drawScaledCenteredText("Attack Speed",
+                    x + typeWidth + (w - typeWidth) / 2, y + 54, 0xFFFFFFFF);
+        }
+        drawScaledCenteredText("Crafting Materials", x + w / 2, y + 160, 0xFFFFFFFF);
         int cellWidth = (w - 22) / 2;
         for (int i = 0; i < 2; i++) {
             var material = recipe().materials().get(i);
             int cellX = x + 8 + i * (cellWidth + 6);
-            drawMaterialIcon(material.name(), cellX + 5, y + 119, 22);
+            drawMaterialIcon(material.name(), cellX + 6, y + 178, 28);
             Text label = Text.literal(material.amount() + "x " + material.name().replaceFirst("^Refined ", "") + " ")
                     .formatted(Formatting.WHITE)
                     .append(Text.literal("[").formatted(Formatting.GOLD))
                     .append(Text.literal("\u272B".repeat(i == 0 ? craft.material1() : craft.material2()))
                             .formatted(Formatting.YELLOW))
                     .append(Text.literal("]").formatted(Formatting.GOLD));
-            ui.drawTextWithShadow(textRenderer, label, cellX + 32, y + 125, 0xFFFFFFFF);
+            drawScaledText(label, cellX + 40, y + 192, 0xFFFFFFFF);
         }
         for (int i = 0; i < 6; i++) {
             int cellX = x + 8 + (i % 2) * (cellWidth + 6);
-            int cellY = y + 153 + (i / 2) * 32;
+            int cellY = y + 221 + (i / 2) * 40;
             Ingredient ingredient = ingredients.get(craft.ingredients().get(i));
             renderIngredientTile(ingredient, i, cellX, cellY, cellWidth, false);
         }
@@ -534,18 +575,39 @@ public final class CrafterScreen extends PlannerScreen {
 
     private void renderIngredientTile(Ingredient ingredient, int slot, int x, int y, int width, boolean floating) {
         if (floating) {
-            UiTheme.drawRoundedBox(drawContext, ui, x, y, width, 28, UiTheme.hoverBackground(), UiTheme.accent());
+            UiTheme.drawRoundedBox(drawContext, ui, x, y, width, 36, UiTheme.hoverBackground(), UiTheme.accent());
         }
-        drawIngredientIcon(ingredient, x + 5, y + 4, 20);
+        drawIngredientIcon(ingredient, x + 6, y + 5, 26);
         String name = ingredient.name();
-        if (textRenderer.getWidth(name) > width - 31) {
-            name = textRenderer.trimToWidth(name, width - 43) + "...";
+        int textWidth = Math.round((width - 43) / CONTROL_TEXT_SCALE);
+        if (textRenderer.getWidth(name) > textWidth) {
+            name = textRenderer.trimToWidth(name, Math.max(0, textWidth - textRenderer.getWidth("..."))) + "...";
         }
-        ui.drawTextWithShadow(textRenderer, name, x + 31, y + 4, ingredientColor(ingredient));
+        drawScaledText(name, x + 40, y + 9, ingredientColor(ingredient));
         int effectiveness = preview == null ? 0 : preview.stat("ingredientEffectiveness" + slot);
-        ui.drawTextWithShadow(textRenderer, preview == null ? "[--]" : "[" + effectiveness + "%]",
-                x + 31, y + 16, preview == null ? 0xFFAAAAAA
+        drawScaledText(preview == null ? "[--]" : "[" + effectiveness + "%]",
+                x + 40, y + 24, preview == null ? 0xFFAAAAAA
                         : effectiveness < 0 ? 0xFFFF5555 : effectiveness == 0 ? 0xFFFFFFFF : 0xFF55FF55);
+    }
+
+    private void drawScaledText(String text, float x, float centerY, int color) {
+        drawScaledText(Text.literal(text), x, centerY, color);
+    }
+
+    private void drawScaledText(Text text, float x, float centerY, int color) {
+        ui.pushMatrix();
+        ui.translate(x, centerY);
+        ui.scale(CONTROL_TEXT_SCALE, CONTROL_TEXT_SCALE);
+        ui.drawTextWithShadow(textRenderer, text, 0, -4, color);
+        ui.popMatrix();
+    }
+
+    private void drawScaledCenteredText(String text, float x, float centerY, int color) {
+        ui.pushMatrix();
+        ui.translate(x, centerY);
+        ui.scale(CONTROL_TEXT_SCALE, CONTROL_TEXT_SCALE);
+        ui.drawCenteredTextWithShadow(textRenderer, text, 0, -4, color);
+        ui.popMatrix();
     }
 
     private void drawMaterialIcon(String name, int x, int y, int size) {
@@ -748,8 +810,8 @@ public final class CrafterScreen extends PlannerScreen {
         int cellWidth = (page.controls().width() - 22) / 2;
         for (int i = 0; i < 6; i++) {
             int cellX = 8 + (i % 2) * (cellWidth + 6);
-            int cellY = 153 + (i / 2) * 32;
-            if (x >= cellX && x < cellX + cellWidth && y >= cellY && y < cellY + 28) return i;
+            int cellY = 221 + (i / 2) * 40;
+            if (x >= cellX && x < cellX + cellWidth && y >= cellY && y < cellY + 36) return i;
             var bounds = page.ingredients().get(i);
             if (x >= bounds.x() && x < bounds.right() && y >= bounds.y() && y < bounds.bottom()) return i;
         }
@@ -764,7 +826,7 @@ public final class CrafterScreen extends PlannerScreen {
     @Override
     public boolean keyPressed(KeyInput input) {
         if (hashField.isFocused() && (input.key() == GLFW.GLFW_KEY_ENTER || input.key() == GLFW.GLFW_KEY_KP_ENTER)) {
-            importCode(hashField.getText());
+            importCode(hashField.getInput());
             return true;
         }
         int target = numberedIngredientSlot(input.key());
@@ -855,30 +917,24 @@ public final class CrafterScreen extends PlannerScreen {
     }
 
     private static final class PageControl {
-        private final ClickableWidget vanilla;
-        private final ThemedButton themed;
+        private final Widget widget;
         private final int y;
         private final boolean enabled;
+        private final int coordinateScale;
 
-        private PageControl(ClickableWidget widget, int y, boolean enabled) {
-            vanilla = widget;
-            themed = null;
+        private PageControl(Widget widget, int y, boolean enabled, int coordinateScale) {
+            this.widget = widget;
             this.y = y;
             this.enabled = enabled;
+            this.coordinateScale = coordinateScale;
         }
 
-        private PageControl(ThemedButton widget, int y, boolean enabled) {
-            vanilla = null;
-            themed = widget;
-            this.y = y;
-            this.enabled = enabled;
-        }
-
-        private void setY(int value) { if (themed != null) themed.setY(value); else vanilla.setY(value); }
-        private int getY() { return themed != null ? themed.getY() : vanilla.getY(); }
-        private int getHeight() { return themed != null ? themed.getHeight() : vanilla.getHeight(); }
-        private void setEnabled(boolean value) { if (themed != null) themed.setEnabled(value); else vanilla.active = value; }
-        private void setFocused(boolean value) { if (themed != null) themed.setFocused(value); else vanilla.setFocused(value); }
-        private boolean is(ClickableWidget widget) { return vanilla == widget; }
+        private void setY(int value) { widget.setPosition(widget.getX(), value * coordinateScale); }
+        private int getY() { return widget.getY() / coordinateScale; }
+        private int getHeight() { return widget.getHeight() / coordinateScale; }
+        private void setEnabled(boolean value) { widget.setEnabled(value); }
+        private void setVisible(boolean value) { widget.setVisible(value); }
+        private void setFocused(boolean value) { widget.setFocused(value); }
+        private boolean is(Widget widget) { return this.widget == widget; }
     }
 }
