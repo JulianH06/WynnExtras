@@ -288,7 +288,9 @@ public final class CrafterScreen extends PlannerScreen {
         List<String> types = recipes.stream().map(Recipe::type).distinct().toList();
         List<CraftingChoiceScreen.Choice> choices = new ArrayList<>();
         for (int i = 0; i < types.size(); i++) {
-            choices.add(new CraftingChoiceScreen.Choice(i, title(types.get(i)), "Craft " + types.get(i)));
+            String type = types.get(i);
+            choices.add(new CraftingChoiceScreen.Choice(i, title(type), "Craft " + type,
+                    recipeIcon(type), List.of(Text.literal("Craft " + title(type)).formatted(Formatting.GRAY))));
         }
         client.setScreen(new CraftingChoiceScreen(this, "Recipe type", choices, selected -> {
             String type = types.get(selected.id());
@@ -302,22 +304,25 @@ public final class CrafterScreen extends PlannerScreen {
 
     private void chooseLevel() {
         List<CraftingChoiceScreen.Choice> choices = recipes.stream().filter(entry -> entry.type().equals(recipe().type()))
-                .map(entry -> new CraftingChoiceScreen.Choice(entry.id(), entry.name(),
-                        entry.profession() + ", ingredient level limit " + entry.levelHigh())).toList();
+                .sorted(Comparator.comparingInt(Recipe::levelLow).reversed())
+                .map(entry -> new CraftingChoiceScreen.Choice(entry.id(), recipeLabel(entry),
+                        title(entry.profession()),
+                        recipeIcon(entry.type()), recipeTooltip(entry))).toList();
         client.setScreen(new CraftingChoiceScreen(this, "Recipe level", choices,
                 selected -> change(craft.withRecipe(selected.id()))));
     }
 
     private void selectSlot(int slot) {
         List<CraftingChoiceScreen.Choice> choices = ingredients.values().stream()
-                .filter(ingredient -> ingredient.supports(recipe()))
-                .sorted(Comparator.comparingInt((Ingredient ingredient) -> ingredient.id() == 4000 ? -1 : 0)
-                        .thenComparing(Ingredient::name, String.CASE_INSENSITIVE_ORDER))
+                .filter(ingredient -> ingredient.id() != 4000 && ingredient.supports(recipe()))
+                .sorted(Comparator.comparing(Ingredient::name, String.CASE_INSENSITIVE_ORDER))
                 .map(ingredient -> new CraftingChoiceScreen.Choice(ingredient.id(),
-                        ingredient.name() + (ingredient.id() == 4000 ? "" : " [" + ingredient.tier()
-                                + "* / Lv. " + ingredient.level() + "]"), ingredientDescription(ingredient), ingredient)).toList();
-        client.setScreen(new CraftingChoiceScreen(this, "Ingredient " + (slot + 1), choices,
-                selected -> change(craft.withIngredient(slot, selected.id()))));
+                        ingredient.name() + " [" + ingredient.tier() + "* / Lv. " + ingredient.level() + "]",
+                        ingredientDescription(ingredient), ingredient)).toList();
+        Runnable remove = craft.ingredients().get(slot) == 4000
+                ? null : () -> change(craft.withIngredient(slot, 4000));
+        client.setScreen(new CraftingChoiceScreen(this, "Ingredients", choices,
+                selected -> change(craft.withIngredient(slot, selected.id())), remove, false));
     }
 
     private void cycleMaterial(int index) {
@@ -329,6 +334,31 @@ public final class CrafterScreen extends PlannerScreen {
 
     private String ingredientDescription(Ingredient ingredient) {
         return String.join(", ", ingredient.professions()) + "\n" + String.join("\n", ingredient.details());
+    }
+
+    private static String recipeLabel(Recipe recipe) {
+        String materials = recipe.materials().stream()
+                .map(material -> material.name().replaceFirst("(?i)^Refined\\s+", ""))
+                .collect(Collectors.joining(" + "));
+        return title(recipe.type()) + " " + recipe.levelLow() + "-" + recipe.levelHigh() + ", " + materials;
+    }
+
+    private static List<Text> recipeTooltip(Recipe recipe) {
+        List<Text> tooltip = new ArrayList<>();
+        tooltip.add(Text.literal(title(recipe.type()) + " Recipe").formatted(Formatting.GOLD));
+        tooltip.add(Text.empty());
+        tooltip.add(Text.literal("Profession: ").formatted(Formatting.GRAY)
+                .append(Text.literal(title(recipe.profession())).formatted(Formatting.WHITE)));
+        tooltip.add(Text.literal("Crafting Level: ").formatted(Formatting.GRAY)
+                .append(Text.literal(recipe.levelLow() + "-" + recipe.levelHigh()).formatted(Formatting.WHITE)));
+        tooltip.add(Text.empty());
+        tooltip.add(Text.literal("Materials").formatted(Formatting.YELLOW));
+        for (var material : recipe.materials()) {
+            tooltip.add(Text.literal("  " + material.amount() + "x ").formatted(Formatting.DARK_GRAY)
+                    .append(Text.literal(material.name().replaceFirst("(?i)^Refined\\s+", ""))
+                            .formatted(Formatting.WHITE)));
+        }
+        return tooltip;
     }
 
     private void footerAction(String action) {
@@ -593,6 +623,23 @@ public final class CrafterScreen extends PlannerScreen {
         return new ItemStack(ingredient.id() == 4000 ? Items.BARRIER : Items.POTION);
     }
 
+    static ItemStack recipeIcon(String type) {
+        return switch (type.toLowerCase(Locale.ROOT)) {
+            case "bow", "dagger", "relik", "spear", "wand" ->
+                    itemIcon("minecraft:potion", type.toLowerCase(Locale.ROOT) + ".basicWood", 0, Items.POTION);
+            case "helmet" -> new ItemStack(Items.LEATHER_HELMET);
+            case "chestplate" -> new ItemStack(Items.LEATHER_CHESTPLATE);
+            case "leggings" -> new ItemStack(Items.LEATHER_LEGGINGS);
+            case "boots" -> new ItemStack(Items.LEATHER_BOOTS);
+            case "ring" -> new ItemStack(Items.EMERALD);
+            case "bracelet" -> new ItemStack(Items.IRON_NUGGET);
+            case "necklace" -> new ItemStack(Items.GOLD_NUGGET);
+            case "food" -> new ItemStack(Items.COOKED_BEEF);
+            case "scroll" -> new ItemStack(Items.PAPER);
+            default -> new ItemStack(Items.POTION);
+        };
+    }
+
     private static ItemStack itemIcon(String itemId, String model, int customModelData, net.minecraft.item.Item fallbackItem) {
         ItemStack fallback = new ItemStack(fallbackItem);
         if (itemId == null || itemId.isBlank()) return fallback;
@@ -803,7 +850,8 @@ public final class CrafterScreen extends PlannerScreen {
     }
 
     private static String title(String value) {
-        return value.substring(0, 1).toUpperCase(Locale.ROOT) + value.substring(1);
+        String normalized = value.toLowerCase(Locale.ROOT);
+        return normalized.substring(0, 1).toUpperCase(Locale.ROOT) + normalized.substring(1);
     }
 
     private static final class PageControl {
