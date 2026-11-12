@@ -157,7 +157,8 @@ final class WynnItemTooltip {
             defenses.append(text(" " + signed(value) + " ", "language/wynncraft", 0xFFAAAAAA));
         }
         if (!defenses.getString().isBlank()) tooltip.add(defenses);
-        tooltip.add(divider(item.tier()));
+        if (item.isCrafted()) addCraftedBaseStats(tooltip, item);
+        tooltip.add(centered(divider(item.tier()), tooltipWidth));
 
         String[] skillKeys = {"strReq", "dexReq", "intReq", "defReq", "agiReq"};
         if (Arrays.stream(skillKeys).anyMatch(key -> item.stat(key) != 0)) {
@@ -178,7 +179,7 @@ final class WynnItemTooltip {
             tooltip.add(aligned(requirement(" Combat Level", level >= requiredLevel),
                     text(Integer.toString(requiredLevel), "language/wynncraft", 0xFFAAAAAA), tooltipWidth));
         }
-        tooltip.add(divider(item.tier()));
+        tooltip.add(centered(divider(item.tier()), tooltipWidth));
 
         for (ItemInspection.Row row : ItemInspection.rows(item, "", true)) {
             if (row.kind() != ItemInspection.Kind.SKILL
@@ -195,23 +196,6 @@ final class WynnItemTooltip {
                     text(Integer.toString(item.stat("powderSlots")), "language/wynncraft", 0xFFAAAAAA),
                     tooltipWidth));
         }
-        if (item.isCrafted()) {
-            if ("consumable".equals(item.type())) {
-                tooltip.add(aligned(text("Duration ", "language/wynncraft", 0xFFFFFFFF),
-                        text(item.stat("durationMin") + "-" + item.stat("durationMax") + "s",
-                                "language/wynncraft", 0xFFAAAAAA), tooltipWidth));
-                tooltip.add(aligned(text("Charges ", "language/wynncraft", 0xFFFFFFFF),
-                        text(Integer.toString(item.stat("charges")), "language/wynncraft", 0xFFAAAAAA),
-                        tooltipWidth));
-            } else {
-                tooltip.add(aligned(text("Durability ", "language/wynncraft", 0xFFFFFFFF),
-                        text(item.stat("durabilityMin") + "-" + item.stat("durabilityMax"),
-                                "language/wynncraft", 0xFFAAAAAA), tooltipWidth));
-            }
-            tooltip.add(aligned(text("Material Tiers ", "language/wynncraft", 0xFFFFFFFF),
-                    text(item.stat("materialTier1") + " / " + item.stat("materialTier2"),
-                            "language/wynncraft", 0xFFAAAAAA), tooltipWidth));
-        }
         for (Map.Entry<String, String> majorId : item.majorIds().entrySet()) {
             tooltip.add(Text.empty());
             appendWrapped(tooltip, "◆ " + majorId.getKey() + ": " + majorId.getValue(), dividerColor(item.tier()));
@@ -227,6 +211,44 @@ final class WynnItemTooltip {
             tooltip.add(centered(text(restriction, "language/wynncraft", 0xFFFF5555), tooltipWidth));
         }
         return tooltip;
+    }
+
+    private void addCraftedBaseStats(List<Text> tooltip, WynnItem item) {
+        if (!"consumable".equals(item.type())) {
+            String durability = range(item.stat("durabilityMin"), item.stat("durabilityMax"));
+            tooltip.add(meter(item.tier()).append(text(" Durability " + durability,
+                    "language/wynncraft", 0xFFAAAAAA)));
+            return;
+        }
+
+        int charges = item.stat("charges");
+        tooltip.add(meter(item.tier())
+                .append(text(" " + charges + " ", "language/wynncraft", 0xFFFFFFFF))
+                .append(text("Charges", "language/wynncraft", 0xFFAAAAAA)));
+        tooltip.add(sprite("\uE00C")
+                .append(text(" " + durationRange(item.stat("durationMin"), item.stat("durationMax")) + " ",
+                        "language/wynncraft", 0xFFFFFFFF))
+                .append(text("Duration", "language/wynncraft", 0xFFAAAAAA)));
+    }
+
+    private MutableText meter(String tier) {
+        return shadowText("\uE023\uDAFF\uDFF7", "tooltip/identification/meter", 0xFF555555)
+                .append(text("\uE023", "tooltip/identification/meter", dividerColor(tier)));
+    }
+
+    private static String duration(int seconds) {
+        int minutes = seconds / 60;
+        int remainder = seconds % 60;
+        if (minutes == 0) return remainder + "s";
+        return remainder == 0 ? minutes + "m" : minutes + "m " + remainder + "s";
+    }
+
+    private static String durationRange(int minimum, int maximum) {
+        return minimum == maximum ? duration(minimum) : duration(minimum) + " - " + duration(maximum);
+    }
+
+    private static String range(int minimum, int maximum) {
+        return minimum == maximum ? Integer.toString(minimum) : minimum + "-" + maximum;
     }
 
     private List<Text> ingredientLines(CraftedItemCodec.Ingredient ingredient) {
@@ -420,7 +442,7 @@ final class WynnItemTooltip {
         return shadowText("\uE000", "tooltip/divider", dividerColor(tier));
     }
 
-    private Text sprite(String value) {
+    private MutableText sprite(String value) {
         return shadowText(value, "tooltip/attribute/sprite", 0xFFFFFFFF);
     }
 
