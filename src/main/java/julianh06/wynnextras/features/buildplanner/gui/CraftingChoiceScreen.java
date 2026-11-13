@@ -26,9 +26,9 @@ final class CraftingChoiceScreen extends PlannerScreen {
     private static final int HORIZONTAL_MARGIN = 80;
     private static final int VERTICAL_MARGIN = 70;
     private static final int PADDING = 20;
-    private static final int SEARCH_TOP = 47;
+    private static final int SEARCH_TOP = 14;
     private static final int SEARCH_HEIGHT = 32;
-    private static final int LIST_TOP = 88;
+    private static final int LIST_TOP = 55;
     private static final int LIST_BOTTOM = 60;
     private static final int BUTTON_HEIGHT = 34;
     private static final int ROW_HEIGHT = 38;
@@ -38,7 +38,6 @@ final class CraftingChoiceScreen extends PlannerScreen {
     private final Consumer<Choice> select;
     private final boolean showTooltips;
     private final Runnable remove;
-    private final boolean showHeading;
     private final SmoothScroll scroll = new SmoothScroll();
     private final Map<Integer, ItemStack> ingredientIcons = new HashMap<>();
     private String query = "";
@@ -55,23 +54,22 @@ final class CraftingChoiceScreen extends PlannerScreen {
 
     CraftingChoiceScreen(Screen parent, String title, List<Choice> choices,
             Consumer<Choice> select, boolean showTooltips) {
-        this(parent, title, choices, select, showTooltips, null, true);
+        this(parent, title, choices, select, showTooltips, null);
     }
 
     CraftingChoiceScreen(Screen parent, String title, List<Choice> choices,
-            Consumer<Choice> select, Runnable remove, boolean showHeading) {
-        this(parent, title, choices, select, true, remove, showHeading);
+            Consumer<Choice> select, Runnable remove) {
+        this(parent, title, choices, select, true, remove);
     }
 
     private CraftingChoiceScreen(Screen parent, String title, List<Choice> choices,
-            Consumer<Choice> select, boolean showTooltips, Runnable remove, boolean showHeading) {
+            Consumer<Choice> select, boolean showTooltips, Runnable remove) {
         super(Text.literal(title));
         this.parent = parent;
         this.choices = List.copyOf(choices);
         this.select = select;
         this.showTooltips = showTooltips;
         this.remove = remove;
-        this.showHeading = showHeading;
     }
 
     @Override
@@ -296,15 +294,6 @@ final class CraftingChoiceScreen extends PlannerScreen {
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         ui.fill(0, 0, width, height, 0x99000000);
         UiTheme.drawPanel(context, ui, left, top, panelWidth, panelHeight);
-        if (showHeading) {
-            ui.pushMatrix();
-            ui.translate(left + PADDING, top + 22);
-            ui.scale(1.65F, 1.65F);
-            ui.drawTextWithShadow(textRenderer,
-                    Text.literal("Choose " + pickerLabel()).styled(style -> style.withColor(UiTheme.accentRgb())),
-                    0, -4, 0xFFFFFFFF);
-            ui.popMatrix();
-        }
         renderVanillaChildren(context, mouseX, mouseY, delta);
     }
 

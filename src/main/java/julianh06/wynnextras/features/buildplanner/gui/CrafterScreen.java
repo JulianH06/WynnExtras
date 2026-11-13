@@ -362,7 +362,7 @@ public final class CrafterScreen extends PlannerScreen {
         Runnable remove = craft.ingredients().get(slot) == 4000
                 ? null : () -> change(craft.withIngredient(slot, 4000));
         client.setScreen(new CraftingChoiceScreen(this, "Ingredients", choices,
-                selected -> change(craft.withIngredient(slot, selected.id())), remove, false));
+                selected -> change(craft.withIngredient(slot, selected.id())), remove));
     }
 
     private void cycleMaterial(int index) {

@@ -153,9 +153,9 @@ public final class BuilderScreen extends PlannerScreen {
     private static final int PICKER_HORIZONTAL_MARGIN = 80;
     private static final int PICKER_VERTICAL_MARGIN = 70;
     private static final int PICKER_PADDING = 20;
-    private static final int PICKER_SEARCH_TOP = 47;
+    private static final int PICKER_SEARCH_TOP = 14;
     private static final int PICKER_SEARCH_HEIGHT = 32;
-    private static final int PICKER_LIST_TOP = 88;
+    private static final int PICKER_LIST_TOP = 55;
     private static final int PICKER_LIST_BOTTOM = 60;
     private static final int PICKER_BUTTON_HEIGHT = 34;
     private static final int PICKER_ROW_HEIGHT = 38;
@@ -4107,13 +4107,6 @@ public final class BuilderScreen extends PlannerScreen {
         int top = (this.height - pickerHeight) / 2;
         ui.fill(0, 0, this.width, this.height, 0x99000000);
         UiTheme.drawPanel(context, ui, left, top, pickerWidth, pickerHeight);
-        ui.pushMatrix();
-        ui.translate(left + PICKER_PADDING, top + 22);
-        ui.scale(1.65F, 1.65F);
-        ui.drawTextWithShadow(this.textRenderer,
-                Text.literal("Choose " + pickerLabel()).styled(style -> style.withColor(UiTheme.accentRgb())),
-                0, -4, 0xFFFFFF);
-        ui.popMatrix();
     }
 
     private int pickerWidth() {
