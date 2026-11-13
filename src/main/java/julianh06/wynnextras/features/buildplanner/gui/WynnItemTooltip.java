@@ -344,7 +344,7 @@ final class WynnItemTooltip {
         };
     }
 
-    private static Text ingredientTier(int tier) {
+    public static Text ingredientTier(int tier) {
         MutableText result = Text.literal(" [").formatted(tier == 1 ? Formatting.GOLD
                 : tier == 2 ? Formatting.DARK_PURPLE : tier == 3 ? Formatting.DARK_AQUA : Formatting.GRAY);
         if (tier == 1) result.append(Text.literal("✫").formatted(Formatting.YELLOW))

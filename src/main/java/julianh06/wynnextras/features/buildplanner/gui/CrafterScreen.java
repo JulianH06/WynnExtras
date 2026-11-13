@@ -355,7 +355,7 @@ public final class CrafterScreen extends PlannerScreen {
                 .filter(ingredient -> ingredient.id() != 4000 && ingredient.supports(recipe()))
                 .sorted(Comparator.comparing(Ingredient::name, String.CASE_INSENSITIVE_ORDER))
                 .map(ingredient -> new CraftingChoiceScreen.Choice(ingredient.id(),
-                        ingredient.name() + " [" + ingredient.tier() + "* / Lv. " + ingredient.level() + "]",
+                        ingredient.name() + " " + "✫".repeat(3) + " [Level " + ingredient.level() + "]",
                         ingredientDescription(ingredient), ingredient)).toList();
         Runnable remove = craft.ingredients().get(slot) == 4000
                 ? null : () -> change(craft.withIngredient(slot, 4000));

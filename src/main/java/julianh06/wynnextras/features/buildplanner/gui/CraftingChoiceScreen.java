@@ -183,14 +183,35 @@ final class CraftingChoiceScreen extends PlannerScreen {
             availableWidth -= 32;
         }
         int textWidth = Math.round(availableWidth / TEXT_SCALE);
-        String label = textRenderer.getWidth(choice.label()) <= textWidth ? choice.label()
-                : textRenderer.trimToWidth(choice.label(), Math.max(0, textWidth - 12)) + "...";
         ui.pushMatrix();
         ui.translate(textX, y + height / 2.0F);
         ui.scale(TEXT_SCALE, TEXT_SCALE);
-        ui.drawTextWithShadow(textRenderer, label, 0, -4,
-                choice.color() == null ? 0xFFFFFFFF : choice.color());
+        if (choice.ingredient() != null) {
+            renderIngredientLabel(ui, textRenderer, choice.ingredient(), textWidth);
+        } else {
+            String label = textRenderer.getWidth(choice.label()) <= textWidth ? choice.label()
+                    : textRenderer.trimToWidth(choice.label(), Math.max(0, textWidth - 12)) + "...";
+            ui.drawTextWithShadow(textRenderer, label, 0, -4,
+                    choice.color() == null ? 0xFFFFFFFF : choice.color());
+        }
         ui.popMatrix();
+    }
+
+    private void renderIngredientLabel(julianh06.wynnextras.utils.UI.UIUtils ui,
+            net.minecraft.client.font.TextRenderer textRenderer, Ingredient ingredient, int width) {
+        Text tier = WynnItemTooltip.ingredientTier(ingredient.tier());
+        Text level = Text.literal(" [Level " + ingredient.level() + "]").formatted(net.minecraft.util.Formatting.GRAY);
+        int suffixWidth = textRenderer.getWidth(tier) + textRenderer.getWidth(level);
+        String name = ingredient.name();
+        if (textRenderer.getWidth(name) + suffixWidth > width) {
+            int nameWidth = Math.max(0, width - suffixWidth - textRenderer.getWidth("..."));
+            name = textRenderer.trimToWidth(name, nameWidth) + "...";
+        }
+        ui.drawTextWithShadow(textRenderer, name, 0, -4,
+                ToolItemCards.color(Integer.toString(ingredient.tier())));
+        int offset = textRenderer.getWidth(name);
+        ui.drawTextWithShadow(textRenderer, tier, offset, -4, 0xFFFFFFFF);
+        ui.drawTextWithShadow(textRenderer, level, offset + textRenderer.getWidth(tier), -4, 0xFFFFFFFF);
     }
 
     private void drawItemIcon(julianh06.wynnextras.utils.UI.UIUtils ui, ItemStack stack,
