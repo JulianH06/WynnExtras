@@ -153,9 +153,11 @@ public final class CrafterScreen extends PlannerScreen {
             }
         });
         addPageControl(tabNameField, 8, 7, true, 2);
-        pageButton(46, 41, typeWidth - 42, 26, title(recipe().type()), this::chooseType, true);
+        pageButton(46, 41, typeWidth - 42, 26, title(recipe().type()), this::chooseType, true)
+                .setHoverText(null);
         pageButton(46, 79, typeWidth - 42, 26,
-                recipe().name().substring(recipe().name().indexOf('-') + 1), this::chooseLevel, true);
+                recipe().name().substring(recipe().name().indexOf('-') + 1), this::chooseLevel, true)
+                .setHoverText(null);
         int speedWidth = (w - typeWidth - 16) / 3;
         if (isWeapon()) {
             for (int i = 0; i < 3; i++) {
@@ -166,6 +168,7 @@ public final class CrafterScreen extends PlannerScreen {
                 if (craft.speed() == i) {
                     button.setMessage(button.getMessage().copy().formatted(Formatting.GREEN, Formatting.BOLD));
                 }
+                button.setHoverText(null);
             }
         }
         hashField = builderTextInput(0, 0, w - 100, 28, "Crafted recipe hash or link");
@@ -195,7 +198,7 @@ public final class CrafterScreen extends PlannerScreen {
         for (int i = 0; i < copies.size(); i++) {
             String action = copies.get(i);
             pageButton(8 + i * (copyWidth + 4), 347, copyWidth, 28, action,
-                    () -> footerAction(action), i == 0 || preview != null);
+                    () -> footerAction(action), i == 0 || preview != null).setHoverText(null);
         }
         pageButton(24 + copyWidth * 4, 347, 28, 28, "i", () -> {}, true)
                 .setTextScale(1.5F).setTextOffset(0.5F, 0.0F).setHoverLines(List.of(

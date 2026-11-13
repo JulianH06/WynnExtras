@@ -924,8 +924,7 @@ public final class BuilderScreen extends PlannerScreen {
                 Text.literal(fitText(label, Math.round((width - 8) / BOOST_TAB_TEXT_SCALE))), action)
                 .setSelected(label.equals(boostSection))
                 .setSelectedBorderHighlight()
-                .setTextScale(BOOST_TAB_TEXT_SCALE)
-                .setHoverText(Text.literal(label)));
+                .setTextScale(BOOST_TAB_TEXT_SCALE));
     }
 
     private void selectBoostSection(String section) {

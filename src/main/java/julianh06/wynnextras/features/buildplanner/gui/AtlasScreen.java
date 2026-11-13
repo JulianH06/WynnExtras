@@ -107,8 +107,7 @@ final class AtlasScreen extends PlannerScreen {
                 int x = (i % 6) * cell;
                 int y = 62 + (i / 6) * 29;
                 var button = button(x, y, cell - 4, 25, Text.empty(), () -> toggle(false, type));
-                button.setHoverText(Text.literal(display(type)
-                        + (selected(state.category(), type) ? " (selected)" : " (not selected)")));
+                button.setHoverText(Text.literal(display(type)));
                 icons.add(new Icon(type, x, y, cell - 4, selected(state.category(), type)));
             }
         }
@@ -122,8 +121,7 @@ final class AtlasScreen extends PlannerScreen {
             String name = state.ingredients() ? rarity : display(rarity);
             Text text = fitted(name, cell - 3).copy().styled(style -> style.withColor(color)
                     .withUnderline(selected(state.rarity(), rarity)));
-            var button = button(i * cell, rarityY + 16, cell - 3, 20, text, () -> toggle(true, rarity));
-            button.setHoverText(Text.literal(name + (selected(state.rarity(), rarity) ? " (selected)" : " (not selected)")));
+            button(i * cell, rarityY + 16, cell - 3, 20, text, () -> toggle(true, rarity));
         }
         button(0, leftHeight - 20, 70, 20, Text.literal("Search!"), () -> {
             refreshResults();
