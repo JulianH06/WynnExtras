@@ -178,7 +178,8 @@ public final class CrafterScreen extends PlannerScreen {
         hashField.setInputAndMoveCursorToEnd(hashInput == null ? CraftedItemCodec.encode(craft) : hashInput);
         hashField.setOnChange(value -> hashInput = value);
         addPageControl(hashField, 46, 117, true, 2);
-        pageButton(w - 50, 117, 42, 28, "Load", () -> importCode(hashField.getInput()), true);
+        pageButton(w - 50, 117, 42, 28, "Load", () -> importCode(hashField.getInput()), true)
+                .setHoverText(null);
         int cellWidth = (w - 22) / 2;
         for (int i = 0; i < 2; i++) {
             final int index = i;

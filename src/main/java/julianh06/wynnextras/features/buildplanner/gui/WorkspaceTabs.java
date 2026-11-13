@@ -115,7 +115,6 @@ public final class WorkspaceTabs {
                         if (active == null) WorkspaceNavigation.show(parent, type);
                         else WorkspaceNavigation.open(parent, active.id());
                     }).setTextScale(CONTROL_TEXT_SCALE);
-            tool.setHoverText(Text.literal(toolName(type)));
             add.accept(tool);
             buttonX += toolWidth;
         }

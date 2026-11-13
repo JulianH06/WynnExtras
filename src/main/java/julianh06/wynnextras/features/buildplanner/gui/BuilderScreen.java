@@ -483,7 +483,7 @@ public final class BuilderScreen extends PlannerScreen {
             addDynamic(new ThemedButton(
                     position.x + ITEM_INFO_WIDTH + 9 + itemButtonWidth, position.y + 3,
                     removeWidth, 20, Text.literal("x"), () -> removeOffhand(index))
-                    .setHoverText(Text.literal("Remove this offhand from the build.")));
+                    .setHoverText(Text.literal("Remove this offhand from the build")));
 
             TextInputWidget powderField = textInput(
                     position.x + ITEM_INFO_WIDTH + 5, position.y + 25,
@@ -1006,8 +1006,7 @@ public final class BuilderScreen extends PlannerScreen {
                     .setTextColor(selected == null ? UiTheme.MUTED : tierRgb(selected.aspect().rarity()));
             button.setEnabled(abilityClass != null);
             if (selected != null) button.setHoverLines(aspectTooltip(selected.aspect(), selected.tier()));
-            else button.setHoverText(Text.literal(abilityClass == null
-                    ? "Equip a weapon to choose aspects" : "Choose an aspect"));
+            else if (abilityClass == null) button.setHoverText(Text.literal("Equip a weapon to choose aspects"));
             addDynamic(button);
             ThemedButton tierButton = new ThemedButton(
                     MARGIN + 5 + selectWidth + gap, top + index * (rowHeight + gap), tierWidth, rowHeight,
