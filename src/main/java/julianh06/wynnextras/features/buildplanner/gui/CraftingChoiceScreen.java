@@ -238,7 +238,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
         } catch (RuntimeException exception) {
             PlannerLog.LOGGER.warn("Could not render ingredient picker icon for {} ({}).",
                     ingredient.name(), ingredient.id(), exception);
-            ItemStack fallback = CrafterScreen.ingredientFallback(ingredient);
+            ItemStack fallback = CrafterScreen.ingredientFallback();
             ingredientIcons.put(ingredient.id(), fallback);
             ui.drawItem(fallback, 0, 0);
         } finally {

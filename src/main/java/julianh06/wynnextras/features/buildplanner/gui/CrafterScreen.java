@@ -1,7 +1,9 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
+import com.google.common.collect.ImmutableMultimap;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import julianh06.wynnextras.compat.wynntils.WynntilsCustomModelAdapter;
 import julianh06.wynnextras.features.buildplanner.PlannerLog;
 import julianh06.wynnextras.features.buildplanner.config.ToolWorkspaceManager;
@@ -619,7 +621,7 @@ public final class CrafterScreen extends PlannerScreen {
             ui.drawItem(stack, 0, 0);
         } catch (RuntimeException exception) {
             PlannerLog.LOGGER.warn("Could not render crafting material icon for {}.", name, exception);
-            ItemStack fallback = new ItemStack(Items.POTION);
+            ItemStack fallback = new ItemStack(Items.BARRIER);
             materialIcons.put(name, fallback);
             ui.drawItem(fallback, 0, 0);
         } finally {
@@ -632,11 +634,11 @@ public final class CrafterScreen extends PlannerScreen {
             var item = WynnDataService.getInstance().findByInternalName(name).stream().findFirst()
                     .or(() -> WynnDataService.getInstance().findByDisplayName(name.replaceFirst("^Refined ", ""))
                             .stream().findFirst()).orElse(null);
-            if (item == null) return new ItemStack(Items.POTION);
-            return itemIcon(item.icon().id(), item.icon().model(), item.icon().customModelData(), Items.POTION);
+            if (item == null) return new ItemStack(Items.BARRIER);
+            return itemIcon(item.icon().id(), item.icon().model(), item.icon().customModelData(), Items.BARRIER);
         } catch (RuntimeException exception) {
             PlannerLog.LOGGER.warn("Could not create crafting material icon for {}.", name, exception);
-            return new ItemStack(Items.POTION);
+            return new ItemStack(Items.BARRIER);
         }
     }
 
@@ -650,7 +652,7 @@ public final class CrafterScreen extends PlannerScreen {
         } catch (RuntimeException exception) {
             PlannerLog.LOGGER.warn("Could not render ingredient icon for {} ({}).",
                     ingredient.name(), ingredient.id(), exception);
-            ItemStack fallback = ingredientFallback(ingredient);
+            ItemStack fallback = ingredientFallback();
             ingredientIcons.put(ingredient.id(), fallback);
             ui.drawItem(fallback, 0, 0);
         } finally {
@@ -663,32 +665,33 @@ public final class CrafterScreen extends PlannerScreen {
             var icon = ingredient.icon();
             if (!icon.skinHash().isBlank()) {
                 ItemStack stack = new ItemStack(Items.PLAYER_HEAD);
-                GameProfile profile = new GameProfile(
-                        UUID.nameUUIDFromBytes(icon.skinHash().getBytes(StandardCharsets.UTF_8)), "Ingredient");
                 String texture = Base64.getEncoder().encodeToString(("{\"textures\":{\"SKIN\":{\"url\":"
                         + "\"https://textures.minecraft.net/texture/" + icon.skinHash() + "\"}}}")
                         .getBytes(StandardCharsets.UTF_8));
-                profile.properties().put("textures", new Property("textures", texture));
+                Property property = new Property("textures", texture);
+                GameProfile profile = new GameProfile(
+                        UUID.nameUUIDFromBytes(icon.skinHash().getBytes(StandardCharsets.UTF_8)), "Ingredient",
+                        new PropertyMap(ImmutableMultimap.of("textures", property)));
                 stack.set(DataComponentTypes.PROFILE, ProfileComponent.ofStatic(profile));
                 return stack;
             }
-            if (icon.itemId().isBlank()) return ingredientFallback(ingredient);
-            return itemIcon(icon.itemId(), icon.model(), icon.customModelData(), ingredientFallback(ingredient).getItem());
+            if (icon.itemId().isBlank()) return ingredientFallback();
+            return itemIcon(icon.itemId(), icon.model(), icon.customModelData(), ingredientFallback().getItem());
         } catch (RuntimeException exception) {
             PlannerLog.LOGGER.warn("Could not create ingredient icon for {} ({}).",
                     ingredient.name(), ingredient.id(), exception);
-            return ingredientFallback(ingredient);
+            return ingredientFallback();
         }
     }
 
-    static ItemStack ingredientFallback(Ingredient ingredient) {
-        return new ItemStack(ingredient.id() == 4000 ? Items.BARRIER : Items.POTION);
+    static ItemStack ingredientFallback() {
+        return new ItemStack(Items.BARRIER);
     }
 
     static ItemStack recipeIcon(String type) {
         return switch (type.toLowerCase(Locale.ROOT)) {
             case "bow", "dagger", "relik", "spear", "wand" ->
-                    itemIcon("minecraft:potion", type.toLowerCase(Locale.ROOT) + ".basicWood", 0, Items.POTION);
+                    itemIcon("minecraft:potion", type.toLowerCase(Locale.ROOT) + ".basicWood", 0, Items.BARRIER);
             case "helmet" -> new ItemStack(Items.LEATHER_HELMET);
             case "chestplate" -> new ItemStack(Items.LEATHER_CHESTPLATE);
             case "leggings" -> new ItemStack(Items.LEATHER_LEGGINGS);
@@ -698,7 +701,7 @@ public final class CrafterScreen extends PlannerScreen {
             case "necklace" -> new ItemStack(Items.GOLD_NUGGET);
             case "food" -> new ItemStack(Items.COOKED_BEEF);
             case "scroll" -> new ItemStack(Items.PAPER);
-            default -> new ItemStack(Items.POTION);
+            default -> new ItemStack(Items.BARRIER);
         };
     }
 
@@ -708,7 +711,11 @@ public final class CrafterScreen extends PlannerScreen {
         try {
             ItemStack stack = new ItemStack(Registries.ITEM.get(Identifier.of(itemId)));
             if (stack.isEmpty()) return fallback;
-            float modelData = WynntilsCustomModelAdapter.getFloat(model).orElse((float) customModelData);
+            var resolvedModelData = WynntilsCustomModelAdapter.getFloat(model);
+            if (model != null && !model.isBlank() && resolvedModelData.isEmpty() && customModelData <= 0) {
+                return fallback;
+            }
+            float modelData = resolvedModelData.orElse((float) customModelData);
             if (modelData > 0) {
                 stack.set(DataComponentTypes.CUSTOM_MODEL_DATA, new CustomModelDataComponent(
                         List.of(modelData), List.of(), List.of(), List.of()));

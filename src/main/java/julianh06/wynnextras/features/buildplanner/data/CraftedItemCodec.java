@@ -27,6 +27,7 @@ public final class CraftedItemCodec {
     private static final Set<String> CONSUMABLES = Set.of("potion", "scroll", "food");
     private static final String[] SKILLS = {"str", "dex", "int", "def", "agi"};
     private static final String[] SPEEDS = {"slow", "normal", "fast"};
+    private static final int[] POWDER_MODEL_BASES = {3480, 3494, 3501, 3487, 3473};
     private static final double[] MATERIAL_MULTIPLIERS = {1, 1.25, 1.4};
     private static final Map<String, WynnItem> CACHE = new LinkedHashMap<>();
     private static Map<Integer, JsonObject> ingredients;
@@ -566,6 +567,19 @@ public final class CraftedItemCodec {
         consumableIds.addProperty("dura", 0);
         consumableIds.addProperty("charges", 0);
         ingredient.add("consumableIDs", consumableIds);
+        if (powder != null) {
+            JsonObject icon = new JsonObject();
+            icon.addProperty("format", "attribute");
+            JsonObject value = new JsonObject();
+            value.addProperty("id", "minecraft:potion");
+            JsonObject customModelData = new JsonObject();
+            JsonArray rangeDispatch = new JsonArray();
+            rangeDispatch.add(POWDER_MODEL_BASES[powder.element()] + powder.tier() - 1);
+            customModelData.add("rangeDispatch", rangeDispatch);
+            value.add("customModelData", customModelData);
+            icon.add("value", value);
+            ingredient.add("icon", icon);
+        }
         return ingredient;
     }
 
