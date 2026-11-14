@@ -49,7 +49,7 @@ public final class AbilityTreeScreen extends PlannerScreen {
     private PresetOverlay presetOverlay = PresetOverlay.NONE;
     private String presetText = "";
     private int presetScroll;
-    private final SmoothScroll scroll = new SmoothScroll();
+    private final SmoothScroll scroll = new SmoothScroll(1.0F);
     private String status = "";
     private long statusUntil;
     private int workspaceTicks;

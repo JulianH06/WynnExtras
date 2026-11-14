@@ -5,11 +5,20 @@ public final class SmoothScroll {
     private static final float SPEED = 0.3F;
     private static final float SNAP_DISTANCE = 0.5F;
 
+    private final float snapDistance;
     private float position;
     private float target;
 
+    public SmoothScroll() {
+        this(SNAP_DISTANCE);
+    }
+
+    public SmoothScroll(float snapDistance) {
+        this.snapDistance = Math.max(0.0F, snapDistance);
+    }
+
     public float update(float tickDelta) {
-        position = interpolate(position, target, tickDelta);
+        position = interpolate(position, target, tickDelta, snapDistance);
         return position;
     }
 

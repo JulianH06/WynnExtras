@@ -101,7 +101,7 @@ public final class BuilderScreen extends PlannerScreen {
     };
     private static boolean abilityTreeVisibleSession;
     private static String boostSectionSession = "Aspects";
-    private static final SmoothScroll ABILITY_TREE_SCROLL = new SmoothScroll();
+    private static final SmoothScroll ABILITY_TREE_SCROLL = new SmoothScroll(1.0F);
     private static final SmoothScroll ABILITY_SIDEBAR_SCROLL = new SmoothScroll();
     private static final Identifier EQUIPMENT_TEXTURE = Identifier.of("wynnextras", "textures/gui/buildplanner/equipment.png");
     private static final Identifier TREE_BACKGROUND = Identifier.of(
@@ -1613,6 +1613,7 @@ public final class BuilderScreen extends PlannerScreen {
         AbilityTreeState.SelectionResult result = abilityTreeState.setSelected(
                 definition, nodeId, active, level);
         if (!result.changed()) {
+            if (result.message().isBlank()) return;
             setAbilityTreeWarning(result.message());
             abilityTreeNoticeNodeIds = Set.of(nodeId);
             return;
@@ -2857,17 +2858,18 @@ public final class BuilderScreen extends PlannerScreen {
         AbilityTreeDefinition definition = AbilityTreeDatabase.getInstance().get(selectedClass);
         AbilityMapData classMap = AbilityTreeCache.getClassMap(selectedClass.apiName());
 
+        int viewportHeight = bottom - top;
+        float treeScrollPosition = abilityTreeScroll.position();
+        if (definition != null && classMap != null) {
+            int contentHeight = definition.maxY() * 40 + 24;
+            abilityTreeMaxScroll = Math.max(0, contentHeight - viewportHeight);
+            abilityTreeScroll.clamp(0.0F, abilityTreeMaxScroll);
+            treeScrollPosition = abilityTreeScroll.update(delta);
+        }
+
         ui.fill(left, top, right, bottom, 0xFF383A45);
-        ui.enableScissor(left, top, right, bottom);
-        ui.drawTexture(
-                RenderPipelines.GUI_TEXTURED,
-                TREE_BACKGROUND,
-                left - 24, top - 24,
-                315, 23,
-                width + 48, bottom - top + 48,
-                274, 174,
-                590, 220);
-        ui.disableScissor();
+        int treeRenderOffset = Math.round(treeScrollPosition);
+        drawAbilityTreeBackground(left, top, right, bottom, treeRenderOffset);
 
         renderAbilityTreeSidebar(context, layout, treeLayout, definition, mouseX, mouseY, delta);
 
@@ -2889,10 +2891,7 @@ public final class BuilderScreen extends PlannerScreen {
         }
 
         int treeTop = top;
-        int viewportHeight = bottom - treeTop;
-        int contentHeight = definition.maxY() * 40 + 24;
-        abilityTreeMaxScroll = Math.max(0, contentHeight - viewportHeight);
-        abilityTreeScroll.clamp(0.0F, abilityTreeMaxScroll);
+        viewportHeight = bottom - treeTop;
         int minNodeX = definition.nodes().values().stream()
                 .mapToInt(AbilityTreeDefinition.Node::x).min().orElse(5);
         int maxNodeX = definition.nodes().values().stream()
@@ -2911,7 +2910,7 @@ public final class BuilderScreen extends PlannerScreen {
         if (abilityTreeWidget.classTree != classMap) {
             abilityTreeWidget.setClassTree(classMap);
         }
-        abilityTreeWidget.setScrollOffset(Math.round(abilityTreeScroll.update(delta) * 2));
+        abilityTreeWidget.setScrollOffset(treeRenderOffset * 2);
         abilityTreeWidget.setSelectedIds(abilityTreeState.selected(selectedClass));
         abilityTreeWidget.setSearchIds(abilityTreeSearchNodeIds(definition));
         abilityTreeWidget.setSearchActive(!abilityTreeSearch.isBlank());
@@ -2930,6 +2929,25 @@ public final class BuilderScreen extends PlannerScreen {
                 abilityTreeMaxScroll);
         abilityTreeScrollbar.draw(context, mouseX, mouseY, delta, ui);
 
+    }
+
+    private void drawAbilityTreeBackground(int left, int top, int right, int bottom, int scrollOffset) {
+        int tileWidth = right - left + 48;
+        int tileHeight = Math.round(tileWidth * 0.7F);
+        int startY = top - 24 - Math.floorMod(scrollOffset, tileHeight);
+
+        ui.enableScissor(left, top, right, bottom);
+        for (int y = startY; y < bottom; y += tileHeight) {
+            ui.drawTexture(
+                    RenderPipelines.GUI_TEXTURED,
+                    TREE_BACKGROUND,
+                    left - 24, y,
+                    315, 23,
+                    tileWidth, tileHeight,
+                    274, 174,
+                    590, 220);
+        }
+        ui.disableScissor();
     }
 
     private void renderAbilityTreeSidebar(
@@ -3236,7 +3254,10 @@ public final class BuilderScreen extends PlannerScreen {
         String search = abilityTreeSearch.strip().toLowerCase(Locale.ROOT);
         Set<String> result = new LinkedHashSet<>();
         for (AbilityTreeDefinition.Node node : definition.nodes().values()) {
-            if (node.name().toLowerCase(Locale.ROOT).contains(search)) result.add(node.id());
+            boolean matchesLore = node.description().stream().anyMatch(line -> line.toLowerCase(Locale.ROOT).contains(search));
+            if (node.name().toLowerCase(Locale.ROOT).contains(search) || matchesLore) {
+                result.add(node.id());
+            }
         }
         return Set.copyOf(result);
     }

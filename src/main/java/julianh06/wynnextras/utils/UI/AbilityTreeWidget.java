@@ -63,6 +63,25 @@ public class AbilityTreeWidget extends Widget {
     public static final Identifier red = Identifier.of("wynnextras", "textures/gui/profileviewer/node/red.png");
     public static final Identifier redActive = Identifier.of("wynnextras", "textures/gui/profileviewer/node/red_active.png");
 
+    private static final Identifier greenHighlight = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/highlight/green.png");
+    private static final Identifier whiteHighlight = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/highlight/white.png");
+    private static final Identifier yellowHighlight = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/highlight/yellow.png");
+    private static final Identifier blueHighlight = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/highlight/blue.png");
+    private static final Identifier purpleHighlight = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/highlight/purple.png");
+    private static final Identifier redHighlight = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/highlight/red.png");
+    private static final Identifier ultimateHighlight = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/highlight/selected.png");
+    private static final Identifier warningExmark = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/exmark_orange.png");
+    private static final Identifier errorExmark = Identifier.of(
+            "wynnextras", "textures/gui/profileviewer/node/exmark_red.png");
+
     public static final Identifier vertical = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/vertical.png");
     public static final Identifier verticalActive = Identifier.of("wynnextras", "textures/gui/profileviewer/connector/vertical_active.png");
 
@@ -405,18 +424,6 @@ public class AbilityTreeWidget extends Widget {
 
         if (searchActive && clipEnabled) drawSearchOverlay(ctx, mouseX, mouseY, tickDelta);
 
-        if (!searchIds.isEmpty()) {
-            for (AbilityMapData.Node node : state.abilities) {
-                if (node.meta == null || node.meta.id == null || !searchIds.contains(node.meta.id)) continue;
-                int xStart = x + node.coordinates.x * 75 + 925;
-                int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
-                if (yStart + 88 > y && yStart - 12 < y + botLimit) {
-                    ui.drawRectBorders(xStart + 13, yStart - 12, 100, 100,
-                            CustomColor.fromHexString("FFFF00"));
-                }
-            }
-        }
-
         AbilityTreeData treeData = AbilityTreeCache.getClassTree(this.className);
         if (treeData != null && treeData.pages != null && searchInput != null && !searchInput.isEmpty()) {
             String search = normalizedSearchText(searchInput);
@@ -439,6 +446,7 @@ public class AbilityTreeWidget extends Widget {
         }
 
         if (!warningIds.isEmpty() || !errorIds.isEmpty()) {
+            float exmarkSize = 125.0F;
             for (AbilityMapData.Node node : state.abilities) {
                 if (node.meta == null || node.meta.id == null) continue;
                 boolean warning = warningIds.contains(node.meta.id);
@@ -446,14 +454,16 @@ public class AbilityTreeWidget extends Widget {
                 if (!warning && !error) continue;
                 int xStart = x + node.coordinates.x * 75 + 925;
                 int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
-                if (yStart + 84 <= y || yStart - 8 >= y + botLimit) continue;
-                if (warning) {
-                    ui.drawRectBorders(xStart + 17, yStart - 8, 92, 92,
-                            CustomColor.fromHexString("FFAA00"));
-                }
-                if (error) {
-                    ui.drawRectBorders(xStart + 22, yStart - 3, 82, 82,
-                            CustomColor.fromHexString("FF5555"));
+                if (yStart + 100 <= y || yStart - 25 >= y + botLimit) continue;
+                float exmarkX = xStart;
+                float exmarkY = yStart - 25;
+                if (warning && error) {
+                    ui.drawImage(warningExmark, exmarkX - 22, exmarkY, exmarkSize, exmarkSize);
+                    ui.drawImage(errorExmark, exmarkX + 22, exmarkY, exmarkSize, exmarkSize);
+                } else if (warning) {
+                    ui.drawImage(warningExmark, exmarkX, exmarkY, exmarkSize, exmarkSize);
+                } else {
+                    ui.drawImage(errorExmark, exmarkX, exmarkY, exmarkSize, exmarkSize);
                 }
             }
         }
@@ -474,6 +484,7 @@ public class AbilityTreeWidget extends Widget {
             if (nodeWidget.node.meta != null && nodeWidget.node.meta.id != null
                     && searchIds.contains(nodeWidget.node.meta.id)) {
                 nodeWidget.draw(ctx, mouseX, mouseY, tickDelta, ui);
+                nodeWidget.drawSearchHighlight(ui);
             }
         }
     }
@@ -780,6 +791,25 @@ public class AbilityTreeWidget extends Widget {
                     if (parent instanceof AbilityTreeWidget tree) tree.currentHoveredNode = node;
                 }
             }
+        }
+
+        private void drawSearchHighlight(UIUtils ui) {
+            int xStart = x + node.coordinates.x * 75 + 925;
+            int yStart = y + 75 + node.coordinates.y * 75 - scrollOffset;
+            if (yStart + 100 <= y || yStart - 25 >= y + botLimit) return;
+
+            String iconName = ((AbilityMapData.Icon.IconValue) ((AbilityMapData.Icon) node.meta.icon).value).name;
+            Identifier texture = switch (iconName) {
+                case "abilityTree.nodeWarrior", "abilityTree.nodeShaman", "abilityTree.nodeArcher",
+                     "abilityTree.nodeMage", "abilityTree.nodeAssassin" -> greenHighlight;
+                case "abilityTree.nodeWhite" -> whiteHighlight;
+                case "abilityTree.nodeYellow" -> yellowHighlight;
+                case "abilityTree.nodeBlue" -> blueHighlight;
+                case "abilityTree.nodePurple" -> purpleHighlight;
+                case "abilityTree.nodeRed" -> redHighlight;
+                default -> iconName.startsWith("abilityTree.ultimate") ? ultimateHighlight : null;
+            };
+            if (texture != null) ui.drawImage(texture, xStart, yStart - 25, 125, 125);
         }
 
         @Override
