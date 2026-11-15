@@ -107,14 +107,14 @@ public abstract class Widget {
     }
 
     public void draw(DrawContext ctx, int mouseX, int mouseY, float tickDelta, UIUtils ui) {
-        this.ui = ui;
+        setUi(ui);
         if(!visible || this.ui == null) return;
         hovered = contains(mouseX, mouseY);
         updateValues();
         drawBackground(ctx, mouseX, mouseY, tickDelta);
         drawContent(ctx, mouseX, mouseY, tickDelta);
         for (Widget child : children) {
-            child.draw(ctx, mouseX, mouseY, tickDelta, ui);
+            child.draw(ctx, mouseX, mouseY, tickDelta, this.ui);
         }
         drawForeground(ctx, mouseX, mouseY, tickDelta);
     }
@@ -222,7 +222,13 @@ public abstract class Widget {
     }
 
     public void setUi(UIUtils ui) {
-        this.ui = ui;
+        if (ui == null) {
+            this.ui = null;
+        } else if (this.ui == null || this.ui == ui) {
+            this.ui = ui.copy();
+        } else {
+            this.ui.updateContext(ui);
+        }
     }
 
     public UIUtils getUi() {

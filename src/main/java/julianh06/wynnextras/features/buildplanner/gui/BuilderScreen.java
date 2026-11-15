@@ -307,6 +307,8 @@ public final class BuilderScreen extends PlannerScreen {
     private TextInputWidget searchField;
     private Widget pickerOverlay;
     private PlannerPickerList<WynnItem> pickerList;
+    private boolean craftedSelectionOpen;
+    private CraftedItemOverlay craftedItemOverlay;
     private ClassSelectorWidget classSelector;
     private ThemedButton abilityTreeWarningDismissButton;
     private AbilityTreeWidget abilityTreeWidget;
@@ -406,12 +408,14 @@ public final class BuilderScreen extends PlannerScreen {
         skillFields.clear();
         removeRootWidget(pickerOverlay);
         removeRootWidget(pickerList);
+        removeRootWidget(craftedItemOverlay);
         removeRootWidget(classSelector);
         removeRootWidget(abilityTreeWidget);
         removeRootWidget(abilityPresetOverlayWidget);
         removeRootWidget(setSummaryWidget);
         pickerOverlay = null;
         pickerList = null;
+        craftedItemOverlay = null;
         classSelector = null;
         abilityPresetOverlayWidget = null;
         setSummaryWidget = null;
@@ -631,7 +635,7 @@ public final class BuilderScreen extends PlannerScreen {
                 .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         addDynamic(new ThemedButton(
                 footerX + footerButtonWidth + footerGap, footerY, footerButtonWidth, SECONDARY_BUTTON_HEIGHT,
-                Text.literal("Browser"), this::openInWynnBuilder)
+                Text.literal("WynnBuilder"), this::openInWynnBuilder)
                 .setTextScale(SECONDARY_BUTTON_TEXT_SCALE)
                 .setHoverLines(List.of(
                         Text.literal("WynnBuilder link export"),
@@ -649,17 +653,17 @@ public final class BuilderScreen extends PlannerScreen {
         addDynamic(new ThemedButton(
                 footerX + (footerButtonWidth + footerGap) * 2, footerY,
                 footerButtonWidth, SECONDARY_BUTTON_HEIGHT,
-                Text.literal("Saved"), this::openSavedBuilds)
+                Text.literal("Saved Builds"), this::openSavedBuilds)
                 .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         addDynamic(new ThemedButton(
                 footerX + (footerButtonWidth + footerGap) * 3, footerY,
                 footerButtonWidth, SECONDARY_BUTTON_HEIGHT,
-                Text.literal("Save"), this::openSaveBuild)
+                Text.literal("Save Build"), this::openSaveBuild)
                 .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
         int doneX = footerX + (footerButtonWidth + footerGap) * 4;
         addDynamic(new ThemedButton(
                 doneX, footerY, footerLayout.buttonRight() - doneX, SECONDARY_BUTTON_HEIGHT,
-                Text.literal("Done"), this::close)
+                Text.literal("Close"), this::close)
                 .setTextScale(SECONDARY_BUTTON_TEXT_SCALE));
 
         int boostButtonY = layout.boostTop + 4;
@@ -691,9 +695,20 @@ public final class BuilderScreen extends PlannerScreen {
             }
             if (classSelector != null) classSelector.setEnabled(false);
             if (abilityTreeWidget != null) abilityTreeWidget.setVisible(false);
-            pickerOverlay = new PickerOverlay();
-            addRootWidget(pickerOverlay);
-            buildPickerWidgets();
+            if (craftedSelectionOpen) {
+                int offhandIndex = pickerOffhandIndex;
+                BuildSlot slot = pickerSlot;
+                craftedItemOverlay = new CraftedItemOverlay(
+                        this, pickerSearchType(), pickerSlotId(), currentPickerItem(),
+                        item -> equipPickerItem(slot, offhandIndex, item),
+                        this::closeCraftedSelection, width, height);
+                addRootWidget(craftedItemOverlay);
+                craftedItemOverlay.inputFields().forEach(this::addDynamicField);
+            } else {
+                pickerOverlay = new PickerOverlay();
+                addRootWidget(pickerOverlay);
+                buildPickerWidgets();
+            }
         }
     }
 
@@ -735,11 +750,8 @@ public final class BuilderScreen extends PlannerScreen {
         addPicker(new ThemedButton(
                 left + PICKER_PADDING + 108, top + pickerHeight - PICKER_BUTTON_HEIGHT - 12,
                 116, PICKER_BUTTON_HEIGHT, Text.literal("Crafted"), () -> {
-                    BuildSlot slot = pickerSlot;
-                    int offhandIndex = pickerOffhandIndex;
-                    client.setScreen(new CraftedItemScreen(
-                            this, pickerSearchType(), pickerSlotId(), currentPickerItem(),
-                            item -> equipPickerItem(slot, offhandIndex, item)));
+                    craftedSelectionOpen = true;
+                    rebuildWidgets();
                 }).setTextScale(PICKER_TEXT_SCALE));
         rebuildPickerResults(left, top, pickerWidth);
     }
@@ -887,9 +899,15 @@ public final class BuilderScreen extends PlannerScreen {
     }
 
     private void closePicker() {
+        craftedSelectionOpen = false;
         pickerSlot = null;
         pickerOffhandIndex = -1;
         pickerScroll.jump(0.0F);
+    }
+
+    private void closeCraftedSelection() {
+        craftedSelectionOpen = false;
+        rebuildWidgets();
     }
 
     private String pickerLabel() {
@@ -2365,6 +2383,9 @@ public final class BuilderScreen extends PlannerScreen {
             return true;
         }
         if (pickerOpen()) {
+            if (craftedSelectionOpen) {
+                return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+            }
             if (pickerList != null && pickerList.containsLogical(logicalX, logicalY)) {
                 pickerList.scroll(verticalAmount);
             }
@@ -2454,7 +2475,9 @@ public final class BuilderScreen extends PlannerScreen {
             int top = (this.height - pickerHeight) / 2;
             if (logical.x() < left || logical.x() >= left + pickerWidth
                     || logical.y() < top || logical.y() >= top + pickerHeight) {
-                closePicker();
+                if (craftedSelectionOpen) {
+                    craftedSelectionOpen = false;
+                } else closePicker();
                 rebuildWidgets();
                 return true;
             }
@@ -2545,7 +2568,8 @@ public final class BuilderScreen extends PlannerScreen {
         }
         if (pickerOpen()) {
             if (input.key() == GLFW.GLFW_KEY_ESCAPE) {
-                closePicker();
+                if (craftedSelectionOpen) craftedSelectionOpen = false;
+                else closePicker();
                 rebuildWidgets();
                 return true;
             }

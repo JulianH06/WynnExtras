@@ -87,11 +87,15 @@ public final class UIUtils {
     private int yStart;
 
     public UIUtils(DrawContext drawContext, double scaleFactor, int xStart, int yStart) {
+        this(drawContext, scaleFactor, xStart, yStart, true);
+    }
+
+    private UIUtils(DrawContext drawContext, double scaleFactor, int xStart, int yStart, boolean clearCache) {
         this.drawContext = drawContext;
         this.scaleFactor = scaleFactor;
         this.xStart = xStart;
         this.yStart = yStart;
-        clearSeparatorCache();
+        if (clearCache) clearSeparatorCache();
     }
 
     public void updateContext(DrawContext ctx, double scaleFactor, int xStart, int yStart) {
@@ -99,6 +103,14 @@ public final class UIUtils {
         this.scaleFactor = scaleFactor;
         this.xStart = xStart;
         this.yStart = yStart;
+    }
+
+    public UIUtils copy() {
+        return new UIUtils(drawContext, scaleFactor, xStart, yStart, false);
+    }
+
+    public void updateContext(UIUtils source) {
+        updateContext(source.drawContext, source.scaleFactor, source.xStart, source.yStart);
     }
 
     public double getScaleFactor() { return scaleFactor; }
