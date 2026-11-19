@@ -20,6 +20,12 @@ public final class ItemInspection {
     }
 
     public static List<Row> rows(WynnItem item, String powders, boolean ranges) {
+        CharacterClass spellClass = "weapon".equals(item.type())
+                ? CharacterClass.fromWeaponSubtype(item.subType()) : CharacterClass.UNKNOWN;
+        return rows(item, powders, ranges, spellClass);
+    }
+
+    public static List<Row> rows(WynnItem item, String powders, boolean ranges, CharacterClass spellClass) {
         List<Row> rows = new ArrayList<>();
         if (!item.attackSpeed().isBlank()) {
             rows.add(row(readable(item.attackSpeed()) + " Attack Speed", "", Kind.TEXT));
@@ -55,36 +61,29 @@ public final class ItemInspection {
             }
         }
         rows.add(gap());
+        boolean hasIdentificationRows = false;
         for (int i = 0; i < 5; i++) {
             Identification id = item.identifications().get(SKILLS[i]);
             if (id != null && id.max() != 0) {
                 rows.add(new Row(SKILL_NAMES[i], Integer.toString(id.max()), Kind.SKILL, -1, id.max() > 0));
+                hasIdentificationRows = true;
             }
         }
-        item.identifications().entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry -> {
-            String key = entry.getKey();
-            int value = entry.getValue().max();
-            if (List.of(SKILLS).contains(key) || value == 0) {
-                return;
+        List<Map.Entry<String, Identification>> identifications = item.identifications().entrySet().stream()
+                .filter(entry -> !List.of(SKILLS).contains(entry.getKey()) && entry.getValue().max() != 0)
+                .sorted((first, second) -> compareIdentifications(first.getKey(), second.getKey()))
+                .toList();
+        for (int group = 0; group < 4; group++) {
+            List<Row> groupRows = new ArrayList<>();
+            for (Map.Entry<String, Identification> entry : identifications) {
+                if (identificationGroup(entry.getKey()) != group) continue;
+                groupRows.add(identificationRow(entry, ranges, spellClass));
             }
-            String label = readable(key) + (IdentificationUnits.unit(key) == IdentificationUnits.Unit.PERCENT ? " %" : "");
-            String formatted = IdentificationUnits.format(key, value);
-            if (formatted.startsWith("+")) {
-                formatted = formatted.substring(1);
-            }
-            if (ranges && entry.getValue().min() != value) {
-                String minimum = IdentificationUnits.format(key, entry.getValue().min());
-                formatted = (minimum.startsWith("+") ? minimum.substring(1) : minimum) + " to " + formatted;
-            }
-            boolean reversed = key.matches("(?i)(raw)?[1-4](st|nd|rd|th)SpellCost");
-            int element = -1;
-            for (int i = 0; i < 5; i++) {
-                if (key.startsWith(ELEMENTS[i].toLowerCase(Locale.ROOT))) {
-                    element = i;
-                }
-            }
-            rows.add(new Row(label, formatted, Kind.IDENTIFICATION, element, reversed ? value < 0 : value > 0));
-        });
+            if (groupRows.isEmpty()) continue;
+            if (hasIdentificationRows) rows.add(gap());
+            rows.addAll(groupRows);
+            hasIdentificationRows = true;
+        }
         rows.add(gap());
         if ("weapon".equals(item.type()) || "armour".equals(item.type())) {
             rows.add(row("Powder Slots", item.stat("powderSlots") + " [" + (powders == null ? "" : powders) + "]", Kind.INFO));
@@ -122,6 +121,73 @@ public final class ItemInspection {
         }
         rows.add(row(readable(item.tier()) + " " + item.subType(), "", Kind.RARITY));
         return List.copyOf(rows);
+    }
+
+    private static Row identificationRow(Map.Entry<String, Identification> entry, boolean ranges,
+            CharacterClass spellClass) {
+        String key = entry.getKey();
+        int value = entry.getValue().max();
+        String label = identificationLabel(key, spellClass)
+                + (IdentificationUnits.unit(key) == IdentificationUnits.Unit.PERCENT ? " %" : "");
+        String formatted = IdentificationUnits.format(key, value);
+        if (formatted.startsWith("+")) {
+            formatted = formatted.substring(1);
+        }
+        if (ranges && entry.getValue().min() != value) {
+            String minimum = IdentificationUnits.format(key, entry.getValue().min());
+            formatted = (minimum.startsWith("+") ? minimum.substring(1) : minimum) + " to " + formatted;
+        }
+        boolean reversed = key.matches("(?i)(raw)?[1-4](st|nd|rd|th)SpellCost");
+        int element = -1;
+        for (int i = 0; i < 5; i++) {
+            if (key.startsWith(ELEMENTS[i].toLowerCase(Locale.ROOT))) {
+                element = i;
+            }
+        }
+        return new Row(label, formatted, Kind.IDENTIFICATION, element, reversed ? value < 0 : value > 0);
+    }
+
+    public static String identificationLabel(String key, CharacterClass spellClass) {
+        if (!key.matches("(?i)(raw)?[1-4](st|nd|rd|th)SpellCost")) return readable(key);
+        int spell = key.toLowerCase(Locale.ROOT).startsWith("raw") ? key.charAt(3) - '0' : key.charAt(0) - '0';
+        String name = switch (spellClass) {
+            case WARRIOR -> new String[]{"Bash", "Charge", "Uppercut", "War Scream"}[spell - 1];
+            case MAGE -> new String[]{"Heal", "Teleport", "Meteor", "Ice Snake"}[spell - 1];
+            case ASSASSIN -> new String[]{"Spin Attack", "Dash", "Multihit", "Smoke Bomb"}[spell - 1];
+            case ARCHER -> new String[]{"Arrow Storm", "Escape", "Arrow Bomb", "Arrow Shield"}[spell - 1];
+            case SHAMAN -> new String[]{"Totem", "Haul", "Aura", "Uproot"}[spell - 1];
+            case UNKNOWN -> switch (spell) {
+                case 1 -> "1st Spell";
+                case 2 -> "2nd Spell";
+                case 3 -> "3rd Spell";
+                default -> "4th Spell";
+            };
+        };
+        return name + " Cost";
+    }
+
+    private static int compareIdentifications(String first, String second) {
+        int group = Integer.compare(identificationGroup(first), identificationGroup(second));
+        if (group != 0) return group;
+        if (identificationGroup(first) == 3) {
+            int spell = Integer.compare(spellNumber(first), spellNumber(second));
+            if (spell != 0) return spell;
+            return Boolean.compare(first.toLowerCase(Locale.ROOT).startsWith("raw"),
+                    second.toLowerCase(Locale.ROOT).startsWith("raw"));
+        }
+        return first.compareToIgnoreCase(second);
+    }
+
+    private static int identificationGroup(String key) {
+        String lower = key.toLowerCase(Locale.ROOT);
+        if (lower.matches("(raw)?[1-4](st|nd|rd|th)spellcost")) return 3;
+        if (lower.contains("damage")) return 1;
+        if (lower.contains("defence") || lower.contains("defense")) return 2;
+        return 0;
+    }
+
+    private static int spellNumber(String key) {
+        return key.toLowerCase(Locale.ROOT).startsWith("raw") ? key.charAt(3) - '0' : key.charAt(0) - '0';
     }
 
     static String readable(String value) {

@@ -79,12 +79,12 @@ final class CraftingChoiceScreen extends PlannerScreen {
 
     @Override
     protected boolean shouldRenderBlur() {
-        return !(parent instanceof CrafterScreen);
+        return !rendersParentAsOverlay();
     }
 
     @Override
     protected boolean shouldRenderBackground() {
-        return !(parent instanceof CrafterScreen);
+        return !rendersParentAsOverlay();
     }
 
     @Override
@@ -131,8 +131,12 @@ final class CraftingChoiceScreen extends PlannerScreen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (parent instanceof CrafterScreen) parent.render(context, -1, -1, delta);
+        if (rendersParentAsOverlay()) parent.render(context, -1, -1, delta);
         super.render(context, mouseX, mouseY, delta);
+    }
+
+    private boolean rendersParentAsOverlay() {
+        return parent instanceof CrafterScreen || parent instanceof AtlasScreen;
     }
 
     private void rebuild() {

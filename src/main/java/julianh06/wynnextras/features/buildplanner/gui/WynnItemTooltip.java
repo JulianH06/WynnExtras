@@ -42,7 +42,7 @@ final class WynnItemTooltip {
         WynnItemTooltip tooltip = new WynnItemTooltip(font, selectedClass, level, finalSkills);
         String tier = item.tier() == null ? "normal" : item.tier().toLowerCase(Locale.ROOT);
         if ("set".equals(tier)) tier = "rare";
-        screen.renderPlannerTooltip(context, tooltip.lines(item, item.displayName(), skillRequirementWarning),
+        screen.renderPlannerTooltip(context, tooltip.lines(item, item.displayName(), skillRequirementWarning, false),
                 Identifier.ofVanilla(tier), mouseX, mouseY);
     }
 
@@ -59,17 +59,25 @@ final class WynnItemTooltip {
     }
 
     static Card itemCard(TextRenderer font, WynnItem item) {
-        return itemCard(font, item, item.displayName());
+        return itemCard(font, item, item.displayName(), false);
     }
 
     static Card itemCard(TextRenderer font, WynnItem item, String displayName) {
+        return itemCard(font, item, displayName, false);
+    }
+
+    static Card itemCard(TextRenderer font, WynnItem item, boolean showLore) {
+        return itemCard(font, item, item.displayName(), showLore);
+    }
+
+    private static Card itemCard(TextRenderer font, WynnItem item, String displayName, boolean showLore) {
         CharacterClass abilityClass = "weapon".equals(item.type())
-                ? CharacterClass.fromWeaponSubtype(item.subType()) : CharacterClass.ARCHER;
+                ? CharacterClass.fromWeaponSubtype(item.subType()) : CharacterClass.UNKNOWN;
         WynnItemTooltip tooltip = new WynnItemTooltip(font, abilityClass, 121,
                 new int[]{200, 200, 200, 200, 200});
         String tier = item.tier() == null ? "normal" : item.tier().toLowerCase(Locale.ROOT);
         if ("set".equals(tier)) tier = "rare";
-        return new Card(font, tooltip.lines(item, displayName), Identifier.ofVanilla(tier));
+        return new Card(font, tooltip.lines(item, displayName, false, showLore), Identifier.ofVanilla(tier));
     }
 
     static Card ingredientCard(TextRenderer font, CraftedItemCodec.Ingredient ingredient) {
@@ -95,16 +103,18 @@ final class WynnItemTooltip {
         return new Card(font, lines, Identifier.ofVanilla("normal"));
     }
 
-    private List<Text> lines(WynnItem item) {
-        return lines(item, item.displayName(), false);
+    private List<Text> lines(WynnItem item, String displayName, boolean skillRequirementWarning,
+            boolean showLore) {
+        int tooltipWidth = tooltipWidth(item, displayName, identificationClass(item));
+        List<Text> tooltip = lines(item, displayName, skillRequirementWarning, showLore, tooltipWidth);
+        int renderedWidth = tooltip.stream().mapToInt(font::getWidth).max().orElse(tooltipWidth);
+        return renderedWidth > tooltipWidth
+                ? lines(item, displayName, skillRequirementWarning, showLore, renderedWidth)
+                : tooltip;
     }
 
-    private List<Text> lines(WynnItem item, String displayName) {
-        return lines(item, displayName, false);
-    }
-
-    private List<Text> lines(WynnItem item, String displayName, boolean skillRequirementWarning) {
-        int tooltipWidth = tooltipWidth(item, displayName);
+    private List<Text> lines(WynnItem item, String displayName, boolean skillRequirementWarning, boolean showLore,
+            int tooltipWidth) {
         List<Text> tooltip = new ArrayList<>();
         if (skillRequirementWarning) {
             tooltip.add(Text.literal("§lSkill point requirements are not met!")
@@ -181,9 +191,18 @@ final class WynnItemTooltip {
         }
         tooltip.add(centered(divider(item.tier()), tooltipWidth));
 
-        for (ItemInspection.Row row : ItemInspection.rows(item, "", true)) {
+        boolean hasIdentificationLine = false;
+        boolean pendingGap = false;
+        for (ItemInspection.Row row : ItemInspection.rows(item, "", true, identificationClass(item))) {
+            if (row.kind() == ItemInspection.Kind.GAP) {
+                if (hasIdentificationLine) pendingGap = true;
+                continue;
+            }
             if (row.kind() != ItemInspection.Kind.SKILL
                     && row.kind() != ItemInspection.Kind.IDENTIFICATION) continue;
+            if (pendingGap) tooltip.add(Text.empty());
+            pendingGap = false;
+            hasIdentificationLine = true;
             String value = row.value();
             if (row.beneficial() && !value.startsWith("+") && !value.startsWith("-")) value = "+" + value;
             tooltip.add(aligned(text(row.label().replaceFirst(" %$", "") + " ",
@@ -200,7 +219,7 @@ final class WynnItemTooltip {
             tooltip.add(Text.empty());
             appendWrapped(tooltip, "◆ " + majorId.getKey() + ": " + majorId.getValue(), dividerColor(item.tier()));
         }
-        if (!item.lore().isBlank()) {
+        if (showLore && !item.lore().isBlank()) {
             tooltip.add(Text.empty());
             appendWrapped(tooltip, item.lore(), 0xFFAAAAAA);
         }
@@ -358,14 +377,19 @@ final class WynnItemTooltip {
                 : tier == 2 ? Formatting.DARK_PURPLE : tier == 3 ? Formatting.DARK_AQUA : Formatting.GRAY));
     }
 
-    private int tooltipWidth(WynnItem item, String displayName) {
+    private int tooltipWidth(WynnItem item, String displayName, CharacterClass identificationClass) {
         int width = Math.max(140, font.getWidth(displayName) + 30);
-        for (ItemInspection.Row row : ItemInspection.rows(item, "", true)) {
+        for (ItemInspection.Row row : ItemInspection.rows(item, "", true, identificationClass)) {
             if (row.kind() == ItemInspection.Kind.SKILL || row.kind() == ItemInspection.Kind.IDENTIFICATION) {
                 width = Math.max(width, font.getWidth(row.label() + "  " + row.value()));
             }
         }
         return width;
+    }
+
+    private CharacterClass identificationClass(WynnItem item) {
+        return "weapon".equals(item.type())
+                ? CharacterClass.fromWeaponSubtype(item.subType()) : selectedClass;
     }
 
     private Text nameLine(WynnItem item, String displayName) {
@@ -458,7 +482,7 @@ final class WynnItemTooltip {
 
     private MutableText aligned(Text left, Text right, int width) {
         return Text.empty().append(left)
-                .append(space(width - font.getWidth(left) - font.getWidth(right))).append(right);
+                .append(space(Math.max(0, width - font.getWidth(left) - font.getWidth(right)))).append(right);
     }
 
     private MutableText centered(Text value, int width) {

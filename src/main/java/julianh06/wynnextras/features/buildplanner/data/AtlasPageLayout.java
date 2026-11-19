@@ -3,10 +3,15 @@ package julianh06.wynnextras.features.buildplanner.data;
 public record AtlasPageLayout(int left, int width, int columnWidth, int filtersX, int filtersY,
         int resultsY) {
     public static final int VISIBLE_ITEMS = 6;
-    public static final int RESULT_GAP = 6;
+    public static final int RESULT_GAP = 10;
 
     public static ResultGrid results(int width, int viewportHeight) {
-        int columns = width >= 560 ? 3 : width >= 360 ? 2 : 1;
+        return results(width, viewportHeight, 300);
+    }
+
+    public static ResultGrid results(int width, int viewportHeight, int minimumCellWidth) {
+        int columns = Math.clamp((width + RESULT_GAP)
+                / (Math.max(1, minimumCellWidth) + RESULT_GAP), 1, 5);
         int rows = (VISIBLE_ITEMS + columns - 1) / columns;
         int cellWidth = (width - (columns - 1) * RESULT_GAP) / columns;
         int cellHeight = Math.max(1, (viewportHeight - 24 - (rows - 1) * RESULT_GAP) / rows);
@@ -34,12 +39,12 @@ public record AtlasPageLayout(int left, int width, int columnWidth, int filtersX
     public record VisibleRange(int start, int end) {}
 
     public static AtlasPageLayout arrange(int screenWidth, int leftHeight, int filtersHeight) {
-        int width = Math.min(1040, screenWidth - 40);
-        boolean wide = width >= 560;
-        int column = wide ? (width - 28) / 2 : width;
+        int width = Math.min(1600, screenWidth - 32);
+        boolean wide = width >= 700;
+        int column = wide ? (width - 36) / 2 : width;
         int filtersY = wide ? 0 : leftHeight + 24;
         return new AtlasPageLayout((screenWidth - width) / 2, width, column,
-                wide ? column + 28 : 0, filtersY,
-                Math.max(leftHeight, filtersY + filtersHeight) + 28);
+                wide ? column + 36 : 0, filtersY,
+                Math.max(leftHeight, filtersY + filtersHeight) + 18);
     }
 }
