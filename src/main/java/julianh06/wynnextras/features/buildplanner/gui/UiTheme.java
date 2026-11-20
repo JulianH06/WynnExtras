@@ -9,21 +9,12 @@ final class UiTheme {
     static final int PANEL = 0xFF141416;
     static final int SURFACE = 0xFF202023;
     static final int BORDER = 0xFF3B3B40;
-    static final int TEXT = 0xFFF0ECE4;
+    static final int TEXT = 0xFFFFFFFF;
     static final int MUTED = 0xFFAAA7A2;
     static final int DISABLED = 0xFF77777D;
     static final int SHADOW = 0x88000000;
-    private static final int ACCENT = 0xFFD6C9AF;
 
     private UiTheme() {}
-
-    static int accent() {
-        return ACCENT;
-    }
-
-    static int accentRgb() {
-        return ACCENT & 0xFFFFFF;
-    }
 
     static int hoverBackground() {
         return 0xFF323235;
@@ -60,7 +51,7 @@ final class UiTheme {
         ui.fill(x, y, x + width, y + height, BORDER);
         ui.fill(x + 1, y + 1, x + width - 1, y + height - 1, PANEL);
         if (width > 12 && height > 4) {
-            ui.fill(x + 6, y + 1, x + width - 6, y + 2, lerpColor(BORDER, ACCENT, 0.25F));
+            ui.fill(x + 6, y + 1, x + width - 6, y + 2, lerpColor(BORDER, TEXT, 0.25F));
         }
     }
 

@@ -513,7 +513,7 @@ final class SavedBuildsScreen extends PlannerScreen {
         protected void drawContent(DrawContext context, int mouseX, int mouseY, float delta) {
             boolean inside = mouseY >= viewportTop && mouseY < viewportBottom && contains(mouseX, mouseY);
             UiTheme.drawRoundedBox(context, ui, x, y, width, height, UiTheme.SURFACE,
-                    inside ? UiTheme.accent() : UiTheme.BORDER);
+                    inside ? UiTheme.TEXT : UiTheme.BORDER);
             int color = build == null ? 0xFF55DDCC : 0xFF000000 | classFor(build.characterClass()).color();
             String subtitle = headerInfo();
             ui.drawTextWithShadow(textRenderer, subtitle, x + width - 10 - textRenderer.getWidth(subtitle), y + 15, color);

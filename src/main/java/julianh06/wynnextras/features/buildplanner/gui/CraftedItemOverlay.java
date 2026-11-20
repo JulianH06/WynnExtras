@@ -225,7 +225,7 @@ final class CraftedItemOverlay extends Widget {
                     && mouseY >= rowY && mouseY < rowY + ROW_HEIGHT - 4;
             UiTheme.drawRoundedBox(context, ui, x, rowY, contentWidth, ROW_HEIGHT - 4,
                     hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
-                    hovered ? UiTheme.accent() : UiTheme.BORDER);
+                    hovered ? UiTheme.TEXT : UiTheme.BORDER);
             EquipmentSprites.draw(context, entry.item().subType(), x + 9, rowY + 9, 34);
             drawText(entry.saved().name(), x + 52, rowY + 18, 1.35F, 0xFF55DDCC);
             drawText("Level " + entry.item().stat("lvlLow") + "-" + entry.item().stat("lvl"),

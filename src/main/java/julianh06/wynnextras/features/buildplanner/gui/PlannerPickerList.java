@@ -1,5 +1,6 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.SmoothScroll;
 import julianh06.wynnextras.utils.UI.UIUtils;
 import julianh06.wynnextras.utils.UI.Widget;
@@ -8,6 +9,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 
 final class PlannerPickerList<T> extends Widget {
     private final int left;
@@ -66,7 +68,7 @@ final class PlannerPickerList<T> extends Widget {
                         ui.pushMatrix();
                         ui.translate(left + 5, rowY + row.height() / 2.0F);
                         ui.scale(headingTextScale, headingTextScale);
-                        ui.drawTextWithShadow(textRenderer(), row.heading(), 0, -4, UiTheme.accent());
+                        ui.drawTextWithShadow(textRenderer(), row.heading(), 0, -4, UiTheme.TEXT);
                         ui.popMatrix();
                     } else {
                         boolean hovered = mouseX >= left && mouseX < left + listWidth - 6
@@ -95,7 +97,10 @@ final class PlannerPickerList<T> extends Widget {
         int contentY = (int) (mouseY - top + scroll.position());
         for (Row<T> row : rows) {
             if (contentY < row.height()) {
-                if (row.value() != null) select.accept(row.value());
+                if (row.value() != null) {
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                    select.accept(row.value());
+                }
                 return true;
             }
             contentY -= row.height();

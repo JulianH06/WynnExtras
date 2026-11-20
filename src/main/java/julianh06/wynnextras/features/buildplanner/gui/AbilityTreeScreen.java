@@ -401,7 +401,7 @@ public final class AbilityTreeScreen extends PlannerScreen {
                 title,
                 panel.x() + panel.width() / 2,
                 panel.y() + 14,
-                UiTheme.accentRgb());
+                UiTheme.TEXT & 0xFFFFFF);
         if (presetOverlay == PresetOverlay.SAVE) {
             ui.drawCenteredTextWithShadow(
                     textRenderer,

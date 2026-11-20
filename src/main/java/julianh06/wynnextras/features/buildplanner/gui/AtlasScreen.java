@@ -6,6 +6,7 @@ import julianh06.wynnextras.features.buildplanner.data.AtlasSearch;
 import julianh06.wynnextras.features.buildplanner.data.AtlasState;
 import julianh06.wynnextras.features.buildplanner.data.CraftedItemCodec;
 import julianh06.wynnextras.features.buildplanner.data.ItemDatabase;
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.SmoothScroll;
 import julianh06.wynnextras.utils.UI.TextInputWidget;
 import julianh06.wynnextras.utils.UI.UIUtils;
@@ -24,6 +25,9 @@ import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.CharInput;
+import net.minecraft.client.input.KeyInput;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -120,7 +124,7 @@ final class AtlasScreen extends PlannerScreen {
         label(0, 0, "Name:");
         int loreButtonWidth = state.ingredients() ? 0 : 120;
         int searchWidth = w - 100 - (loreButtonWidth == 0 ? 0 : loreButtonWidth + 8);
-        field(0, 22, searchWidth, state.query(), state.ingredients() ? "Ingredient name (case insensitive)" : "Item name or effect",
+        field(0, 22, searchWidth, state.query(), state.ingredients() ? "Ingredient name" : "Item name or effect",
                 value -> updateInputs(value, state.category(), state.rarity(), state.filters(), state.excluded(), state.strings()));
         button(searchWidth + 8, 22, 92, CONTROL_HEIGHT, Text.literal("Reset"), () -> {
             state = AtlasState.defaults(state.ingredients());
@@ -566,7 +570,7 @@ final class AtlasScreen extends PlannerScreen {
         field.setFocusedColor(CustomColor.fromInt(UiTheme.hoverBackground()));
         field.setTextColor(CustomColor.fromInt(UiTheme.TEXT));
         field.setPlaceholderColor(CustomColor.fromInt(UiTheme.MUTED));
-        field.setCursorColor(CustomColor.fromInt(UiTheme.accent()));
+        field.setCursorColor(CustomColor.fromInt(UiTheme.TEXT));
         field.setOnChange(change);
         inputFields.add(field);
         addRootWidget(field);
@@ -719,10 +723,11 @@ final class AtlasScreen extends PlannerScreen {
                         icon.selected() ? UiTheme.TEXT : UiTheme.DISABLED, CONTROL_TEXT_SCALE);
             }
         } finally { ui.disableScissor(); }
-        for (var button : fixed) button.draw(context, mouseX, mouseY, delta, ui);
-        scrollbar.configure(width - 24, BODY_TOP, viewportHeight(), maxScroll);
-        scrollbar.draw(context, mouseX, mouseY, delta, ui);
-        if (itemDetails != null) {
+        if (itemDetails == null) {
+            for (var button : fixed) button.draw(context, mouseX, mouseY, delta, ui);
+            scrollbar.configure(width - 24, BODY_TOP, viewportHeight(), maxScroll);
+            scrollbar.draw(context, mouseX, mouseY, delta, ui);
+        } else {
             ThemedButton.takePendingTooltip();
             itemDetails.resize(width, height);
             itemDetails.draw(context, mouseX, mouseY, delta, ui);
@@ -744,11 +749,12 @@ final class AtlasScreen extends PlannerScreen {
 
     @Override
     public boolean mouseClicked(Click click, boolean doubled) {
-        clearUiFocus();
         if (itemDetails != null) {
-            itemDetails = null;
+            Click logical = logicalClick(click);
+            itemDetails.mouseClicked(logical.x(), logical.y(), logical.button());
             return true;
         }
+        clearUiFocus();
         Click logical = logicalClick(click);
         if (scrollbar.mouseClicked(logical.x(), logical.y(), logical.button())) return true;
         if (logical.button() == 0 && logical.y() >= BODY_TOP && logical.y() < height - BODY_BOTTOM) {
@@ -757,7 +763,9 @@ final class AtlasScreen extends PlannerScreen {
                 double y = logical.y() - BODY_TOP + offset;
                 if (x >= card.x() && x < card.x() + card.width() && y >= card.y() && y < card.y() + card.height()) {
                     if (card.entry().item() != null) {
-                        itemDetails = new AtlasItemDetails(card.entry().item(), width, height, showLore);
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
+                        itemDetails = new AtlasItemDetails(card.entry().item(), width, height, showLore,
+                                () -> itemDetails = null);
                     }
                     return true;
                 }
@@ -769,6 +777,11 @@ final class AtlasScreen extends PlannerScreen {
     @Override
     public boolean mouseDragged(Click click, double deltaX, double deltaY) {
         Click logical = logicalClick(click);
+        if (itemDetails != null) {
+            itemDetails.mouseDragged(logical.x(), logical.y(), logical.button(),
+                    deltaX / matrixScale, deltaY / matrixScale);
+            return true;
+        }
         if (scrollbar.mouseDragged(logical.x(), logical.y(), logical.button(),
                 deltaX / matrixScale, deltaY / matrixScale)) return true;
         return super.mouseDragged(click, deltaX, deltaY);
@@ -777,8 +790,26 @@ final class AtlasScreen extends PlannerScreen {
     @Override
     public boolean mouseReleased(Click click) {
         Click logical = logicalClick(click);
+        if (itemDetails != null) {
+            itemDetails.mouseReleased(logical.x(), logical.y(), logical.button());
+            return true;
+        }
         if (scrollbar.mouseReleased(logical.x(), logical.y(), logical.button())) return true;
         return super.mouseReleased(click);
+    }
+
+    @Override
+    public boolean keyPressed(KeyInput input) {
+        if (itemDetails != null
+                && itemDetails.keyPressed(input.key(), input.scancode(), input.modifiers())) return true;
+        return super.keyPressed(input);
+    }
+
+    @Override
+    public boolean charTyped(CharInput input) {
+        if (itemDetails != null
+                && itemDetails.charTyped((char) input.codepoint(), input.modifiers())) return true;
+        return super.charTyped(input);
     }
 
     @Override public boolean mouseScrolled(double x, double y, double horizontal, double vertical) {

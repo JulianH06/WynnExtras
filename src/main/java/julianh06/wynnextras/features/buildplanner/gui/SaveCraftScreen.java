@@ -59,7 +59,7 @@ final class SaveCraftScreen extends PlannerScreen {
         int left = (width - 380) / 2;
         int top = (height - 144) / 2;
         UiTheme.drawPanel(context, ui, left, top, 380, 144);
-        ui.drawCenteredTextWithShadow(textRenderer, "Save Crafted", width / 2, top + 16, UiTheme.accent());
+        ui.drawCenteredTextWithShadow(textRenderer, "Save Crafted", width / 2, top + 16, UiTheme.TEXT);
         ui.drawCenteredTextWithShadow(textRenderer, status, width / 2, top + 80, UiTheme.MUTED);
         renderVanillaChildren(context, mouseX, mouseY, delta);
     }

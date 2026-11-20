@@ -109,8 +109,7 @@ public final class WorkspaceTabs {
         int buttonX = toolX;
         for (var type : ToolWorkspaceManager.Type.values()) {
             ThemedButton tool = new ThemedButton(buttonX, y, toolWidth - 3, CONTROL_HEIGHT,
-                    Text.literal(shortToolName(type)).withColor(type == currentType
-                            ? UiTheme.accentRgb() : UiTheme.TEXT & 0xFFFFFF), () -> {
+                    Text.literal(shortToolName(type)).withColor(UiTheme.TEXT & 0xFFFFFF), () -> {
                         var active = workspace.activeTab(type);
                         if (active == null) WorkspaceNavigation.show(parent, type);
                         else WorkspaceNavigation.open(parent, active.id());
@@ -217,7 +216,7 @@ public final class WorkspaceTabs {
                     boolean active = tab.id().equals(activeId);
                     boolean focused = isFocused() && i == keyboardIndex;
                     int background = active ? UiTheme.hoverBackground() : UiTheme.SURFACE;
-                    int border = focused ? 0xFFFFFFFF : active ? UiTheme.accent() : UiTheme.BORDER;
+                    int border = focused ? 0xFFFFFFFF : active ? UiTheme.TEXT : UiTheme.BORDER;
                     UiTheme.drawRoundedBox(context, ui, tabX, getY(), TAB_WIDTH, TAB_HEIGHT,
                             background, border);
                     var current = ToolWorkspaceManager.getInstance().find(tab.id());
@@ -231,7 +230,7 @@ public final class WorkspaceTabs {
                     ui.translate(tabX + 7, getY() + TAB_HEIGHT / 2.0F);
                     ui.scale(TAB_TEXT_SCALE, TAB_TEXT_SCALE);
                     ui.drawTextWithShadow(MinecraftClient.getInstance().textRenderer, label,
-                            0, -4, active ? UiTheme.accent() : UiTheme.TEXT);
+                            0, -4, UiTheme.TEXT);
                     ui.popMatrix();
                     ui.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer, "x",
                             tabX + TAB_WIDTH - 10, getY() + 7, active ? 0xFFFFFFFF : UiTheme.MUTED);
@@ -244,7 +243,7 @@ public final class WorkspaceTabs {
                         / (tabs.size() * (TAB_WIDTH + TAB_GAP) - TAB_GAP));
                 int thumbX = getX() + Math.round(offset / maxScroll * (getWidth() - thumbWidth));
                 ui.fill(getX(), getY() + 24, getX() + getWidth(), getY() + 26, UiTheme.BORDER);
-                ui.fill(thumbX, getY() + 23, thumbX + thumbWidth, getY() + 26, UiTheme.accent());
+                ui.fill(thumbX, getY() + 23, thumbX + thumbWidth, getY() + 26, UiTheme.TEXT);
             }
         }
 
@@ -262,6 +261,7 @@ public final class WorkspaceTabs {
             setFocused(true);
             if (mouseY >= getY() + TAB_HEIGHT) {
                 if (maxScroll > 0) {
+                    playClickSound();
                     moveScrollbar(mouseX);
                     return true;
                 }

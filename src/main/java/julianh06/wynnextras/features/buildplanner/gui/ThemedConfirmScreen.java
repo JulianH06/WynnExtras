@@ -45,7 +45,7 @@ final class ThemedConfirmScreen extends PlannerScreen {
         UiTheme.drawPanel(context, ui, left, top, panelWidth, panelHeight);
         ui.drawCenteredTextWithShadow(textRenderer,
                 textRenderer.trimToWidth(getTitle().getString(), panelWidth - 36),
-                width / 2, top + 14, UiTheme.accentRgb());
+                width / 2, top + 14, UiTheme.TEXT & 0xFFFFFF);
         for (int i = 0; i < lines.size(); i++) {
             ui.drawCenteredTextWithShadow(
                     textRenderer, lines.get(i), width / 2, top + 38 + i * 12, 0xFFE8E8E8);

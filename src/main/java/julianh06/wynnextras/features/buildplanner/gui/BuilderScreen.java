@@ -62,7 +62,6 @@ import java.util.stream.Collectors;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextWidget;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.gl.RenderPipelines;
@@ -285,7 +284,7 @@ public final class BuilderScreen extends PlannerScreen {
     private final List<ThemedButton> dynamicButtons = new ArrayList<>();
     private final List<ThemedButton> pickerButtons = new ArrayList<>();
     private final List<TextInputWidget> dynamicFields = new ArrayList<>();
-    private final List<PowderBoostSlider> powderBoostSliders = new ArrayList<>();
+    private final List<PlannerSlider> powderBoostSliders = new ArrayList<>();
     private final List<TextInputWidget> skillFields = new ArrayList<>();
     private final List<TextWidget> dynamicLabels = new ArrayList<>();
     private BuildSlot pickerSlot;
@@ -400,7 +399,7 @@ public final class BuilderScreen extends PlannerScreen {
             removeButton(button);
         }
         dynamicButtons.clear();
-        for (PowderBoostSlider slider : powderBoostSliders) this.remove(slider);
+        for (PlannerSlider slider : powderBoostSliders) removeRootWidget(slider);
         powderBoostSliders.clear();
         pickerButtons.clear();
         for (TextInputWidget field : dynamicFields) removeRootWidget(field);
@@ -687,7 +686,7 @@ public final class BuilderScreen extends PlannerScreen {
         }
         if (pickerOpen()) {
             for (ThemedButton button : dynamicButtons) button.setEnabled(false);
-            for (PowderBoostSlider slider : powderBoostSliders) slider.active = false;
+            for (PlannerSlider slider : powderBoostSliders) slider.setEnabled(false);
             for (TextInputWidget field : dynamicFields) {
                 field.setEnabled(false);
                 field.setDisabledTooltip(null);
@@ -1426,15 +1425,22 @@ public final class BuilderScreen extends PlannerScreen {
         passiveLabel.setEnabled(false);
         addDynamic(passiveLabel.setTextColor(elementColors[selectedPowderElement]));
         int sliderY = levelTop + 88;
-        PowderBoostSlider slider = new PowderBoostSlider(
-                MARGIN + 5, sliderY, width, 24, selectedPowderElement);
-        powderBoostSliders.add(this.addDrawableChild(slider));
         ThemedButton damageLabel = new ThemedButton(
                 MARGIN + 5, Math.min(bottom - 22, sliderY + 27), width, 20,
                 Text.literal(powderDamageLabel(selectedPowderElement)), () -> {}).setTextScale(BOOST_TEXT_SCALE);
         damageLabel.setEnabled(false);
         addDynamic(damageLabel);
-        slider.setValueLabel(damageLabel);
+        int element = selectedPowderElement;
+        PlannerSlider slider = new PlannerSlider(MARGIN + 5, sliderY, width, 24,
+                () -> powderDamageBoosts[element], () -> POWDER_DAMAGE_CAPS[element], next -> {
+                    powderDamageBoosts[element] = next;
+                    damageLabel.setMessage(Text.literal(powderDamageLabel(element)));
+                    invalidateStats();
+                    saveWorkspace();
+                });
+        slider.setUiScaleFactor(1.0D);
+        powderBoostSliders.add(slider);
+        addRootWidget(slider);
     }
 
     private String powderDamageLabel(int element) {
@@ -2364,7 +2370,7 @@ public final class BuilderScreen extends PlannerScreen {
         field.setFocusedColor(CustomColor.fromInt(UiTheme.hoverBackground()));
         field.setTextColor(CustomColor.fromInt(UiTheme.TEXT));
         field.setPlaceholderColor(CustomColor.fromInt(UiTheme.MUTED));
-        field.setCursorColor(CustomColor.fromInt(UiTheme.accent()));
+        field.setCursorColor(CustomColor.fromInt(UiTheme.TEXT));
         return field;
     }
 
@@ -2461,6 +2467,7 @@ public final class BuilderScreen extends PlannerScreen {
             return super.mouseClicked(click, doubled);
         }
         if (detailItem != null) {
+            MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
             detailItem = null;
             detailScroll.jump(0.0F);
             return true;
@@ -2478,6 +2485,7 @@ public final class BuilderScreen extends PlannerScreen {
                 if (craftedSelectionOpen) {
                     craftedSelectionOpen = false;
                 } else closePicker();
+                MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                 rebuildWidgets();
                 return true;
             }
@@ -2496,6 +2504,7 @@ public final class BuilderScreen extends PlannerScreen {
                 SlotPosition position = slotPosition(layout, slot);
                 if (logical.x() >= position.x + 4 && logical.x() < position.x + 46
                         && logical.y() >= position.y + 3 && logical.y() < position.y + 44) {
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     openPicker(slot);
                     return true;
                 }
@@ -2504,6 +2513,7 @@ public final class BuilderScreen extends PlannerScreen {
                 SlotPosition position = offhandPosition(layout, i);
                 if (logical.x() >= position.x + 4 && logical.x() < position.x + 46
                         && logical.y() >= position.y + 3 && logical.y() < position.y + 44) {
+                    MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                     openOffhandPicker(i);
                     return true;
                 }
@@ -2512,6 +2522,7 @@ public final class BuilderScreen extends PlannerScreen {
                 for (DamageCardBounds card : damageCards) {
                     if (logical.x() >= card.left() && logical.x() < card.right()
                             && logical.y() >= card.top() && logical.y() < card.bottom()) {
+                        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
                         expandedSpell = expandedSpell == card.spell() ? -1 : card.spell();
                         damageScroll.jump(0.0F);
                         return true;
@@ -4165,7 +4176,7 @@ public final class BuilderScreen extends PlannerScreen {
             int x, int y, int width, int height, boolean hovered) {
         UiTheme.drawRoundedBox(context, ui, x, y, width, height - 2,
                 hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
-                hovered ? UiTheme.accent() : UiTheme.BORDER);
+                hovered ? UiTheme.TEXT : UiTheme.BORDER);
         drawEquipmentIcon(context, pickerOffhandIndex >= 0 ? BuildSlot.WEAPON : pickerSlot,
                 item, x + 4, y + 3, 30);
         Text name = Text.literal(fitText(item.displayName(),
@@ -4617,7 +4628,7 @@ public final class BuilderScreen extends PlannerScreen {
                     && mouseY >= y && mouseY < y + optionHeight;
             UiTheme.drawRoundedBox(context, ui, x, y, optionWidth, optionHeight,
                     hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
-                    abilityClass == selectedClass ? UiTheme.accent() : UiTheme.BORDER);
+                    abilityClass == selectedClass ? UiTheme.TEXT : UiTheme.BORDER);
             Identifier texture = Identifier.of("wynnextras", "textures/gui/profileviewer/classes/"
                     + abilityClass.apiName() + ".png");
             ui.drawTexture(RenderPipelines.GUI_TEXTURED, texture, x + 4, y + 2,
@@ -5176,36 +5187,6 @@ public final class BuilderScreen extends PlannerScreen {
         }
     }
 
-    private final class PowderBoostSlider extends SliderWidget {
-        private final int element;
-        private ThemedButton valueLabel;
-
-        private PowderBoostSlider(int x, int y, int width, int height, int element) {
-            super(x, y, width, height, Text.empty(),
-                    powderDamageBoosts[element] / (double) POWDER_DAMAGE_CAPS[element]);
-            this.element = element;
-        }
-
-        private void setValueLabel(ThemedButton valueLabel) {
-            this.valueLabel = valueLabel;
-        }
-
-        @Override
-        protected void updateMessage() {
-            setMessage(Text.empty());
-        }
-
-        @Override
-        protected void applyValue() {
-            int next = (int) Math.round(value * POWDER_DAMAGE_CAPS[element]);
-            if (next == powderDamageBoosts[element]) return;
-            powderDamageBoosts[element] = next;
-            if (valueLabel != null) valueLabel.setMessage(Text.literal(powderDamageLabel(element)));
-            invalidateStats();
-            saveWorkspace();
-        }
-    }
-
     private final class AbilityPresetOverlayWidget extends Widget {
         private AbilityPresetOverlayWidget() {
             super(0, 0, BuilderScreen.this.width, BuilderScreen.this.height);
@@ -5229,7 +5210,7 @@ public final class BuilderScreen extends PlannerScreen {
                     title,
                     panel.x() + panel.width() / 2,
                     panel.y() + 14,
-                    UiTheme.accentRgb());
+                    UiTheme.TEXT & 0xFFFFFF);
             if (abilityPresetOverlay == AbilityPresetOverlay.SAVE) {
                 ui.drawCenteredTextWithShadow(
                         textRenderer,

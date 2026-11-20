@@ -1,8 +1,10 @@
 package julianh06.wynnextras.features.buildplanner.gui;
 
+import julianh06.wynnextras.utils.MinecraftUtils;
 import julianh06.wynnextras.utils.UI.SmoothScroll;
 import julianh06.wynnextras.utils.UI.Widget;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.sound.SoundEvents;
 
 final class PlannerScrollbar extends Widget {
     private final SmoothScroll scroll;
@@ -17,7 +19,11 @@ final class PlannerScrollbar extends Widget {
     }
 
     void configure(int x, int y, int height, int maxScroll) {
-        setBounds(x, y, 6, Math.max(0, height));
+        configure(x, y, 6, height, maxScroll);
+    }
+
+    void configure(int x, int y, int width, int height, int maxScroll) {
+        setBounds(x, y, Math.max(1, width), Math.max(0, height));
         this.maxScroll = Math.max(0, maxScroll);
         setVisible(this.maxScroll > 0 && height > 0);
         if (!isVisible()) dragging = false;
@@ -31,7 +37,7 @@ final class PlannerScrollbar extends Widget {
         ui.fill(x, y, x + width, y + height, UiTheme.SURFACE);
         ui.fill(x + 1, y, x + width - 1, y + height, UiTheme.BORDER);
         ui.fill(x + 1, thumbY, x + width - 1, thumbY + thumbHeight,
-                dragging || hovered ? UiTheme.accent() : 0xFFAAAAAA);
+                dragging || hovered ? UiTheme.TEXT : 0xFFAAAAAA);
     }
 
     @Override
@@ -45,6 +51,7 @@ final class PlannerScrollbar extends Widget {
                 ? (float) mouseY - thumbY
                 : thumbHeight / 2.0F;
         dragging = true;
+        MinecraftUtils.playSoundUI(SoundEvents.UI_BUTTON_CLICK.value());
         moveTo(mouseY);
         return true;
     }

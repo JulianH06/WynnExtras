@@ -169,11 +169,11 @@ class ThemedButton extends Widget {
                 ? UiTheme.lerpColor(baseBackground, hoverBackground, hoverProgress)
                 : UiTheme.PANEL;
         background = UiTheme.lerpColor(background, UiTheme.BACKGROUND, pressProgress * 0.35F);
-        int baseBorder = hoverSelection ? UiTheme.accent() : borderOnlySelection
-                ? UiTheme.accent() : highlightedSelection ? selection : UiTheme.BORDER;
+        int baseBorder = hoverSelection ? UiTheme.TEXT : borderOnlySelection
+                ? UiTheme.TEXT : highlightedSelection ? selection : UiTheme.BORDER;
         int hoverBorder = borderOnlySelection
-                ? UiTheme.lerpColor(UiTheme.accent(), 0xFFFFFFFF, 0.25F)
-                : highlightedSelection ? UiTheme.lerpColor(selection, 0xFFFFFFFF, 0.25F) : UiTheme.accent();
+                ? UiTheme.lerpColor(UiTheme.TEXT, 0xFFFFFFFF, 0.25F)
+                : highlightedSelection ? UiTheme.lerpColor(selection, 0xFFFFFFFF, 0.25F) : UiTheme.TEXT;
         int border = isEnabled() ? UiTheme.lerpColor(baseBorder, hoverBorder, hoverProgress)
                 : UiTheme.lerpColor(UiTheme.PANEL, UiTheme.BORDER, 0.5F);
         int baseText = highlightedSelection

@@ -54,6 +54,15 @@ public final class WynnDataService {
         private static final ItemIconData EMPTY = new ItemIconData("", "", 0);
     }
 
+    public record DropMeta(String name, List<String> types, String event, List<Integer> coordinates) {
+        public DropMeta {
+            name = name == null ? "" : name;
+            types = List.copyOf(types == null ? List.of() : types);
+            event = event == null ? "" : event;
+            coordinates = List.copyOf(coordinates == null ? List.of() : coordinates);
+        }
+    }
+
     public record ItemData(
             String internalName,
             String displayName,
@@ -62,6 +71,7 @@ public final class WynnDataService {
             String tier,
             String restriction,
             String dropRestriction,
+            DropMeta dropMeta,
             String attackSpeed,
             Integer powderSlots,
             Map<String, String> requirements,
@@ -544,11 +554,37 @@ public final class WynnDataService {
         return new ItemData(internalName, displayName, requiredString(object, "type"),
                 optionalString(object, "subType"), optionalString(object, "tier"),
                 optionalString(object, "restriction"), optionalString(object, "dropRestriction"),
+                parseDropMeta(object.get("dropMeta")),
                 optionalString(object, "attackSpeed"), optionalInt(object, "powderSlots"),
                 parseScalarMap(object.get("requirements")), parseStatMap(object.get("base")),
                 parseStatMap(object.get("identifications")), parseTextMap(object.get("majorIds")),
                 cleanItemText(optionalString(object, "lore")), optionalString(object, "emblem"),
                 parseItemIcon(object.get("icon")));
+    }
+
+    private static DropMeta parseDropMeta(JsonElement element) {
+        if (element == null || !element.isJsonObject()) return null;
+        JsonObject object = element.getAsJsonObject();
+        List<Integer> coordinates = new ArrayList<>();
+        JsonElement coordinateElement = object.get("coordinates");
+        if (coordinateElement != null && coordinateElement.isJsonArray()) {
+            for (JsonElement coordinate : coordinateElement.getAsJsonArray()) {
+                if (coordinate.isJsonPrimitive() && coordinate.getAsJsonPrimitive().isNumber()) {
+                    coordinates.add(coordinate.getAsInt());
+                }
+            }
+        }
+        List<String> types = new ArrayList<>();
+        JsonElement typeElement = object.get("type");
+        if (typeElement != null && typeElement.isJsonPrimitive()) {
+            types.add(typeElement.getAsString());
+        } else if (typeElement != null && typeElement.isJsonArray()) {
+            for (JsonElement type : typeElement.getAsJsonArray()) {
+                if (type.isJsonPrimitive() && type.getAsJsonPrimitive().isString()) types.add(type.getAsString());
+            }
+        }
+        return new DropMeta(optionalString(object, "name"), types,
+                optionalString(object, "event"), coordinates);
     }
 
     private static IngredientCatalog parseIngredients(JsonArray root) {

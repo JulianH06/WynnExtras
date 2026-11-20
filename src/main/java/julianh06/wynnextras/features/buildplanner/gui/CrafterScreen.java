@@ -273,7 +273,7 @@ public final class CrafterScreen extends PlannerScreen {
         field.setFocusedColor(CustomColor.fromInt(UiTheme.hoverBackground()));
         field.setTextColor(CustomColor.fromInt(UiTheme.TEXT));
         field.setPlaceholderColor(CustomColor.fromInt(UiTheme.MUTED));
-        field.setCursorColor(CustomColor.fromInt(UiTheme.accent()));
+        field.setCursorColor(CustomColor.fromInt(UiTheme.TEXT));
         return field;
     }
 
@@ -499,7 +499,7 @@ public final class CrafterScreen extends PlannerScreen {
                         cardX, cardY, CARD_SCALE, ingredientCardWidth);
                 if (dragTarget == i && dragTarget != draggedIngredient) {
                     int cardHeight = card.height(CARD_SCALE);
-                    int accent = UiTheme.accent();
+                    int accent = UiTheme.TEXT;
                     ui.fill(cardX, cardY, cardX + scaledIngredientCardWidth, cardY + 2, accent);
                     ui.fill(cardX, cardY + cardHeight - 2, cardX + scaledIngredientCardWidth, cardY + cardHeight, accent);
                     ui.fill(cardX, cardY, cardX + 2, cardY + cardHeight, accent);
@@ -581,7 +581,7 @@ public final class CrafterScreen extends PlannerScreen {
 
     private void renderIngredientTile(Ingredient ingredient, int slot, int x, int y, int width, boolean floating) {
         if (floating) {
-            UiTheme.drawRoundedBox(drawContext, ui, x, y, width, 36, UiTheme.hoverBackground(), UiTheme.accent());
+            UiTheme.drawRoundedBox(drawContext, ui, x, y, width, 36, UiTheme.hoverBackground(), UiTheme.TEXT);
         }
         drawIngredientIcon(ingredient, x + 6, y + 5, 26);
         String name = ingredient.name();

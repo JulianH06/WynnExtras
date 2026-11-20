@@ -123,7 +123,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
         search.setFocusedColor(CustomColor.fromInt(UiTheme.hoverBackground()));
         search.setTextColor(CustomColor.fromInt(UiTheme.TEXT));
         search.setPlaceholderColor(CustomColor.fromInt(UiTheme.MUTED));
-        search.setCursorColor(CustomColor.fromInt(UiTheme.accent()));
+        search.setCursorColor(CustomColor.fromInt(UiTheme.TEXT));
         search.setOnChange(value -> {
             query = value;
             rebuild();
@@ -219,7 +219,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
             int x, int y, int width, int height, boolean hovered) {
         UiTheme.drawRoundedBox(context, ui, x, y, width, height - 2,
                 hovered ? UiTheme.hoverBackground() : UiTheme.SURFACE,
-                hovered ? UiTheme.accent() : UiTheme.BORDER);
+                hovered ? UiTheme.TEXT : UiTheme.BORDER);
         int textX = x + 12;
         int availableWidth = width - 24;
         if (choice.ingredient() != null) {

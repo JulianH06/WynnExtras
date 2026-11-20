@@ -96,7 +96,7 @@ final class SaveBuildScreen extends PlannerScreen {
         int top = (height - PANEL_HEIGHT) / 2;
         UiTheme.drawPanel(context, ui, left, top, PANEL_WIDTH, PANEL_HEIGHT);
         ui.drawCenteredTextWithShadow(
-                textRenderer, "Save Build", width / 2, top + 14, UiTheme.accentRgb());
+                textRenderer, "Save Build", width / 2, top + 14, UiTheme.TEXT & 0xFFFFFF);
         if (!status.isEmpty()) {
             ui.drawCenteredTextWithShadow(
                     textRenderer, status, width / 2, top + 98, 0xFFFF5555);
