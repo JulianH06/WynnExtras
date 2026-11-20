@@ -1507,7 +1507,7 @@ public final class BuilderScreen extends PlannerScreen {
         lines.add(Text.empty());
         List<BuildBoosts.RaidEffect> effects = BuildBoosts.raidEffects(buff);
         if (effects.isEmpty()) {
-            lines.add(Text.literal("No numeric effect data available.").formatted(Formatting.GRAY));
+            lines.add(Text.literal("No effect data available.").formatted(Formatting.GRAY));
         } else {
             for (BuildBoosts.RaidEffect effect : effects) {
                 lines.add(Text.literal(effect.value() + " ").formatted(

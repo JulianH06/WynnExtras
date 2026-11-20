@@ -5,6 +5,7 @@ import java.util.List;
 
 public final class CraftingPageLayout {
     private static final int GAP = 12;
+    private static final int INGREDIENT_COLUMN_GAP = 20;
     private static final int ROW_GAP = 6;
 
     private CraftingPageLayout() {}
@@ -33,12 +34,12 @@ public final class CraftingPageLayout {
         if (columns.mode() == 3) {
             int ingredientX = controls.right() + GAP;
             int availableWidth = columns.left() - ingredientX;
-            int cardWidth = (availableWidth - GAP) / 2;
+            int cardWidth = (availableWidth - INGREDIENT_COLUMN_GAP) / 2;
             int y = 0;
             for (int row = 0; row < 3; row++) {
                 for (int column = 0; column < 2; column++) {
                     int index = row * 2 + column;
-                    ingredients.add(new Rect(ingredientX + column * (cardWidth + GAP), y,
+                    ingredients.add(new Rect(ingredientX + column * (cardWidth + INGREDIENT_COLUMN_GAP), y,
                             cardWidth, ingredientHeights.get(index)));
                 }
                 y += Math.max(ingredientHeights.get(row * 2), ingredientHeights.get(row * 2 + 1)) + ROW_GAP;
@@ -46,11 +47,11 @@ public final class CraftingPageLayout {
             height = Math.max(Math.max(y - ROW_GAP, controls.bottom()), result.bottom());
         } else {
             int y = result.bottom() + 12;
-            int cardWidth = (columns.width() - GAP) / 2;
+            int cardWidth = (columns.width() - INGREDIENT_COLUMN_GAP) / 2;
             for (int row = 0; row < 3; row++) {
                 for (int column = 0; column < 2; column++) {
                     int index = row * 2 + column;
-                    ingredients.add(new Rect(column * (cardWidth + GAP), y,
+                    ingredients.add(new Rect(column * (cardWidth + INGREDIENT_COLUMN_GAP), y,
                             cardWidth, ingredientHeights.get(index)));
                 }
                 y += Math.max(ingredientHeights.get(row * 2), ingredientHeights.get(row * 2 + 1)) + ROW_GAP;

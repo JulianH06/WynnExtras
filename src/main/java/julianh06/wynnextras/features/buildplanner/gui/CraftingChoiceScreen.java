@@ -16,6 +16,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.input.KeyInput;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.Formatting;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
@@ -29,6 +30,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
     private static final int SEARCH_TOP = 14;
     private static final int SEARCH_HEIGHT = 32;
     private static final int LIST_TOP = 55;
+    private static final int TABBED_LIST_TOP = 91;
     private static final int LIST_BOTTOM = 60;
     private static final int BUTTON_HEIGHT = 34;
     private static final int ROW_HEIGHT = 38;
@@ -37,10 +39,13 @@ final class CraftingChoiceScreen extends PlannerScreen {
     private final List<Choice> choices;
     private final Consumer<Choice> select;
     private final boolean showTooltips;
+    private final boolean showGroupTabs;
     private final Runnable remove;
     private final SmoothScroll scroll = new SmoothScroll();
     private final Map<Integer, ItemStack> ingredientIcons = new HashMap<>();
+    private final List<GroupButton> groupButtons = new java.util.ArrayList<>();
     private String query = "";
+    private String selectedGroup = "";
     private int left;
     private int top;
     private int panelWidth;
@@ -54,21 +59,27 @@ final class CraftingChoiceScreen extends PlannerScreen {
 
     CraftingChoiceScreen(Screen parent, String title, List<Choice> choices,
             Consumer<Choice> select, boolean showTooltips) {
-        this(parent, title, choices, select, showTooltips, null);
+        this(parent, title, choices, select, showTooltips, false, null);
+    }
+
+    CraftingChoiceScreen(Screen parent, String title, List<Choice> choices,
+            Consumer<Choice> select, boolean showTooltips, boolean showGroupTabs) {
+        this(parent, title, choices, select, showTooltips, showGroupTabs, null);
     }
 
     CraftingChoiceScreen(Screen parent, String title, List<Choice> choices,
             Consumer<Choice> select, Runnable remove) {
-        this(parent, title, choices, select, true, remove);
+        this(parent, title, choices, select, true, false, remove);
     }
 
     private CraftingChoiceScreen(Screen parent, String title, List<Choice> choices,
-            Consumer<Choice> select, boolean showTooltips, Runnable remove) {
+            Consumer<Choice> select, boolean showTooltips, boolean showGroupTabs, Runnable remove) {
         super(Text.literal(title));
         this.parent = parent;
         this.choices = List.copyOf(choices);
         this.select = select;
         this.showTooltips = showTooltips;
+        this.showGroupTabs = showGroupTabs;
         this.remove = remove;
     }
 
@@ -90,10 +101,13 @@ final class CraftingChoiceScreen extends PlannerScreen {
     @Override
     protected void init() {
         if (parent instanceof CrafterScreen crafter) crafter.init();
+        else if (parent instanceof AtlasScreen atlas) atlas.prepareOverlayRender();
         super.init();
         clearChildren();
         removeRootWidget(search);
         removeRootWidget(list);
+        list = null;
+        groupButtons.clear();
         panelWidth = Math.min(MAX_WIDTH, width - HORIZONTAL_MARGIN);
         panelHeight = Math.min(MAX_HEIGHT, height - VERTICAL_MARGIN);
         left = (width - panelWidth) / 2;
@@ -115,6 +129,7 @@ final class CraftingChoiceScreen extends PlannerScreen {
             rebuild();
         });
         addRootWidget(search);
+        if (showGroupTabs) addGroupTabs();
         addButton(new ThemedButton(left + panelWidth - PADDING - 96,
                 top + panelHeight - BUTTON_HEIGHT - 12,
                 96, BUTTON_HEIGHT, Text.literal("Cancel"), this::close).setTextScale(TEXT_SCALE));
@@ -129,6 +144,33 @@ final class CraftingChoiceScreen extends PlannerScreen {
         setFocusedWidget(search);
     }
 
+    private void addGroupTabs() {
+        List<String> groups = choices.stream().map(Choice::group).filter(group -> !group.isBlank()).distinct().toList();
+        if (groups.isEmpty()) return;
+        if (!groups.contains(selectedGroup)) selectedGroup = groups.getFirst();
+        int gap = 6;
+        int availableWidth = panelWidth - PADDING * 2;
+        int buttonWidth = (availableWidth - gap * (groups.size() - 1)) / groups.size();
+        for (int index = 0; index < groups.size(); index++) {
+            String group = groups.get(index);
+            int x = left + PADDING + index * (buttonWidth + gap);
+            int width = index == groups.size() - 1 ? left + panelWidth - PADDING - x : buttonWidth;
+            ThemedButton button = new ThemedButton(x, top + LIST_TOP, width, 28, Text.literal(group),
+                    () -> selectGroup(group)).setTextScale(1.2F).setSelectedHoverHighlight(group.equals(selectedGroup));
+            groupButtons.add(new GroupButton(group, button));
+            addButton(button);
+        }
+    }
+
+    private void selectGroup(String group) {
+        selectedGroup = group;
+        for (GroupButton groupButton : groupButtons) {
+            groupButton.button().setSelected(groupButton.group().equals(group));
+        }
+        scroll.jump(0);
+        rebuild();
+    }
+
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         if (rendersParentAsOverlay()) parent.render(context, -1, -1, delta);
@@ -141,17 +183,29 @@ final class CraftingChoiceScreen extends PlannerScreen {
 
     private void rebuild() {
         String normalized = query.toLowerCase(Locale.ROOT).trim();
-        List<Choice> filtered = choices.stream().filter(choice -> normalized.isBlank()
-                || (choice.label() + " " + choice.description()).toLowerCase(Locale.ROOT).contains(normalized)).toList();
-        List<PlannerPickerList.Row<Choice>> rows = filtered.stream()
-                .map(choice -> PlannerPickerList.Row.value(choice, ROW_HEIGHT)).toList();
+        List<Choice> filtered = choices.stream()
+                .filter(choice -> !showGroupTabs || choice.group().equals(selectedGroup))
+                .filter(choice -> normalized.isBlank()
+                || (choice.label() + " " + choice.description() + " " + choice.group())
+                        .toLowerCase(Locale.ROOT).contains(normalized)).toList();
+        List<PlannerPickerList.Row<Choice>> rows = new java.util.ArrayList<>();
+        String currentGroup = "";
+        for (Choice choice : filtered) {
+            if (!showGroupTabs && !choice.group().isBlank() && !choice.group().equals(currentGroup)) {
+                currentGroup = choice.group();
+                rows.add(PlannerPickerList.Row.heading(currentGroup, 28));
+            }
+            rows.add(PlannerPickerList.Row.value(choice, ROW_HEIGHT));
+        }
         if (list == null) {
-            list = new PlannerPickerList<>(left + PADDING, top + LIST_TOP,
-                    panelWidth - PADDING * 2, panelHeight - LIST_TOP - LIST_BOTTOM,
+            int listTop = showGroupTabs ? TABBED_LIST_TOP : LIST_TOP;
+            list = new PlannerPickerList<>(left + PADDING, top + listTop,
+                    panelWidth - PADDING * 2, panelHeight - listTop - LIST_BOTTOM,
                     rows, scroll, TEXT_SCALE, this::renderRow,
                     showTooltips ? this::renderTooltip : null,
                     choice -> {
                         select.accept(choice);
+                        prepareParentReturn();
                         client.setScreen(parent);
                     });
             addRootWidget(list);
@@ -262,8 +316,21 @@ final class CraftingChoiceScreen extends PlannerScreen {
             renderPlannerTooltip(context, choice.tooltip(), mouseX, mouseY);
             return;
         }
-        renderPlannerTooltip(context,
-                List.of(Text.literal(choice.label()), Text.literal(choice.description())), mouseX, mouseY);
+        if (choice.description().isBlank()) return;
+        List<Text> lines = new java.util.ArrayList<>();
+        lines.add(Text.literal(choice.label()).formatted(Formatting.LIGHT_PURPLE));
+        String line = "";
+        for (String word : choice.description().split("\\s+")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            if (!line.isEmpty() && textRenderer.getWidth(candidate) > 280) {
+                lines.add(Text.literal(line).formatted(Formatting.GRAY));
+                line = word;
+            } else {
+                line = candidate;
+            }
+        }
+        if (!line.isEmpty()) lines.add(Text.literal(line).formatted(Formatting.GRAY));
+        renderPlannerTooltip(context, lines, mouseX, mouseY);
     }
 
     @Override
@@ -308,7 +375,12 @@ final class CraftingChoiceScreen extends PlannerScreen {
 
     @Override
     public void close() {
+        prepareParentReturn();
         client.setScreen(parent);
+    }
+
+    private void prepareParentReturn() {
+        if (parent instanceof AtlasScreen atlas) atlas.returnFromOverlay();
     }
 
     record Choice(
@@ -319,28 +391,40 @@ final class CraftingChoiceScreen extends PlannerScreen {
             Integer color,
             ChoiceIcon icon,
             ItemStack itemIcon,
-            List<Text> tooltip
+            List<Text> tooltip,
+            String group
     ) {
         Choice {
             tooltip = List.copyOf(tooltip == null ? List.of() : tooltip);
+            group = group == null ? "" : group;
+        }
+
+        Choice(int id, String label, String description, Ingredient ingredient, Integer color,
+                ChoiceIcon icon, ItemStack itemIcon, List<Text> tooltip) {
+            this(id, label, description, ingredient, color, icon, itemIcon, tooltip, "");
         }
 
         Choice(int id, String label, String description) {
-            this(id, label, description, null, null, null, null, List.of());
+            this(id, label, description, null, null, null, null, List.of(), "");
+        }
+
+        Choice(int id, String label, String description, String group) {
+            this(id, label, description, null, null, null, null, List.of(), group);
         }
 
         Choice(int id, String label, String description, Ingredient ingredient) {
-            this(id, label, description, ingredient, null, null, null, List.of());
+            this(id, label, description, ingredient, null, null, null, List.of(), "");
         }
 
         Choice(int id, String label, String description, int color, ChoiceIcon icon, List<Text> tooltip) {
-            this(id, label, description, null, color, icon, null, tooltip);
+            this(id, label, description, null, color, icon, null, tooltip, "");
         }
 
         Choice(int id, String label, String description, ItemStack itemIcon, List<Text> tooltip) {
-            this(id, label, description, null, null, null, itemIcon, tooltip);
+            this(id, label, description, null, null, null, itemIcon, tooltip, "");
         }
     }
 
     record ChoiceIcon(Identifier texture, int u, int v, int textureWidth, int textureHeight) {}
+    private record GroupButton(String group, ThemedButton button) {}
 }

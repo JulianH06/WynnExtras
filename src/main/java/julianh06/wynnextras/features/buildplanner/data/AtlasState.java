@@ -45,7 +45,7 @@ public record AtlasState(boolean ingredients, String query, String category, Str
         }
 
         public NumericFilter {
-            if (key == null || key.isBlank()) throw new IllegalArgumentException("Missing numeric filter");
+            if (key == null || key.isBlank()) throw new IllegalArgumentException("Missing stat filter");
             minimum = minimum == null ? "" : minimum;
             maximum = maximum == null ? "" : maximum;
         }
@@ -53,7 +53,7 @@ public record AtlasState(boolean ingredients, String query, String category, Str
 
     public record StringFilter(String key, String value) {
         public StringFilter {
-            if (key == null || key.isBlank()) throw new IllegalArgumentException("Missing string filter");
+            if (key == null || key.isBlank()) throw new IllegalArgumentException("Missing item property filter");
             value = value == null ? "" : value;
         }
     }

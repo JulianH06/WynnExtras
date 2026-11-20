@@ -21,6 +21,7 @@ class ThemedButton extends Widget {
     private boolean selected;
     private Integer selectedColor;
     private boolean selectedBorderHighlight;
+    private boolean selectedHoverHighlight;
     private Integer textColor;
     private float textScale = 1.0F;
     private float textOffsetX;
@@ -79,6 +80,12 @@ class ThemedButton extends Widget {
 
     ThemedButton setSelectedBorderHighlight() {
         selectedBorderHighlight = true;
+        return this;
+    }
+
+    ThemedButton setSelectedHoverHighlight(boolean selected) {
+        this.selected = selected;
+        selectedHoverHighlight = true;
         return this;
     }
 
@@ -150,10 +157,11 @@ class ThemedButton extends Widget {
         hoverProgress = UiTheme.approach(hoverProgress, hoverTarget, 13.0F, elapsed);
         pressProgress = UiTheme.approach(pressProgress, 0.0F, 18.0F, elapsed);
 
-        boolean borderOnlySelection = selected && selectedBorderHighlight;
-        boolean highlightedSelection = selected && !selectedBorderHighlight;
+        boolean hoverSelection = selected && selectedHoverHighlight;
+        boolean borderOnlySelection = selected && selectedBorderHighlight && !hoverSelection;
+        boolean highlightedSelection = selected && !selectedBorderHighlight && !hoverSelection;
         int selection = selectedColor == null ? 0xFF44BB66 : selectedColor;
-        int baseBackground = highlightedSelection
+        int baseBackground = hoverSelection ? UiTheme.hoverBackground() : highlightedSelection
                 ? UiTheme.lerpColor(UiTheme.SURFACE, selection, 0.28F) : UiTheme.SURFACE;
         int hoverBackground = highlightedSelection ? UiTheme.lerpColor(UiTheme.SURFACE, selection, 0.42F)
                 : UiTheme.hoverBackground();
@@ -161,7 +169,7 @@ class ThemedButton extends Widget {
                 ? UiTheme.lerpColor(baseBackground, hoverBackground, hoverProgress)
                 : UiTheme.PANEL;
         background = UiTheme.lerpColor(background, UiTheme.BACKGROUND, pressProgress * 0.35F);
-        int baseBorder = borderOnlySelection
+        int baseBorder = hoverSelection ? UiTheme.accent() : borderOnlySelection
                 ? UiTheme.accent() : highlightedSelection ? selection : UiTheme.BORDER;
         int hoverBorder = borderOnlySelection
                 ? UiTheme.lerpColor(UiTheme.accent(), 0xFFFFFFFF, 0.25F)

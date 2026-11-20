@@ -5,8 +5,6 @@ import julianh06.wynnextras.features.buildplanner.data.CraftedItemCodec;
 import julianh06.wynnextras.features.buildplanner.data.ItemInspection;
 import julianh06.wynnextras.features.buildplanner.data.WynnItem;
 import julianh06.wynnextras.wynncraft.state.CharacterClass;
-import julianh06.wynnextras.wynncraft.state.ProfessionState;
-import julianh06.wynnextras.utils.enums.WEProfessionType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +22,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
 final class WynnItemTooltip {
+    private static final int INGREDIENT_ACCENT = 0xFF7DC97D;
     private final TextRenderer font;
     private final CharacterClass selectedClass;
     private final int level;
@@ -87,7 +86,7 @@ final class WynnItemTooltip {
             case 2 -> "rare";
             case 3 -> "legendary";
             default -> "normal";
-        }));
+        }), 4);
     }
 
     static Card messageCard(TextRenderer font, String title, List<ItemInspection.Row> rows) {
@@ -217,7 +216,7 @@ final class WynnItemTooltip {
         }
         for (Map.Entry<String, String> majorId : item.majorIds().entrySet()) {
             tooltip.add(Text.empty());
-            appendWrapped(tooltip, "◆ " + majorId.getKey() + ": " + majorId.getValue(), dividerColor(item.tier()));
+            appendMajorId(tooltip, majorId.getKey(), majorId.getValue(), dividerColor(item.tier()));
         }
         if (showLore && !item.lore().isBlank()) {
             tooltip.add(Text.empty());
@@ -271,82 +270,230 @@ final class WynnItemTooltip {
     }
 
     private List<Text> ingredientLines(CraftedItemCodec.Ingredient ingredient) {
+        Text nameLine = ingredientNameLine(ingredient.name());
+        Text typeLine = ingredientTypeLine(ingredient.tier());
+        int width = Math.max(190, Math.max(font.getWidth(nameLine), font.getWidth(typeLine)));
+        List<Text> tooltip = ingredientLines(ingredient, width);
+        int renderedWidth = tooltip.stream().mapToInt(font::getWidth).max().orElse(width);
+        return renderedWidth > width ? ingredientLines(ingredient, renderedWidth) : tooltip;
+    }
+
+    private List<Text> ingredientLines(CraftedItemCodec.Ingredient ingredient, int width) {
         List<Text> tooltip = new ArrayList<>();
-        tooltip.add(Text.literal(ingredient.name()).formatted(Formatting.GRAY).append(ingredientTier(ingredient.tier())));
-        tooltip.add(Text.literal("Crafting Ingredient").formatted(Formatting.DARK_GRAY));
+        Text nameLine = ingredientNameLine(ingredient.name());
+        Text typeLine = ingredientTypeLine(ingredient.tier());
+        tooltip.add(nameLine);
+        tooltip.add(typeLine);
         tooltip.add(Text.empty());
         if (ingredient.id() == 4000) {
-            tooltip.add(Text.literal("Empty ingredient slot").formatted(Formatting.DARK_GRAY));
+            tooltip.add(centered(text("Empty ingredient slot", "language/wynncraft", 0xFF555555), width));
             return tooltip;
         }
-        addIngredientRows(tooltip, ingredient.rows().stream()
-                .filter(row -> row.kind() == ItemInspection.Kind.IDENTIFICATION).toList(), false);
-        addIngredientRows(tooltip, ingredient.rows().stream()
-                .filter(row -> row.label().startsWith("Effectiveness ")).toList(), true);
-        addIngredientRows(tooltip, ingredient.rows().stream()
+        tooltip.add(space(2)
+                .append(text(Integer.toString(ingredient.level()), "offset/wynncraft_quad/12", 0xFF7DC97D))
+                .append(text(" Crafting Level", "language/wynncraft", 0xFFFFFFFF)));
+        tooltip.add(space(2).append(text("Can be used in recipes for", "language/wynncraft", 0xFFAAAAAA)));
+        for (int index = 0; index < ingredient.professions().size(); index += 2) {
+            Text left = profession(ingredient.professions().get(index));
+            Text right = index + 1 < ingredient.professions().size()
+                    ? profession(ingredient.professions().get(index + 1)) : Text.empty();
+            tooltip.add(space(2).append(columns(left, right, width - 2)));
+        }
+        tooltip.add(centeredPadded(ingredientDivider(), width));
+
+        List<ItemInspection.Row> modifiers = ingredient.rows().stream()
                 .filter(row -> row.kind() == ItemInspection.Kind.MODIFIER
-                        && !row.label().startsWith("Effectiveness ")).toList(), false);
-        boolean craftingLevelMet = ingredient.professions().stream().map(WEProfessionType::fromString)
-                .filter(java.util.Objects::nonNull)
-                .anyMatch(profession -> ProfessionState.level(profession) >= ingredient.level());
-        tooltip.add(Text.literal(craftingLevelMet ? "✔" : "✖")
-                .formatted(craftingLevelMet ? Formatting.GREEN : Formatting.RED)
-                .append(Text.literal(" Crafting Lv. Min: " + ingredient.level()).formatted(Formatting.GRAY)));
-        for (String profession : ingredient.professions()) {
-            WEProfessionType type = WEProfessionType.fromString(profession);
-            boolean met = type != null && ProfessionState.level(type) >= ingredient.level();
-            tooltip.add(Text.literal("   " + (met ? "✔" : "✖") + " ").formatted(Formatting.DARK_GRAY)
-                    .append(Text.literal(professionIcon(profession) + " ").formatted(Formatting.WHITE))
-                    .append(Text.literal(readable(profession)).formatted(Formatting.GRAY)));
+                        && !row.label().startsWith("Effectiveness ")).toList();
+        List<ItemInspection.Row> identifications = ingredient.rows().stream()
+                .filter(row -> row.kind() == ItemInspection.Kind.IDENTIFICATION).toList();
+        addIngredientStats(tooltip, modifiers, width);
+        if (!modifiers.isEmpty() && !identifications.isEmpty()) tooltip.add(Text.empty());
+        addIngredientStats(tooltip, identifications, width);
+
+        List<ItemInspection.Row> effectiveness = ingredient.rows().stream()
+                .filter(row -> row.label().startsWith("Effectiveness ")).toList();
+        if (!effectiveness.isEmpty()) {
+            addEffectiveness(tooltip, effectiveness, width,
+                    !modifiers.isEmpty() || !identifications.isEmpty());
         }
         return tooltip;
     }
 
-    private static void addIngredientRows(List<Text> tooltip, List<ItemInspection.Row> rows, boolean positions) {
-        if (rows.isEmpty()) return;
+    private Text ingredientNameLine(String name) {
+        return shadowText("\uDAFF\uDFF0", "space", 0xFFFFFFFF)
+                .append(text("\uE031", "tooltip/emblem/frame", 0xFFFFFFFF))
+                .append(text("\uDAFF\uDFCF", "space", 0xFFFFFFFF))
+                .append(text("\uE034", "tooltip/emblem/sprite", 0xFF00EB1C))
+                .append(space(5))
+                .append(text(name, "language/wynncraft", 0xFF20AA20));
+    }
+
+    private Text ingredientTypeLine(int tier) {
+        return space(38)
+                .append(ingredientStarBanner(tier))
+                .append(space(1))
+                .append(ingredientLabelBanner());
+    }
+
+    private Text ingredientLabelBanner() {
+        String background = "\uE060" + spacingGlyph(-1)
+                + "\uE038" + spacingGlyph(-1)
+                + "\uE03D" + spacingGlyph(-1)
+                + "\uE036" + spacingGlyph(-1)
+                + "\uE041" + spacingGlyph(-1)
+                + "\uE034" + spacingGlyph(-1)
+                + "\uE033" + spacingGlyph(-1)
+                + "\uE038" + spacingGlyph(-1)
+                + "\uE034" + spacingGlyph(-1)
+                + "\uE03D" + spacingGlyph(-1)
+                + "\uE043" + spacingGlyph(-1)
+                + "\uE062" + spacingGlyph(-58);
+        return text(background, "banner/box", 0xFF7DC97D)
+                .append(shadowText("\uE008\uE00D\uE006\uE011\uE004\uE003\uE008\uE004\uE00D\uE013",
+                        "banner/box", 0xFF000000))
+                .append(space(2));
+    }
+
+    private Text ingredientStarBanner(int tier) {
+        int filled = Math.clamp(tier, 0, 3);
+        MutableText line = Text.empty();
+        if (filled > 0) line.append(starBanner(filled, ingredientStarColor(filled)));
+        int empty = 3 - filled;
+        if (empty > 0) {
+            if (filled > 0) line.append(space(-3));
+            line.append(starBanner(empty, 0xFF000000));
+        }
+        return line;
+    }
+
+    private Text starBanner(int stars, int color) {
+        StringBuilder background = new StringBuilder("\uE060");
+        for (int index = 0; index < stars; index++) {
+            background.append(spacingGlyph(-1)).append('\uE001');
+        }
+        background.append(spacingGlyph(-1)).append('\uE062')
+                .append(spacingGlyph(-(7 * stars + 2)));
+        String foreground = String.valueOf('\uE000').repeat(stars);
+        return text(background.toString(), "banner/symbol", 0xFF555555)
+                .append(shadowText(foreground, "banner/symbol", color))
+                .append(space(2));
+    }
+
+    private static int ingredientStarColor(int tier) {
+        return switch (tier) {
+            case 1 -> 0xFFE6B847;
+            case 2 -> 0xFFE647E6;
+            case 3 -> 0xFF47C4E6;
+            default -> 0xFF555555;
+        };
+    }
+
+    private void addIngredientStats(List<Text> tooltip, List<ItemInspection.Row> rows, int width) {
         for (ItemInspection.Row row : rows) {
-            if (positions) {
-                tooltip.add(ingredientValue(row, "Ingredient Effectiveness"));
-                tooltip.add(Text.literal("(To ingredients " + positionDescription(row.label()) + " this one)")
-                        .formatted(Formatting.GRAY));
-            } else {
-                String label = row.label().replaceFirst(" %$", "");
-                if (label.endsWith(" Min")) label += ".";
-                tooltip.add(ingredientValue(row, label));
+            String label = row.label().replaceFirst(" %$", "");
+            tooltip.add(aligned(text(label, "language/wynncraft", 0xFFFFFFFF),
+                    identificationValue(row.value(), row.beneficial()), width));
+        }
+    }
+
+    private void addEffectiveness(List<Text> tooltip, List<ItemInspection.Row> rows, int width,
+            boolean separatedFromStats) {
+        Map<String, Integer> modifiers = new java.util.HashMap<>();
+        for (ItemInspection.Row row : rows) {
+            try {
+                String direction = row.label().substring("Effectiveness ".length())
+                        .replace(" ", "").toLowerCase(Locale.ROOT);
+                modifiers.put(direction,
+                        Integer.parseInt(row.value().replace("+", "").replace("%", "")));
+            } catch (NumberFormatException ignored) {
             }
         }
-        tooltip.add(Text.empty());
-    }
-
-    private static Text ingredientValue(ItemInspection.Row row, String label) {
-        Formatting bright = row.beneficial() ? Formatting.GREEN : Formatting.RED;
-        Formatting dark = row.beneficial() ? Formatting.DARK_GREEN : Formatting.DARK_RED;
-        boolean percent = row.label().endsWith(" %") || label.equals("Ingredient Effectiveness");
-        String value = row.value();
-        int separator = value.indexOf(" to ");
-        if (separator < 0) {
-            if (percent && !value.endsWith("%")) value += "%";
-            return Text.literal(value + " ").formatted(bright)
-                    .append(Text.literal(label).formatted(Formatting.GRAY));
+        if (separatedFromStats) {
+            tooltip.add(centered(ingredientDivider(), width));
         }
-        String minimum = value.substring(0, separator).replace("%", "");
-        String maximum = value.substring(separator + 4).replace("%", "") + (percent ? "%" : "");
-        return Text.literal(minimum + " ").formatted(bright)
-                .append(Text.literal("to").formatted(dark))
-                .append(Text.literal(" " + maximum).formatted(bright))
-                .append(Text.literal(" " + label).formatted(Formatting.GRAY));
+        tooltip.add(effectivenessBanner());
+        tooltip.add(text("Grants an effectiveness multiplier", "language/wynncraft", 0xFFAAAAAA));
+        tooltip.add(text("to nearby ingredients when used in", "language/wynncraft", 0xFFAAAAAA));
+        tooltip.add(text("a Crafted Item recipe", "language/wynncraft", 0xFFAAAAAA));
+        Text gridBackground = shadowText("\uF000", "tooltip/attribute/sprite", 0xFFFFFFFF);
+        boolean expandedWidth = width > 190;
+        int gridOffset = Math.max(0, (width - 190) / 2);
+        tooltip.add(expandedWidth ? space(22 + gridOffset).append(gridBackground)
+                : centered(gridBackground, width));
+        for (int row = -2; row <= 2; row++) {
+            List<Text> cells = new ArrayList<>();
+            for (int column = -1; column <= 1; column++) {
+                if (row == 0 && column == 0) {
+                    cells.add(Text.empty());
+                } else {
+                    int value = effectiveness(modifiers, row, column);
+                    int color = value > 0 ? 0xFFACFAC6 : value < 0 ? 0xFFFAACAC : 0xFFAAAAAA;
+                    cells.add(shadowText((value > 0 ? "+" : "") + value + "%", "language/five", color));
+                }
+            }
+            Text gridRow = effectivenessGridRow(cells, row == 0);
+            tooltip.add(expandedWidth ? space(27 + gridOffset).append(gridRow) : centered(gridRow, width));
+        }
     }
 
-    private static String positionDescription(String label) {
-        return switch (label.substring("Effectiveness ".length())) {
-            case "left" -> "to the left of";
-            case "right" -> "to the right of";
-            case "above" -> "above";
-            case "under" -> "under";
-            case "touching" -> "touching";
-            case "notTouching" -> "not touching";
-            default -> "near";
-        };
+    private static int effectiveness(Map<String, Integer> modifiers, int row, int column) {
+        int value = 0;
+        if (row == 0 && column == -1) value += modifiers.getOrDefault("left", 0);
+        if (row == 0 && column == 1) value += modifiers.getOrDefault("right", 0);
+        if (column == 0 && row < 0) value += modifiers.getOrDefault("above", 0);
+        if (column == 0 && row > 0) value += modifiers.getOrDefault("under", 0);
+        if (Math.abs(row) + Math.abs(column) == 1) value += modifiers.getOrDefault("touching", 0);
+        if (Math.abs(row) > 1 || Math.abs(row) == 1 && Math.abs(column) == 1) {
+            value += modifiers.getOrDefault("nottouching", 0);
+        }
+        return value;
+    }
+
+    private Text profession(String profession) {
+        return text(professionIcon(profession) + " ", "language/wynncraft", 0xFFFFFFFF)
+                .append(text(readable(profession), "language/wynncraft", 0xFFAAAAAA));
+    }
+
+    private Text columns(Text left, Text right, int width) {
+        int columnWidth = width / 2;
+        return Text.empty().append(left).append(space(Math.max(4, columnWidth - font.getWidth(left)))).append(right);
+    }
+
+    private Text effectivenessGridRow(List<Text> cells, boolean centerRow) {
+        int cellWidth = 36;
+        MutableText line = Text.empty();
+        for (int index = 0; index < cells.size(); index++) {
+            Text cell = cells.get(index);
+            if (centerRow && index == 1) {
+                line.append(space(cellWidth));
+                continue;
+            }
+            int remaining = Math.max(0, cellWidth - font.getWidth(cell));
+            line.append(space(remaining / 2)).append(cell).append(space(remaining - remaining / 2));
+        }
+        return line;
+    }
+
+    private Text effectivenessBanner() {
+        String background = "\uE060" + spacingGlyph(-1)
+                + "\uE034" + spacingGlyph(-1)
+                + "\uE035" + spacingGlyph(-1)
+                + "\uE035" + spacingGlyph(-1)
+                + "\uE034" + spacingGlyph(-1)
+                + "\uE032" + spacingGlyph(-1)
+                + "\uE043" + spacingGlyph(-1)
+                + "\uE038" + spacingGlyph(-1)
+                + "\uE045" + spacingGlyph(-1)
+                + "\uE034" + spacingGlyph(-1)
+                + "\uE03D" + spacingGlyph(-1)
+                + "\uE034" + spacingGlyph(-1)
+                + "\uE042" + spacingGlyph(-1)
+                + "\uE042" + spacingGlyph(-1)
+                + "\uE062" + spacingGlyph(-78);
+        String foreground = "\uE004\uE005\uE005\uE004\uE002\uE013\uE008\uE015\uE004\uE00D\uE004\uE012\uE012"
+                + spacingGlyph(2);
+        return shadowText(background, "banner/box", INGREDIENT_ACCENT)
+                .append(shadowText(foreground, "banner/box", 0xFF000000));
     }
 
     private static String professionIcon(String profession) {
@@ -364,17 +511,21 @@ final class WynnItemTooltip {
     }
 
     public static Text ingredientTier(int tier) {
-        MutableText result = Text.literal(" [").formatted(tier == 1 ? Formatting.GOLD
+        MutableText result = ingredientTierText(" [", tier == 1 ? Formatting.GOLD
                 : tier == 2 ? Formatting.DARK_PURPLE : tier == 3 ? Formatting.DARK_AQUA : Formatting.GRAY);
-        if (tier == 1) result.append(Text.literal("✫").formatted(Formatting.YELLOW))
-                .append(Text.literal("✫✫").formatted(Formatting.DARK_GRAY));
-        else if (tier == 2) result.append(Text.literal("✫").formatted(Formatting.LIGHT_PURPLE))
-                .append(Text.literal("✫✫").formatted(Formatting.DARK_GRAY));
-        else if (tier == 3) result.append(Text.literal("✫✫").formatted(Formatting.AQUA))
-                .append(Text.literal("✫").formatted(Formatting.DARK_AQUA));
-        else result.append(Text.literal("✫✫✫").formatted(Formatting.DARK_GRAY));
-        return result.append(Text.literal("]").formatted(tier == 1 ? Formatting.GOLD
+        if (tier == 1) result.append(ingredientTierText("✫", Formatting.YELLOW))
+                .append(ingredientTierText("✫✫", Formatting.DARK_GRAY));
+        else if (tier == 2) result.append(ingredientTierText("✫✫", Formatting.LIGHT_PURPLE))
+                .append(ingredientTierText("✫", Formatting.DARK_GRAY));
+        else if (tier == 3) result.append(ingredientTierText("✫✫✫", Formatting.AQUA));
+        else result.append(ingredientTierText("✫✫✫", Formatting.DARK_GRAY));
+        return result.append(ingredientTierText("]", tier == 1 ? Formatting.GOLD
                 : tier == 2 ? Formatting.DARK_PURPLE : tier == 3 ? Formatting.DARK_AQUA : Formatting.GRAY));
+    }
+
+    private static MutableText ingredientTierText(String value, Formatting color) {
+        return Text.literal(value).formatted(color).styled(style -> style.withFont(
+                new StyleSpriteSource.Font(Identifier.ofVanilla("default"))));
     }
 
     private int tooltipWidth(WynnItem item, String displayName, CharacterClass identificationClass) {
@@ -466,6 +617,10 @@ final class WynnItemTooltip {
         return shadowText("\uE000", "tooltip/divider", dividerColor(tier));
     }
 
+    private Text ingredientDivider() {
+        return shadowText("\uE000", "tooltip/divider", INGREDIENT_ACCENT);
+    }
+
     private MutableText sprite(String value) {
         return shadowText(value, "tooltip/attribute/sprite", 0xFFFFFFFF);
     }
@@ -487,6 +642,11 @@ final class WynnItemTooltip {
 
     private MutableText centered(Text value, int width) {
         return space(Math.max(0, (width - font.getWidth(value)) / 2)).append(value);
+    }
+
+    private MutableText centeredPadded(Text value, int width) {
+        MutableText line = centered(value, width);
+        return line.append(space(Math.max(0, width - font.getWidth(line))));
     }
 
     private MutableText banner(String value, int backgroundColor, int foregroundColor) {
@@ -524,6 +684,47 @@ final class WynnItemTooltip {
         if (!line.isEmpty()) tooltip.add(text(line.toString(), "language/wynncraft", color));
     }
 
+    private void appendMajorId(List<Text> tooltip, String name, String description, int color) {
+        String value = name + ": " + plainDescription(description);
+        StringBuilder line = new StringBuilder();
+        boolean first = true;
+        int iconWidth = font.getWidth(text("\uE000", "tooltip/identification/major", color)) + 2;
+        for (String word : value.split("\\s+")) {
+            String candidate = line.isEmpty() ? word : line + " " + word;
+            int availableWidth = first ? 150 - iconWidth : 150;
+            if (!line.isEmpty() && font.getWidth(candidate) > availableWidth) {
+                tooltip.add(majorIdLine(line.toString(), color, first));
+                line.setLength(0);
+                first = false;
+            }
+            if (!line.isEmpty()) line.append(' ');
+            line.append(word);
+        }
+        if (!line.isEmpty()) tooltip.add(majorIdLine(line.toString(), color, first));
+    }
+
+    private Text majorIdLine(String value, int color, boolean icon) {
+        MutableText line = Text.empty();
+        if (icon) {
+            line.append(shadowText("\uE000", "tooltip/identification/major", color));
+            line.append(space(2));
+        }
+        return line.append(text(value, "language/wynncraft", color));
+    }
+
+    private static String plainDescription(String value) {
+        return value.replaceAll("(?i)<br\\s*/?>", " ")
+                .replaceAll("<[^>]+>", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace("&nbsp;", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
     private static MutableText text(String value, String font, int color) {
         return Text.literal(value).fillStyle(Style.EMPTY
                 .withFont(new StyleSpriteSource.Font(Identifier.ofVanilla(font))).withColor(color));
@@ -537,7 +738,11 @@ final class WynnItemTooltip {
 
     private static MutableText space(int pixels) {
         if (pixels == 0) return Text.empty();
-        return text(new String(Character.toChars(0xD0000 + pixels)), "space", 0xFFFFFFFF);
+        return text(spacingGlyph(pixels), "space", 0xFFFFFFFF);
+    }
+
+    private static String spacingGlyph(int pixels) {
+        return new String(Character.toChars(0xD0000 + pixels));
     }
 
     private static char bannerGlyph(char value, boolean background) {
@@ -677,13 +882,19 @@ final class WynnItemTooltip {
         private final Identifier style;
         private final int contentWidth;
         private final int contentHeight;
+        private final int topPadding;
 
         private Card(TextRenderer font, List<Text> lines, Identifier style) {
+            this(font, lines, style, 0);
+        }
+
+        private Card(TextRenderer font, List<Text> lines, Identifier style, int topPadding) {
             components = lines.stream().map(Text::asOrderedText).map(TooltipComponent::of).toList();
             this.style = style;
+            this.topPadding = topPadding;
             contentWidth = components.stream().mapToInt(component -> component.getWidth(font)).max().orElse(1);
             contentHeight = components.stream().mapToInt(component -> component.getHeight(font)).sum()
-                    + (components.size() > 1 ? 2 : -2);
+                    + (components.size() > 1 ? 2 : -2) + topPadding;
         }
 
         int width() {
@@ -712,7 +923,7 @@ final class WynnItemTooltip {
             int renderedContentWidth = Math.max(contentWidth, width - 24);
             TooltipBackgroundRenderer.render(context, contentX, contentY,
                     renderedContentWidth, contentHeight, style);
-            int lineY = contentY;
+            int lineY = contentY + topPadding;
             for (int i = 0; i < components.size(); i++) {
                 TooltipComponent component = components.get(i);
                 component.drawText(context, font, contentX, lineY);

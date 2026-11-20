@@ -22,9 +22,11 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 
 final class AtlasScreen extends PlannerScreen {
     private static final int BODY_TOP = 104;
@@ -56,6 +58,7 @@ final class AtlasScreen extends PlannerScreen {
     private final List<Control> controls = new ArrayList<>();
     private final List<Label> labels = new ArrayList<>();
     private final List<Icon> icons = new ArrayList<>();
+    private final List<ProfessionIcon> professionIcons = new ArrayList<>();
     private final List<ThemedButton> fixed = new ArrayList<>();
     private final List<TextInputWidget> inputFields = new ArrayList<>();
     private final Map<String, WynnItemTooltip.Card> cardCache = new HashMap<>();
@@ -76,6 +79,8 @@ final class AtlasScreen extends PlannerScreen {
     private TextInputWidget tabNameField;
     private AtlasItemDetails itemDetails;
     private boolean showLore;
+    private boolean suppressRefresh;
+    private boolean skipNextRefresh;
 
     AtlasScreen(Screen parent, String tabId) {
         super(Text.literal("Atlas"));
@@ -86,12 +91,15 @@ final class AtlasScreen extends PlannerScreen {
 
     @Override
     protected void init() {
+        boolean refresh = !suppressRefresh && !skipNextRefresh;
+        skipNextRefresh = false;
         super.init();
         for (TextInputWidget field : inputFields) removeRootWidget(field);
         clearChildren();
         controls.clear();
         labels.clear();
         icons.clear();
+        professionIcons.clear();
         fixed.clear();
         inputFields.clear();
         reloadCatalog();
@@ -104,15 +112,28 @@ final class AtlasScreen extends PlannerScreen {
                 Text.literal(state.ingredients() ? "Item Searching" : "Ingredient Searching"),
                 () -> { state = AtlasState.defaults(!state.ingredients()); rebuild(true); })
                 .setTextScale(CONTROL_TEXT_SCALE));
-        int leftHeight = state.ingredients() ? 318 : 286;
+        int leftHeight = state.ingredients() ? 282 : 250;
         int rowHeight = 68;
-        int filtersHeight = (state.ingredients() ? 130 : 200) + state.filters().size() * rowHeight
-                + state.excluded().size() * 35 + state.strings().size() * 66;
-        layout = AtlasPageLayout.arrange(width, leftHeight, filtersHeight);
+        int filtersHeight = filterAreaHeight(rowHeight);
+        layout = AtlasPageLayout.arrange(width - 16, leftHeight, filtersHeight);
         int w = layout.columnWidth();
         label(0, 0, "Name:");
-        field(0, 22, w, state.query(), state.ingredients() ? "Ingredient name (case insensitive)" : "Item name or effect",
+        int loreButtonWidth = state.ingredients() ? 0 : 120;
+        int searchWidth = w - 100 - (loreButtonWidth == 0 ? 0 : loreButtonWidth + 8);
+        field(0, 22, searchWidth, state.query(), state.ingredients() ? "Ingredient name (case insensitive)" : "Item name or effect",
                 value -> updateInputs(value, state.category(), state.rarity(), state.filters(), state.excluded(), state.strings()));
+        button(searchWidth + 8, 22, 92, CONTROL_HEIGHT, Text.literal("Reset"), () -> {
+            state = AtlasState.defaults(state.ingredients());
+            rebuild(true);
+        });
+        if (!state.ingredients()) {
+            button(searchWidth + 108, 22, loreButtonWidth, CONTROL_HEIGHT,
+                    Text.literal("Item Lore: " + (showLore ? "On" : "Off")), () -> {
+                        showLore = !showLore;
+                        cardCache.clear();
+                        rebuild(false);
+                    });
+        }
         List<String> types = state.ingredients() ? PROFESSIONS : ITEM_TYPES;
         selectionHeader("Types:", 64, false);
         if (state.ingredients()) {
@@ -123,9 +144,9 @@ final class AtlasScreen extends PlannerScreen {
                 int right = (column + 1) * w / 2;
                 int cellWidth = right - x - (column == 1 ? 0 : 8);
                 int y = 91 + i / 2 * 34;
-                button(x, y, cellWidth, CONTROL_HEIGHT,
-                        Text.literal((selected(state.category(), type) ? "[x] " : "[ ] ") + display(type)),
-                        () -> toggle(false, type));
+                boolean selected = selected(state.category(), type);
+                button(x, y, cellWidth, CONTROL_HEIGHT, Text.empty(), () -> toggle(false, type));
+                professionIcons.add(new ProfessionIcon(type, x, y, cellWidth, selected));
             }
         } else {
             for (int i = 0; i < types.size(); i++) {
@@ -148,87 +169,129 @@ final class AtlasScreen extends PlannerScreen {
             int x = i * w / rarities.size();
             int right = (i + 1) * w / rarities.size();
             int cellWidth = right - x - (i == rarities.size() - 1 ? 0 : 5);
-            int color = state.ingredients() ? 0xFFFFFF55
-                    : rarity.equals("normal") ? UiTheme.TEXT : ToolItemCards.color(rarity);
-            String name = state.ingredients() ? rarity : display(rarity);
-            int textColor = selected(state.rarity(), rarity) ? color : UiTheme.DISABLED;
-            Text text = fitted(name, cellWidth, CONTROL_TEXT_SCALE).copy().styled(style -> style.withColor(textColor));
-            button(x, rarityY + 27, cellWidth, CONTROL_HEIGHT, text, () -> toggle(true, rarity));
-        }
-        button(0, leftHeight - CONTROL_HEIGHT, 104, CONTROL_HEIGHT, Text.literal("Search"), () -> {
-            refreshResults();
-            save();
-            scroll.jump(Math.min(layout.resultsY(), maxScroll));
-        });
-        button(112, leftHeight - CONTROL_HEIGHT, 92, CONTROL_HEIGHT, Text.literal("Reset"), () -> {
-            state = AtlasState.defaults(state.ingredients());
-            rebuild(true);
-        });
-        if (!state.ingredients()) {
-            button(212, leftHeight - CONTROL_HEIGHT, 120, CONTROL_HEIGHT,
-                    Text.literal("Item Lore: " + (showLore ? "On" : "Off")), () -> {
-                        showLore = !showLore;
-                        cardCache.clear();
-                        rebuild(false);
-                    });
+            boolean selected = selected(state.rarity(), rarity);
+            int color = rarity.equals("normal") ? UiTheme.TEXT : ToolItemCards.color(rarity);
+            Text text = state.ingredients()
+                    ? ingredientStars(Integer.parseInt(rarity), selected)
+                    : fitted(display(rarity), cellWidth, CONTROL_TEXT_SCALE).copy()
+                            .styled(style -> style.withColor(selected ? color : UiTheme.DISABLED));
+            var rarityButton = button(x, rarityY + 27, cellWidth, CONTROL_HEIGHT, text,
+                    () -> toggle(true, rarity));
+            if (state.ingredients()) rarityButton.setSelectedHoverHighlight(selected);
         }
         buildFilters(rowHeight);
         int y = height - 36;
-        fixed(new ThemedButton(width - 176, y, 162, 26, Text.literal("Close"), this::close)
+        fixed(new ThemedButton(width - 178, y, 162, 26, Text.literal("Close"), this::close)
                 .setTextScale(CONTROL_TEXT_SCALE));
-        refreshResults();
+        if (refresh) refreshResults();
         positionControls();
+    }
+
+    void prepareOverlayRender() {
+        suppressRefresh = true;
+        try {
+            init();
+        } finally {
+            suppressRefresh = false;
+        }
+    }
+
+    void returnFromOverlay() {
+        skipNextRefresh = true;
     }
 
     private void buildFilters(int rowHeight) {
         int x = layout.filtersX();
         int y = layout.filtersY();
         int w = layout.columnWidth();
-        label(x, y, "Filters:");
+        label(x, y, "Advanced filters:");
         y += 25;
+        int addButtonCount = state.ingredients() ? 2 : 3;
+        int addButtonWidth = (w - (addButtonCount - 1) * 6) / addButtonCount;
+        button(x, y, addButtonWidth, CONTROL_HEIGHT, fitted("Add stat filter", addButtonWidth, CONTROL_TEXT_SCALE),
+                () -> chooseNumeric(key -> {
+                    var list = new ArrayList<>(state.filters());
+                    list.add(new AtlasState.NumericFilter(key));
+                    updateLists(list, state.excluded(), state.strings());
+                })).setHoverText(Text.literal("Limit a stat and use it to order the results"));
+        int nextAddX = x + addButtonWidth + 6;
+        if (!state.ingredients()) {
+            button(nextAddX, y, addButtonWidth, CONTROL_HEIGHT,
+                    fitted("Add property filter", addButtonWidth, CONTROL_TEXT_SCALE), () -> chooseItemProperty(filter -> {
+                        var list = new ArrayList<>(state.strings());
+                        list.add(filter);
+                        updateLists(state.filters(), state.excluded(), list);
+                    })).setHoverText(Text.literal("Filter by Major ID, attack speed, or restriction"));
+            nextAddX += addButtonWidth + 6;
+        }
+        button(nextAddX, y, w - (nextAddX - x), CONTROL_HEIGHT,
+                fitted("Add stat exclusion", w - (nextAddX - x), CONTROL_TEXT_SCALE), () -> chooseNumeric(key -> {
+                    var list = new ArrayList<>(state.excluded());
+                    if (!list.contains(key)) list.add(key);
+                    updateLists(state.filters(), list, state.strings());
+                })).setHoverText(Text.literal("Hide items that have the selected stat."));
+        y += 42;
+        if (state.filters().isEmpty() && state.excluded().isEmpty()
+                && (state.ingredients() || state.strings().isEmpty())) {
+            label(x, y, "No advanced filters active");
+            return;
+        }
+        if (!state.filters().isEmpty()) {
+            label(x, y, "Stat ranges:");
+            y += 25;
+        }
         for (int i = 0; i < state.filters().size(); i++) {
             int index = i;
             var filter = state.filters().get(i);
-            int selectorWidth = w - 78;
+            int selectorWidth = w - 196;
             button(x, y, selectorWidth, CONTROL_HEIGHT,
                     fitted(AtlasSearch.label(filter.key()), selectorWidth, CONTROL_TEXT_SCALE),
                     () -> chooseNumeric(key -> {
                         var list = new ArrayList<>(state.filters());
-                        list.set(index, new AtlasState.NumericFilter(key, filter.minimum(), filter.maximum(), filter.descending()));
+                        var current = list.get(index);
+                        list.set(index, new AtlasState.NumericFilter(key, current.minimum(), current.maximum(),
+                                current.descending()));
                         updateLists(list, state.excluded(), state.strings());
                     }));
-            button(x + selectorWidth + 6, y, 32, CONTROL_HEIGHT,
-                    Text.literal(filter.descending() ? "v" : "^"), () -> {
+            button(x + selectorWidth + 6, y, 88, CONTROL_HEIGHT,
+                    fitted(filter.descending() ? "High first" : "Low first", 88, CONTROL_TEXT_SCALE), () -> {
                 var list = new ArrayList<>(state.filters());
-                list.set(index, new AtlasState.NumericFilter(filter.key(), filter.minimum(), filter.maximum(), !filter.descending()));
+                var current = list.get(index);
+                list.set(index, new AtlasState.NumericFilter(current.key(), current.minimum(), current.maximum(),
+                        !current.descending()));
                 updateLists(list, state.excluded(), state.strings());
-            }).setHoverText(Text.literal("Sort this stat ascending/descending; rows are sort priorities"));
-            button(x + selectorWidth + 44, y, 34, CONTROL_HEIGHT, Text.literal("^"), () -> {
+            }).setHoverText(Text.literal("Switch between highest and lowest values first"));
+            button(x + selectorWidth + 100, y, 28, CONTROL_HEIGHT, Text.literal("^"), () -> {
                 if (index == 0) return;
                 var list = new ArrayList<>(state.filters());
                 java.util.Collections.swap(list, index, index - 1);
                 updateLists(list, state.excluded(), state.strings());
-            }).setHoverText(Text.literal("Move this filter up in the sorting order"));
-            int by = y + 34;
-            int boundWidth = Math.min(100, (w - 104) / 2);
-            field(x, by, boundWidth, filter.minimum(), "-inf", value -> changeBound(index, value, true));
-            label(x + boundWidth + 10, by + 8, "to");
-            field(x + boundWidth + 38, by, boundWidth, filter.maximum(), "+inf", value -> changeBound(index, value, false));
-            button(x + w - 32, by, 32, CONTROL_HEIGHT, Text.literal("x"), () -> {
+            }).setHoverText(Text.literal("Give this stat a higher sorting priority"));
+            button(x + selectorWidth + 134, y, 28, CONTROL_HEIGHT, Text.literal("v"), () -> {
+                if (index == state.filters().size() - 1) return;
+                var list = new ArrayList<>(state.filters());
+                java.util.Collections.swap(list, index, index + 1);
+                updateLists(list, state.excluded(), state.strings());
+            }).setHoverText(Text.literal("Give this stat a lower sorting priority"));
+            button(x + selectorWidth + 168, y, 28, CONTROL_HEIGHT, Text.literal("x"), () -> {
                 var list = new ArrayList<>(state.filters());
                 list.remove(index);
                 updateLists(list, state.excluded(), state.strings());
-            });
+            }).setHoverText(Text.literal("Remove this stat filter"));
+            int by = y + 34;
+            int boundWidth = (w - 74) / 2;
+            label(x, by + 8, "Min:");
+            field(x + 30, by, boundWidth, filter.minimum(), "No minimum", value -> changeBound(index, value, true));
+            int maxLabelX = x + 42 + boundWidth;
+            label(maxLabelX, by + 8, "Max:");
+            field(maxLabelX + 32, by, boundWidth, filter.maximum(), "No maximum", value -> changeBound(index, value, false));
             y += rowHeight;
         }
-        button(x, y, Math.min(w, 190), CONTROL_HEIGHT, Text.literal("+ Add Filter"), () -> chooseNumeric(key -> {
-            var list = new ArrayList<>(state.filters());
-            list.add(new AtlasState.NumericFilter(key));
-            updateLists(list, state.excluded(), state.strings());
-        }));
-        y += 46;
-        label(x, y, "Excluded Filters:");
-        y += 25;
+        if (!state.filters().isEmpty()) y += 14;
+        if (!state.excluded().isEmpty()) {
+            label(x, y, "Items must not have these stats:");
+            y += 25;
+        }
         for (int i = 0; i < state.excluded().size(); i++) {
             int index = i;
             String key = state.excluded().get(i);
@@ -242,45 +305,65 @@ final class AtlasScreen extends PlannerScreen {
                 var list = new ArrayList<>(state.excluded());
                 list.remove(index);
                 updateLists(state.filters(), list, state.strings());
-            });
+            }).setHoverText(Text.literal("Remove this stat filter"));
             y += 35;
         }
-        button(x, y, Math.min(w, 230), CONTROL_HEIGHT, Text.literal("+ Add Excluded Filter"), () -> chooseNumeric(key -> {
-            var list = new ArrayList<>(state.excluded());
-            if (!list.contains(key)) list.add(key);
-            updateLists(state.filters(), list, state.strings());
-        })).setHoverText(Text.literal("Exclude results with a nonzero value for this stat"));
         if (state.ingredients()) return;
-        y += 46;
-        label(x, y, "String Filters:");
-        y += 25;
+        if (!state.excluded().isEmpty()) y += 14;
+        if (!state.strings().isEmpty()) {
+            label(x, y, "Item properties:");
+            y += 25;
+        }
         for (int i = 0; i < state.strings().size(); i++) {
             int index = i;
             var filter = state.strings().get(i);
-            button(x, y, w - 38, CONTROL_HEIGHT,
-                    fitted(AtlasSearch.label(filter.key()), w - 38, CONTROL_TEXT_SCALE),
-                    () -> chooseString(key -> {
+            int selectorWidth = Math.min(180, Math.max(100, w / 3));
+            button(x, y, selectorWidth, CONTROL_HEIGHT,
+                    fitted(AtlasSearch.label(filter.key()), selectorWidth, CONTROL_TEXT_SCALE),
+                    () -> chooseItemProperty(chosen -> {
                         var list = new ArrayList<>(state.strings());
-                        list.set(index, new AtlasState.StringFilter(key, filter.value()));
+                        list.set(index, chosen);
                         updateLists(state.filters(), state.excluded(), list);
                     }));
+            int valueWidth = w - selectorWidth - 44;
+            if (selectableProperty(filter.key())) {
+                button(x + selectorWidth + 6, y, valueWidth, CONTROL_HEIGHT,
+                        fitted(filter.value().isBlank() ? "Choose..." : propertyValueLabel(filter.key(), filter.value()),
+                                valueWidth, CONTROL_TEXT_SCALE),
+                        () -> choosePropertyValue(filter.key(), value -> {
+                            var list = new ArrayList<>(state.strings());
+                            list.set(index, new AtlasState.StringFilter(filter.key(), value));
+                            updateLists(state.filters(), state.excluded(), list);
+                        }));
+            } else {
+                field(x + selectorWidth + 6, y, valueWidth, filter.value(),
+                        filter.key().equals("lore") ? "Search lore..." : "Contains...", value -> {
+                            var list = new ArrayList<>(state.strings());
+                            list.set(index, new AtlasState.StringFilter(filter.key(), value));
+                            updateInputs(state.query(), state.category(), state.rarity(), state.filters(),
+                                    state.excluded(), list);
+                        });
+            }
             button(x + w - 32, y, 32, CONTROL_HEIGHT, Text.literal("x"), () -> {
                 var list = new ArrayList<>(state.strings());
                 list.remove(index);
                 updateLists(state.filters(), state.excluded(), list);
-            });
-            field(x, y + 34, w, filter.value(), "Contains (case insensitive)", value -> {
-                var list = new ArrayList<>(state.strings());
-                list.set(index, new AtlasState.StringFilter(filter.key(), value));
-                updateInputs(state.query(), state.category(), state.rarity(), state.filters(), state.excluded(), list);
-            });
-            y += 66;
+            }).setHoverText(Text.literal("Remove this item property filter"));
+            y += 35;
         }
-        button(x, y, Math.min(w, 210), CONTROL_HEIGHT, Text.literal("+ Add String Filter"), () -> chooseString(key -> {
-            var list = new ArrayList<>(state.strings());
-            list.add(new AtlasState.StringFilter(key, ""));
-            updateLists(state.filters(), state.excluded(), list);
-        }));
+    }
+
+    private int filterAreaHeight(int rowHeight) {
+        int height = 67;
+        if (state.filters().isEmpty() && state.excluded().isEmpty()
+                && (state.ingredients() || state.strings().isEmpty())) return height + 20;
+        if (!state.filters().isEmpty()) height += 25 + state.filters().size() * rowHeight + 14;
+        if (!state.excluded().isEmpty()) height += 25 + state.excluded().size() * 35;
+        if (!state.ingredients() && !state.strings().isEmpty()) {
+            if (!state.excluded().isEmpty()) height += 14;
+            height += 25 + state.strings().size() * 35;
+        }
+        return height;
     }
 
     private void changeBound(int index, String value, boolean minimum) {
@@ -292,16 +375,86 @@ final class AtlasScreen extends PlannerScreen {
     }
 
     private void chooseNumeric(Consumer<String> selected) {
-        choose("Numeric stat (maximum identification roll)", AtlasSearch.numericKeys(catalog()), selected);
+        choose("Choose stat", AtlasSearch.numericKeys(catalog()), selected, true);
     }
 
-    private void chooseString(Consumer<String> selected) {
-        choose("String field", List.of("name", "lore", "majorId", "restriction", "attackSpeed"), selected);
-    }
-
-    private void choose(String title, List<String> keys, Consumer<String> selected) {
+    private void chooseItemProperty(Consumer<AtlasState.StringFilter> selected) {
+        List<PropertyOption> properties = propertyOptions();
+        List<AtlasState.StringFilter> options = new ArrayList<>();
         List<CraftingChoiceScreen.Choice> choices = new ArrayList<>();
-        for (int i = 0; i < keys.size(); i++) choices.add(new CraftingChoiceScreen.Choice(i, AtlasSearch.label(keys.get(i)), keys.get(i)));
+        for (PropertyOption property : properties) {
+            int id = options.size();
+            options.add(new AtlasState.StringFilter(property.key(), property.value()));
+            choices.add(new CraftingChoiceScreen.Choice(id, property.label(), property.description(), property.group()));
+        }
+        client.setScreen(new CraftingChoiceScreen(this, "Choose item property", choices,
+                choice -> selected.accept(options.get(choice.id())), true, true));
+    }
+
+    private void choosePropertyValue(String key, Consumer<String> selected) {
+        List<PropertyOption> values = propertyOptions().stream().filter(option -> option.key().equals(key)).toList();
+        List<CraftingChoiceScreen.Choice> choices = new ArrayList<>();
+        for (int index = 0; index < values.size(); index++) {
+            PropertyOption value = values.get(index);
+            choices.add(new CraftingChoiceScreen.Choice(index, value.label(), value.description()));
+        }
+        client.setScreen(new CraftingChoiceScreen(this, "Choose " + AtlasSearch.label(key), choices,
+                choice -> selected.accept(values.get(choice.id()).value()), key.equals("majorId")));
+    }
+
+    private List<PropertyOption> propertyOptions() {
+        var majorIds = new java.util.TreeMap<String, String>(String.CASE_INSENSITIVE_ORDER);
+        var attackSpeeds = new java.util.TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        var restrictions = new java.util.TreeSet<String>(String.CASE_INSENSITIVE_ORDER);
+        for (AtlasSearch.Entry entry : items) {
+            if (entry.item() == null) continue;
+            entry.item().majorIds().forEach((name, description) -> majorIds.putIfAbsent(name, description));
+            if (!entry.item().attackSpeed().isBlank()) attackSpeeds.add(entry.item().attackSpeed());
+            String restriction = entry.item().restriction();
+            if (!restriction.isBlank() && !restriction.equalsIgnoreCase("none")) restrictions.add(restriction);
+        }
+        List<PropertyOption> options = new ArrayList<>();
+        majorIds.forEach((name, description) -> options.add(
+                new PropertyOption("majorId", name, name, majorIdDescription(description), "Major IDs")));
+        attackSpeeds.forEach(value -> options.add(new PropertyOption("attackSpeed", value,
+                propertyValueLabel("attackSpeed", value), "", "Attack Speed")));
+        restrictions.forEach(value -> options.add(new PropertyOption("restriction", value,
+                propertyValueLabel("restriction", value), "", "Restrictions")));
+        return List.copyOf(options);
+    }
+
+    private static String majorIdDescription(String description) {
+        if (description == null || description.isBlank()) return "";
+        return description
+                .replaceAll("(?i)<br\\s*/?>", " ")
+                .replaceAll("<[^>]+>", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'")
+                .replace("&nbsp;", " ")
+                .replaceAll("[\\uE000-\\uF8FF]", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private static boolean selectableProperty(String key) {
+        return key.equals("majorId") || key.equals("attackSpeed") || key.equals("restriction");
+    }
+
+    private static String propertyValueLabel(String key, String value) {
+        return key.equals("majorId") ? value : AtlasSearch.label(value);
+    }
+
+    private void choose(String title, List<String> keys, Consumer<String> selected, boolean grouped) {
+        List<CraftingChoiceScreen.Choice> choices = new ArrayList<>();
+        for (int i = 0; i < keys.size(); i++) {
+            String key = keys.get(i);
+            choices.add(grouped
+                    ? new CraftingChoiceScreen.Choice(i, AtlasSearch.label(key), key, AtlasSearch.group(key))
+                    : new CraftingChoiceScreen.Choice(i, AtlasSearch.label(key), key));
+        }
         client.setScreen(new CraftingChoiceScreen(this, title, choices, choice -> selected.accept(keys.get(choice.id())), false));
     }
 
@@ -367,6 +520,22 @@ final class AtlasScreen extends PlannerScreen {
 
     private static String display(String value) {
         return Character.toUpperCase(value.charAt(0)) + value.substring(1).toLowerCase(Locale.ROOT);
+    }
+
+    private static Text ingredientStars(int tier, boolean selected) {
+        var stars = Text.empty();
+        Formatting color = switch (tier) {
+            case 1 -> Formatting.YELLOW;
+            case 2 -> Formatting.LIGHT_PURPLE;
+            case 3 -> Formatting.AQUA;
+            default -> Formatting.GRAY;
+        };
+        for (int star = 0; star < 3; star++) {
+            stars.append(Text.literal("✫").formatted(star < tier
+                    ? selected ? color : Formatting.GRAY
+                    : Formatting.DARK_GRAY));
+        }
+        return stars;
     }
 
     private ThemedButton fixed(ThemedButton button) {
@@ -504,7 +673,7 @@ final class AtlasScreen extends PlannerScreen {
     @Override
     protected void drawPlannerContent(DrawContext context, int mouseX, int mouseY, float delta) {
         ui.fill(0, 0, width, height, UiTheme.BACKGROUND);
-        UiTheme.drawPanel(context, ui, 6, 6, width - 12, height - 12);
+        UiTheme.drawPanel(context, ui, 8, 55, width - 16, height - 57);
         offset = Math.round(scroll.update(delta));
         positionControls();
         if (itemDetails != null) {
@@ -538,9 +707,20 @@ final class AtlasScreen extends PlannerScreen {
                 EquipmentSprites.draw(context, icon.type(), x + (icon.width() - 24) / 2, y + 5, 24);
                 if (!icon.selected()) ui.fill(x + 1, y + 1, x + icon.width() - 1, y + 37, 0x88000000);
             }
+            for (ProfessionIcon icon : professionIcons) {
+                int x = layout.left() + icon.x();
+                int y = BODY_TOP + icon.y() - offset;
+                ui.drawTexture(RenderPipelines.GUI_TEXTURED, professionTexture(icon.type()),
+                        x + 6, y + 2, 0, 0, 24, 24, 500, 500, 500, 500);
+                if (!icon.selected()) {
+                    ui.fill(x + 1, y + 1, x + icon.width() - 1, y + CONTROL_HEIGHT - 1, 0x88000000);
+                }
+                drawScaledText(Text.literal(display(icon.type())), x + 38, y + 8,
+                        icon.selected() ? UiTheme.TEXT : UiTheme.DISABLED, CONTROL_TEXT_SCALE);
+            }
         } finally { ui.disableScissor(); }
         for (var button : fixed) button.draw(context, mouseX, mouseY, delta, ui);
-        scrollbar.configure(width - 11, BODY_TOP, viewportHeight(), maxScroll);
+        scrollbar.configure(width - 24, BODY_TOP, viewportHeight(), maxScroll);
         scrollbar.draw(context, mouseX, mouseY, delta, ui);
         if (itemDetails != null) {
             ThemedButton.takePendingTooltip();
@@ -555,6 +735,11 @@ final class AtlasScreen extends PlannerScreen {
         ui.scale(scale, scale);
         ui.drawTextWithShadow(textRenderer, text, 0, 0, color);
         ui.popMatrix();
+    }
+
+    private static Identifier professionTexture(String profession) {
+        return Identifier.of("wynnextras", "textures/gui/profileviewer/rankingicons/"
+                + profession.toLowerCase(Locale.ROOT) + ".png");
     }
 
     @Override
@@ -691,4 +876,6 @@ final class AtlasScreen extends PlannerScreen {
     }
     private record Label(int x, int y, String text) {}
     private record Icon(String type, int x, int y, int width, boolean selected) {}
+    private record ProfessionIcon(String type, int x, int y, int width, boolean selected) {}
+    private record PropertyOption(String key, String value, String label, String description, String group) {}
 }
